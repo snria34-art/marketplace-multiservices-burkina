@@ -104,7 +104,7 @@ class _CourierPageState extends ConsumerState<CourierPage> {
       builder: (dialogContext) => AlertDialog(
         title: const Text('Vérifier la confidentialité'),
         content: const Text(
-          'Si un visage apparaît sur la photo, ne l’utilisez que si la personne a donné son accord.',
+          'Si un visage apparaît, remettez le téléphone au client pour qu’il confirme lui-même son accord. Sans accord, reprenez la photo sans visage.',
         ),
         actions: [
           TextButton(
@@ -123,7 +123,7 @@ class _CourierPageState extends ConsumerState<CourierPage> {
               'person_visible': true,
               'person_consent': true,
             }),
-            child: const Text('Visage visible, accord obtenu'),
+            child: const Text('Le client accepte la photo'),
           ),
         ],
       ),
