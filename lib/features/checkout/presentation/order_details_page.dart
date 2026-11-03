@@ -117,7 +117,7 @@ class _OrderDetailsPageState extends ConsumerState<OrderDetailsPage> {
     final order = await client
         .from('orders')
         .select(
-          'id,status,subtotal,delivery_fee,discount_total,total,currency,delivery_address,created_at',
+          'id,status,subtotal,delivery_fee,discount_total,total,currency,delivery_address,created_at,review_deadline_at,completed_at',
         )
         .eq('id', widget.orderId)
         .eq('customer_id', user.id)
@@ -582,6 +582,9 @@ class _OrderDetailsPageState extends ConsumerState<OrderDetailsPage> {
           final order = data.order;
           final status = order['status']?.toString() ?? '-';
           final delivered = status == 'DELIVERED';
+          final reviewDeadline = DateTime.tryParse(order['review_deadline_at']?.toString() ?? '');
+          final reviewOpen = delivered && reviewDeadline != null && DateTime.now().isBefore(reviewDeadline);
+          final displayStatus = order['completed_at'] != null ? 'Commande terminée' : _statusLabel(status);
 
           return ListView(
             padding: const EdgeInsets.all(12),
@@ -593,7 +596,7 @@ class _OrderDetailsPageState extends ConsumerState<OrderDetailsPage> {
                   ),
                   title: Text(widget.orderId),
                   subtitle: Text(
-                    _statusLabel(status) + ' • ' + (order['created_at']?.toString() ?? ''),
+                    displayStatus + ' • ' + (order['created_at']?.toString() ?? ''),
                   ),
                   trailing: Text(
                     (order['total']?.toString() ?? '0') +
@@ -652,6 +655,7 @@ class _OrderDetailsPageState extends ConsumerState<OrderDetailsPage> {
                       ..._items(
                         group: group,
                         delivered: group['status']?.toString() == 'DELIVERED',
+                        reviewOpen: reviewOpen,
                         onReturn: _openReturn,
                         onReview: _review,
                       ),
@@ -669,6 +673,16 @@ class _OrderDetailsPageState extends ConsumerState<OrderDetailsPage> {
                   icon: const Icon(Icons.local_shipping_outlined),
                   label: const Text('Suivre la livraison'),
                 ),
+              if (reviewDeadline != null && delivered) ...[
+                const SizedBox(height: 8),
+                Card(
+                  child: ListTile(
+                    leading: const Icon(Icons.star_outline),
+                    title: Text(reviewOpen ? 'Avis possible jusqu’au' : 'Délai d’avis terminé'),
+                    subtitle: Text(reviewDeadline.toLocal().toString()),
+                  ),
+                ),
+              ],
               if (data.deliveryEvidence.isNotEmpty) ...[
                 const SizedBox(height: 12),
                 Text(
@@ -781,6 +795,7 @@ class _OrderDetailsPageState extends ConsumerState<OrderDetailsPage> {
   List<Widget> _items({
     required Map<String, dynamic> group,
     required bool delivered,
+    required bool reviewOpen,
     required Future<void> Function(String itemId) onReturn,
     required Future<void> Function(String productId, String shopId) onReview,
   }) {
@@ -811,13 +826,14 @@ class _OrderDetailsPageState extends ConsumerState<OrderDetailsPage> {
             ? Wrap(
                 spacing: 4,
                 children: [
-                  TextButton.icon(
-                    onPressed: productId.isNotEmpty && shopId.isNotEmpty
-                        ? () => onReview(productId, shopId)
-                        : null,
-                    icon: const Icon(Icons.star_outline, size: 18),
-                    label: const Text('Noter'),
-                  ),
+                  if (reviewOpen)
+                    TextButton.icon(
+                      onPressed: productId.isNotEmpty && shopId.isNotEmpty
+                          ? () => onReview(productId, shopId)
+                          : null,
+                      icon: const Icon(Icons.star_outline, size: 18),
+                      label: const Text('Noter'),
+                    ),
                   PopupMenuButton<String>(
                     onSelected: (value) {
                       if (value == 'return' && itemId.isNotEmpty) {
