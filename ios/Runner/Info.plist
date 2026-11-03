@@ -26,6 +26,12 @@
 	<string>????</string>
 	<key>CFBundleVersion</key>
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
+	<key>NSCameraUsageDescription</key>
+	<string>La caméra sert à photographier les colis et les preuves des avis.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Le microphone sert uniquement à enregistrer les courtes vidéos de preuve et d’avis.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>La photothèque sert à joindre une photo ou une courte vidéo à un avis client.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Votre localisation est utilisée pour les livraisons, le suivi des livreurs et les services de proximité.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
