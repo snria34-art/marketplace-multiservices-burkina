@@ -198,6 +198,70 @@ class _SellerProductsPageState
     }
   }
 
+  Future<void> _addPhotosForProduct(String productId) async {
+    final repo = ref.read(sellerProductsRepositoryProvider);
+    if (repo == null) return;
+    try {
+      final photos = await ImagePicker().pickMultiImage(
+        limit: 5,
+        imageQuality: 75,
+        maxWidth: 1600,
+      );
+      if (photos.isEmpty) return;
+      for (final photo in photos) {
+        await repo.uploadProductImage(
+          productId: productId,
+          file: photo,
+          imageRole: 'PRODUCT',
+        );
+      }
+      final addPackaging = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Photo de l’emballage'),
+          content: const Text('Ajoutez aussi une photo de la boîte, du sachet ou de l’étiquette si elle existe.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Pas maintenant'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text('Ajouter'),
+            ),
+          ],
+        ),
+      );
+      if (addPackaging == true) {
+        final packaging = await ImagePicker().pickImage(
+          source: ImageSource.gallery,
+          imageQuality: 75,
+          maxWidth: 1600,
+        );
+        if (packaging != null) {
+          await repo.uploadProductImage(
+            productId: productId,
+            file: packaging,
+            imageRole: 'PACKAGING',
+          );
+        }
+      }
+      await repo.submitForReview(productId);
+      var message = 'Photos enregistrées. Annonce envoyée en validation.';
+      try {
+        await repo.analyzeProduct(productId);
+        message += ' Analyse IA terminée.';
+      } catch (_) {
+        message += ' Analyse IA en attente de configuration.';
+      }
+      if (!mounted) return;
+      setState(() => _future = _loadProducts());
+      _show(message);
+    } catch (error) {
+      _show('Ajout des photos impossible : $error');
+    }
+  }
+
   void _show(String text) {
     if (!mounted) return;
 
@@ -283,10 +347,21 @@ class _SellerProductsPageState
                           (inventory['reserved_quantity']?.toString() ??
                               '0'),
                     ),
-                    trailing: IconButton(
-                      onPressed: () => _editStock(product),
-                      icon: const Icon(Icons.edit_outlined),
-                      tooltip: 'Modifier le stock',
+                    trailing: Wrap(
+                      spacing: 2,
+                      children: [
+                        if (product['status']?.toString() != 'ACTIVE')
+                          IconButton(
+                            onPressed: () => _addPhotosForProduct(product['id'].toString()),
+                            icon: const Icon(Icons.add_a_photo_outlined),
+                            tooltip: 'Ajouter des photos et soumettre',
+                          ),
+                        IconButton(
+                          onPressed: () => _editStock(product),
+                          icon: const Icon(Icons.edit_outlined),
+                          tooltip: 'Modifier le stock',
+                        ),
+                      ],
                     ),
                   ),
                 );
