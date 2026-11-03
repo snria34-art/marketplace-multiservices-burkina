@@ -59,6 +59,29 @@ class _AdminPlatformHealthPageState
     }
   }
 
+  Future<void> _rollbackRepair(Map<String, dynamic> row) async {
+    final details = row['details'] is Map
+        ? Map<String, dynamic>.from(row['details'] as Map)
+        : const <String, dynamic>{};
+    final backupId = details['backup_id']?.toString();
+    if (backupId == null || backupId.isEmpty) return;
+    try {
+      final client = ref.read(supabaseProvider);
+      if (client == null) throw StateError('Service indisponible.');
+      await client.rpc('rollback_platform_repair', params: {'p_backup_id': backupId});
+      if (!mounted) return;
+      setState(() => _future = _load());
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Réparation annulée à partir de sa sauvegarde.')),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Annulation impossible : $error')),
+      );
+    }
+  }
+
   Future<void> _runRepairs() async {
     final client = ref.read(supabaseProvider);
     if (client == null) return;
@@ -199,7 +222,13 @@ class _AdminPlatformHealthPageState
                   leading: const Icon(Icons.history),
                   title: Text(row['repair_code']?.toString() ?? 'Réparation'),
                   subtitle: Text(row['status']?.toString() ?? ''),
-                  trailing: Text(row['created_at']?.toString() ?? ''),
+                  trailing: row['status'] == 'APPLIED'
+                      ? IconButton(
+                          tooltip: 'Annuler avec la sauvegarde',
+                          onPressed: () => _rollbackRepair(row),
+                          icon: const Icon(Icons.undo),
+                        )
+                      : Text(row['created_at']?.toString() ?? ''),
                 );
               }),
               const SizedBox(height: 12),
