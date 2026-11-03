@@ -390,9 +390,33 @@ class _OrderDetailsPageState extends ConsumerState<OrderDetailsPage> {
     );
     if (form == null) return;
 
+    final client = ref.read(supabaseProvider);
+    final user = client?.auth.currentUser;
+    if (client == null || user == null) {
+      _showReviewMessage('Session indisponible. Votre avis n’a pas été envoyé.');
+      return;
+    }
+
+    Uint8List? mediaBytes;
+    if (form.media != null) {
+      mediaBytes = await form.media!.readAsBytes();
+      final maxBytes = form.mediaType == 'VIDEO'
+          ? 20 * 1024 * 1024
+          : 5 * 1024 * 1024;
+      if (mediaBytes.isEmpty || mediaBytes.length > maxBytes) {
+        _showReviewMessage(
+          form.mediaType == 'VIDEO'
+              ? 'La vidéo doit faire au maximum 20 Mo.'
+              : 'La photo doit faire au maximum 5 Mo.',
+        );
+        return;
+      }
+    }
+
+    dynamic createdReviewId;
+    String? uploadedPath;
     try {
-      final client = ref.read(supabaseProvider);
-      final id = await client?.rpc(
+      createdReviewId = await client.rpc(
         'create_review',
         params: {
           'p_product_id': productId,
@@ -402,46 +426,59 @@ class _OrderDetailsPageState extends ConsumerState<OrderDetailsPage> {
           'p_issue_codes': form.issueCodes,
         },
       );
-      final media = form.media;
-      if (media != null) {
-        final clientUser = client?.auth.currentUser;
-        if (client == null || clientUser == null || id == null) {
-          throw StateError('Avis créé, mais média non associé : session indisponible.');
-        }
-        final bytes = await media.readAsBytes();
-        final maxBytes = form.mediaType == 'VIDEO' ? 20 * 1024 * 1024 : 5 * 1024 * 1024;
-        if (bytes.isEmpty || bytes.length > maxBytes) {
-          throw StateError(form.mediaType == 'VIDEO'
-              ? 'Avis créé, mais la vidéo dépasse 20 Mo.'
-              : 'Avis créé, mais la photo dépasse 5 Mo.');
-        }
-        final extension = media.name.contains('.')
-            ? media.name.split('.').last.toLowerCase()
+
+      if (form.media != null && mediaBytes != null) {
+        final extension = form.media!.name.contains('.')
+            ? form.media!.name.split('.').last.toLowerCase()
             : (form.mediaType == 'VIDEO' ? 'mp4' : 'jpg');
-        final storagePath = '${clientUser.id}/reviews/${id}_${DateTime.now().microsecondsSinceEpoch}.$extension';
-        final mime = media.mimeType ??
+        uploadedPath =
+            user.id + '/reviews/' + createdReviewId.toString() + '_' +
+            DateTime.now().microsecondsSinceEpoch.toString() + '.' + extension;
+        final mime = form.media!.mimeType ??
             (form.mediaType == 'VIDEO' ? 'video/mp4' : 'image/jpeg');
         await client.storage.from('order-feedback-media').uploadBinary(
-          storagePath,
-          bytes,
+          uploadedPath,
+          mediaBytes,
           fileOptions: FileOptions(contentType: mime, upsert: false),
         );
         await client.rpc('attach_review_media', params: {
-          'p_review_id': id.toString(),
-          'p_storage_path': storagePath,
+          'p_review_id': createdReviewId.toString(),
+          'p_storage_path': uploadedPath,
           'p_media_type': form.mediaType,
           'p_duration_seconds': form.durationSeconds,
         });
       }
+
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Avis envoyé pour modération' + (media == null ? '.' : ' avec média.'))),
+        SnackBar(
+          content: Text(
+            'Avis envoyé pour modération' +
+                (form.media == null ? '.' : ' avec média.'),
+          ),
+        ),
       );
     } catch (error) {
+      if (uploadedPath != null) {
+        try {
+          await client.storage.from('order-feedback-media').remove([uploadedPath]);
+        } catch (_) {}
+      }
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Avis refusé : ' + error.toString())));
+      final message = createdReviewId != null
+          ? 'Avis enregistré, mais le média n’a pas pu être associé. Contactez le support si nécessaire.'
+          : 'Avis non envoyé : ' + error.toString();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message)),
+      );
     }
+  }
+
+  void _showReviewMessage(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
   }
 
   @override
