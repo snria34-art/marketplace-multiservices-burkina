@@ -44,6 +44,7 @@ class _SellerModerationPageState extends ConsumerState<SellerModerationPage> {
             children: [
               TextField(
                 controller: controller,
+                onChanged: (_) => setDialogState(() {}),
                 maxLines: 4,
                 maxLength: 2000,
                 decoration: const InputDecoration(
