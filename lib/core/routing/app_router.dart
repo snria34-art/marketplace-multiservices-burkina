@@ -36,6 +36,7 @@ import '../../features/seller/presentation/seller_clients_page.dart';
 import '../../features/seller/presentation/seller_reviews_page.dart';
 import '../../features/seller/presentation/seller_stats_page.dart';
 import '../../features/seller/presentation/seller_settings_page.dart';
+import '../../features/seller/presentation/seller_moderation_page.dart';
 import '../../features/verticals/data/vertical_repository.dart';
 import '../../features/verticals/presentation/vertical_discovery_page.dart';
 import '../../features/admin/presentation/admin_dashboard_page.dart';
@@ -155,6 +156,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/seller',
         builder: (_, __) => const SellerToolsPage(),
+      ),
+      GoRoute(
+        path: '/seller/moderation',
+        builder: (_, __) => const SellerModerationPage(),
       ),
       GoRoute(
         path: '/seller/dashboard',
