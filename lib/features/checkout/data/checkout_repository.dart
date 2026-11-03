@@ -136,7 +136,7 @@ class CheckoutRepository {
     int offset = 0,
   }) async {
     final raw = await client.rpc(
-      'get_my_orders',
+      'get_my_orders_with_completion',
       params: {
         'p_limit': limit,
         'p_offset': offset,
