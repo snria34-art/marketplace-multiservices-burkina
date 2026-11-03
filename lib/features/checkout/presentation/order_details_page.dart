@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -420,7 +421,7 @@ class _OrderDetailsPageState extends ConsumerState<OrderDetailsPage> {
       return;
     }
 
-    List<int>? mediaBytes;
+    Uint8List? mediaBytes;
     if (form.media != null) {
       mediaBytes = await form.media!.readAsBytes();
       final maxBytes = form.mediaType == 'VIDEO'
