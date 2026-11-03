@@ -77,6 +77,27 @@ class _CourierPageState extends ConsumerState<CourierPage> {
     );
   }
 
+  Future<bool> _confirmEvidenceCapture(String message) async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Photo obligatoire du colis'),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Annuler'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Continuer'),
+          ),
+        ],
+      ),
+    );
+    return result == true;
+  }
+
   Future<void> _action(
     Map<String, dynamic> assignment,
     String action,
@@ -89,6 +110,9 @@ class _CourierPageState extends ConsumerState<CourierPage> {
       if (action == 'accept') {
         await repo.accept(assignment['id'].toString());
       } else if (action == 'pickup') {
+        if (!await _confirmEvidenceCapture(
+          'Photographiez uniquement l’article remis par le vendeur. Évitez tout visage et toute donnée personnelle.',
+        )) return;
         final photo = await ImagePicker().pickImage(
           source: ImageSource.camera,
           imageQuality: 75,
@@ -106,6 +130,9 @@ class _CourierPageState extends ConsumerState<CourierPage> {
       } else if (action == 'start') {
         await repo.start(packageId);
       } else if (action == 'deliver') {
+        if (!await _confirmEvidenceCapture(
+          'Photographiez le colis déposé ou remis. Ne photographiez pas le visage du client sans son accord.',
+        )) return;
         final photo = await ImagePicker().pickImage(
           source: ImageSource.camera,
           imageQuality: 75,
