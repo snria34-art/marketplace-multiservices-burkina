@@ -7,7 +7,13 @@ const corsHeaders = {
 };
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
-const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+const serviceKey = (() => {
+  try {
+    const secretKeys = JSON.parse(Deno.env.get("SUPABASE_SECRET_KEYS") ?? "{}");
+    if (secretKeys.default) return secretKeys.default;
+  } catch (_) {}
+  return Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+})();
 const anonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? Deno.env.get("SUPABASE_PUBLISHABLE_KEY") ?? "";
 const openAiKey = Deno.env.get("OPENAI_API_KEY") ?? "";
 const model = Deno.env.get("OPENAI_VISION_MODEL") ?? "gpt-4o-mini";
