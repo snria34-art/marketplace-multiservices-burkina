@@ -15,14 +15,13 @@ const publishableKey = Deno.env.get("SUPABASE_ANON_KEY") ??
       return "";
     }
   })();
-const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ??
-  (() => {
-    try {
-      return JSON.parse(Deno.env.get("SUPABASE_SECRET_KEYS") ?? "{}").default ?? "";
-    } catch {
-      return "";
-    }
-  })();
+const serviceKey = (() => {
+  try {
+    const secretKeys = JSON.parse(Deno.env.get("SUPABASE_SECRET_KEYS") ?? "{}");
+    if (secretKeys.default) return secretKeys.default;
+  } catch (_) {}
+  return Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+})();
 
 function response(status: number, body: unknown) {
   return new Response(JSON.stringify(body), {
