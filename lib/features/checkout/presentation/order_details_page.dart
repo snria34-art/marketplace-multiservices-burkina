@@ -848,6 +848,10 @@ class _ReviewDialogState extends State<_ReviewDialog> {
             },
           ),
           const SizedBox(height: 8),
+          const Text(
+            'Les avis honnêtes, même négatifs, sont autorisés. Les insultes, menaces et données personnelles ne le sont pas.',
+          ),
+          const SizedBox(height: 8),
           TextField(
             controller: body,
             maxLines: 4,
