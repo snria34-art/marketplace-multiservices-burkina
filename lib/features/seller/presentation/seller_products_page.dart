@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/providers/repository_providers.dart';
@@ -75,9 +76,64 @@ class _SellerProductsPageState
         expiryDate: result['expiry_date'] as DateTime?,
       );
 
+      var submissionMessage = 'Produit créé en brouillon : ajoutez au moins une photo.';
+      final productPhotos = await ImagePicker().pickMultiImage(
+        limit: 5,
+        imageQuality: 75,
+        maxWidth: 1600,
+      );
+      if (productPhotos.isNotEmpty) {
+        for (final photo in productPhotos) {
+          await repo.uploadProductImage(
+            productId: id,
+            file: photo,
+            imageRole: 'PRODUCT',
+          );
+        }
+        final addPackaging = await showDialog<bool>(
+          context: context,
+          builder: (dialogContext) => AlertDialog(
+            title: const Text('Photo de l’emballage'),
+            content: const Text('Ajoutez une photo de la boîte, du sachet ou de l’étiquette si le produit en possède un.'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext, false),
+                child: const Text('Pas maintenant'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(dialogContext, true),
+                child: const Text('Ajouter'),
+              ),
+            ],
+          ),
+        );
+        if (addPackaging == true) {
+          final packaging = await ImagePicker().pickImage(
+            source: ImageSource.gallery,
+            imageQuality: 75,
+            maxWidth: 1600,
+          );
+          if (packaging != null) {
+            await repo.uploadProductImage(
+              productId: id,
+              file: packaging,
+              imageRole: 'PACKAGING',
+            );
+          }
+        }
+        await repo.submitForReview(id);
+        submissionMessage = 'Photos enregistrées. Annonce envoyée en attente de validation.';
+        try {
+          await repo.analyzeProduct(id);
+          submissionMessage += ' Analyse IA terminée.';
+        } catch (_) {
+          submissionMessage += ' Analyse IA non disponible pour le moment; l’annonce reste en attente.';
+        }
+      }
+
       if (!mounted) return;
       setState(() => _future = _loadProducts());
-      _show('Produit créé en brouillon : ' + id);
+      _show(submissionMessage);
     } catch (error) {
       _show('Création impossible : ' + error.toString());
     }
