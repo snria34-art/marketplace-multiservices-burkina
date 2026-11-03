@@ -162,6 +162,8 @@ class _AdminReviewModerationPageState
                       Text('Boutique : ${row['shop_name'] ?? '-'}'),
                       Text('Client : ${row['customer_name'] ?? '-'}'),
                       Text('Note : ${row['rating'] ?? '-'} / 5'),
+                      if ((row['issue_codes'] as List? ?? const []).isNotEmpty)
+                        Text('Problèmes signalés : ${(row['issue_codes'] as List).map(_issueLabel).join(', ')}'),
                       const SizedBox(height: 8),
                       Text(row['body']?.toString() ?? ''),
                       const SizedBox(height: 6),
