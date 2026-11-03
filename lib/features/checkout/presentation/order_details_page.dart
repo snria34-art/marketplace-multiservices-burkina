@@ -399,6 +399,7 @@ class _OrderDetailsPageState extends ConsumerState<OrderDetailsPage> {
           'p_shop_id': shopId,
           'p_rating': form.rating,
           'p_body': form.body,
+          'p_issue_codes': form.issueCodes,
         },
       );
       final media = form.media;
@@ -408,8 +409,11 @@ class _OrderDetailsPageState extends ConsumerState<OrderDetailsPage> {
           throw StateError('Avis créé, mais média non associé : session indisponible.');
         }
         final bytes = await media.readAsBytes();
-        if (bytes.isEmpty || bytes.length > 5 * 1024 * 1024) {
-          throw StateError('Avis créé, mais le média dépasse la limite de 5 Mo.');
+        final maxBytes = form.mediaType == 'VIDEO' ? 20 * 1024 * 1024 : 5 * 1024 * 1024;
+        if (bytes.isEmpty || bytes.length > maxBytes) {
+          throw StateError(form.mediaType == 'VIDEO'
+              ? 'Avis créé, mais la vidéo dépasse 20 Mo.'
+              : 'Avis créé, mais la photo dépasse 5 Mo.');
         }
         final extension = media.name.contains('.')
             ? media.name.split('.').last.toLowerCase()
@@ -756,10 +760,12 @@ class _ReviewForm {
     this.media,
     this.mediaType,
     this.durationSeconds,
+    required this.issueCodes,
   });
 
   final int rating;
   final String body;
+  final List<String> issueCodes;
   final XFile? media;
   final String? mediaType;
   final num? durationSeconds;
@@ -778,6 +784,7 @@ class _ReviewDialogState extends State<_ReviewDialog> {
   XFile? media;
   String? mediaType;
   num? durationSeconds;
+  final Set<String> issueCodes = {};
 
   Future<void> _pickPhoto() async {
     final picked = await ImagePicker().pickImage(
@@ -850,6 +857,69 @@ class _ReviewDialogState extends State<_ReviewDialog> {
           const SizedBox(height: 8),
           const Text(
             'Les avis honnêtes, même négatifs, sont autorisés. Les insultes, menaces et données personnelles ne le sont pas.',
+          ),
+          const SizedBox(height: 8),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              'Signaler un problème (facultatif)',
+              style: Theme.of(context).textTheme.titleSmall,
+            ),
+          ),
+          Wrap(
+            spacing: 6,
+            runSpacing: 4,
+            children: [
+              FilterChip(
+                label: const Text('Différent de l’image'),
+                selected: issueCodes.contains('NOT_AS_DESCRIBED'),
+                onSelected: (selected) => setState(() {
+                  selected ? issueCodes.add('NOT_AS_DESCRIBED') : issueCodes.remove('NOT_AS_DESCRIBED');
+                }),
+              ),
+              FilterChip(
+                label: const Text('Endommagé'),
+                selected: issueCodes.contains('DAMAGED'),
+                onSelected: (selected) => setState(() {
+                  selected ? issueCodes.add('DAMAGED') : issueCodes.remove('DAMAGED');
+                }),
+              ),
+              FilterChip(
+                label: const Text('Mauvais article'),
+                selected: issueCodes.contains('WRONG_ITEM'),
+                onSelected: (selected) => setState(() {
+                  selected ? issueCodes.add('WRONG_ITEM') : issueCodes.remove('WRONG_ITEM');
+                }),
+              ),
+              FilterChip(
+                label: const Text('Pièce manquante'),
+                selected: issueCodes.contains('MISSING_PARTS'),
+                onSelected: (selected) => setState(() {
+                  selected ? issueCodes.add('MISSING_PARTS') : issueCodes.remove('MISSING_PARTS');
+                }),
+              ),
+              FilterChip(
+                label: const Text('Qualité insuffisante'),
+                selected: issueCodes.contains('QUALITY_ISSUE'),
+                onSelected: (selected) => setState(() {
+                  selected ? issueCodes.add('QUALITY_ISSUE') : issueCodes.remove('QUALITY_ISSUE');
+                }),
+              ),
+              FilterChip(
+                label: const Text('Emballage abîmé'),
+                selected: issueCodes.contains('PACKAGING_ISSUE'),
+                onSelected: (selected) => setState(() {
+                  selected ? issueCodes.add('PACKAGING_ISSUE') : issueCodes.remove('PACKAGING_ISSUE');
+                }),
+              ),
+              FilterChip(
+                label: const Text('Autre'),
+                selected: issueCodes.contains('OTHER'),
+                onSelected: (selected) => setState(() {
+                  selected ? issueCodes.add('OTHER') : issueCodes.remove('OTHER');
+                }),
+              ),
+            ],
           ),
           const SizedBox(height: 8),
           TextField(
