@@ -77,27 +77,44 @@ Deno.serve(async (req: Request) => {
   if (req.method !== "POST") return response(405, { error: "method_not_allowed" });
   if (!url || !publishableKey || !serviceKey) return response(503, { error: "supabase_secrets_missing" });
 
-  const authorization = req.headers.get("Authorization") ?? "";
-  if (!authorization.startsWith("Bearer ")) return response(401, { error: "authentication_required" });
+  const monitorSecret = req.headers.get("x-platform-monitor-secret") ?? "";
+  if (monitorSecret) {
+    const secretCheck = await fetch(url + "/rest/v1/rpc/check_platform_monitor_secret", {
+      method: "POST",
+      headers: {
+        apikey: serviceKey,
+        Authorization: "Bearer " + serviceKey,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ p_secret: monitorSecret }),
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!secretCheck.ok || (await secretCheck.json()) !== true) {
+      return response(401, { error: "invalid_monitor_secret" });
+    }
+  } else {
+    const authorization = req.headers.get("Authorization") ?? "";
+    if (!authorization.startsWith("Bearer ")) return response(401, { error: "authentication_required" });
 
-  const userResponse = await fetch(url + "/auth/v1/user", {
-    headers: { apikey: publishableKey, Authorization: authorization },
-    signal: AbortSignal.timeout(8000),
-  });
-  if (!userResponse.ok) return response(401, { error: "invalid_session" });
+    const userResponse = await fetch(url + "/auth/v1/user", {
+      headers: { apikey: publishableKey, Authorization: authorization },
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!userResponse.ok) return response(401, { error: "invalid_session" });
 
-  const adminResponse = await fetch(url + "/rest/v1/rpc/is_admin_actor", {
-    method: "POST",
-    headers: {
-      apikey: publishableKey,
-      Authorization: authorization,
-      "Content-Type": "application/json",
-    },
-    body: "{}",
-    signal: AbortSignal.timeout(8000),
-  });
-  if (!adminResponse.ok || (await adminResponse.json()) !== true) {
-    return response(403, { error: "admin_access_required" });
+    const adminResponse = await fetch(url + "/rest/v1/rpc/is_admin_actor", {
+      method: "POST",
+      headers: {
+        apikey: publishableKey,
+        Authorization: authorization,
+        "Content-Type": "application/json",
+      },
+      body: "{}",
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!adminResponse.ok || (await adminResponse.json()) !== true) {
+      return response(403, { error: "admin_access_required" });
+    }
   }
 
   const results: Array<Record<string, unknown>> = [];
