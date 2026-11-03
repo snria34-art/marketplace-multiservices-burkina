@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:video_player/video_player.dart';
 
 import '../../../core/providers/repository_providers.dart';
 
@@ -242,7 +243,10 @@ class _AdminCatalogModerationPageState
                         if (row['seller_response_media_url'] is String)
                           Padding(
                             padding: const EdgeInsets.only(top: 8),
-                            child: Text('Pièce jointe du vendeur disponible'),
+                            child: _ModerationMediaPreview(
+                              url: row['seller_response_media_url'].toString(),
+                              isVideo: response['media_type'] == 'VIDEO',
+                            ),
                           ),
                       ],
                       const SizedBox(height: 12),
@@ -272,6 +276,77 @@ class _AdminCatalogModerationPageState
           );
         },
       ),
+    );
+  }
+}
+
+
+class _ModerationMediaPreview extends StatefulWidget {
+  const _ModerationMediaPreview({required this.url, required this.isVideo});
+
+  final String url;
+  final bool isVideo;
+
+  @override
+  State<_ModerationMediaPreview> createState() => _ModerationMediaPreviewState();
+}
+
+class _ModerationMediaPreviewState extends State<_ModerationMediaPreview> {
+  VideoPlayerController? _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.isVideo) {
+      _controller = VideoPlayerController.networkUrl(Uri.parse(widget.url))
+        ..initialize().then((_) {
+          if (mounted) setState(() {});
+        });
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller?.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!widget.isVideo) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(8),
+        child: Image.network(
+          widget.url,
+          height: 160,
+          width: double.infinity,
+          fit: BoxFit.contain,
+          errorBuilder: (_, __, ___) => const Text('Photo indisponible.'),
+        ),
+      );
+    }
+    final controller = _controller;
+    if (controller == null || !controller.value.isInitialized) {
+      return const Padding(
+        padding: EdgeInsets.all(12),
+        child: CircularProgressIndicator(),
+      );
+    }
+    return Column(
+      children: [
+        AspectRatio(
+          aspectRatio: controller.value.aspectRatio,
+          child: VideoPlayer(controller),
+        ),
+        IconButton(
+          onPressed: () {
+            setState(() {
+              controller.value.isPlaying ? controller.pause() : controller.play();
+            });
+          },
+          icon: Icon(controller.value.isPlaying ? Icons.pause : Icons.play_arrow),
+        ),
+      ],
     );
   }
 }
