@@ -98,6 +98,38 @@ class _CourierPageState extends ConsumerState<CourierPage> {
     return result == true;
   }
 
+  Future<Map<String, bool>?> _confirmPhotoPrivacy() async {
+    return showDialog<Map<String, bool>>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Vérifier la confidentialité'),
+        content: const Text(
+          'Si un visage apparaît sur la photo, ne l’utilisez que si la personne a donné son accord.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Reprendre la photo'),
+          ),
+          OutlinedButton(
+            onPressed: () => Navigator.pop(dialogContext, {
+              'person_visible': false,
+              'person_consent': false,
+            }),
+            child: const Text('Aucun visage visible'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, {
+              'person_visible': true,
+              'person_consent': true,
+            }),
+            child: const Text('Visage visible, accord obtenu'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _action(
     Map<String, dynamic> assignment,
     String action,
@@ -139,10 +171,14 @@ class _CourierPageState extends ConsumerState<CourierPage> {
           maxWidth: 1600,
         );
         if (photo == null) return;
+        final privacy = await _confirmPhotoPrivacy();
+        if (privacy == null) return;
         await repo.uploadEvidence(
           packageId: packageId,
           file: photo,
           evidenceType: 'DELIVERY',
+          personVisible: privacy['person_visible'] ?? false,
+          personConsent: privacy['person_consent'] ?? false,
         );
         final code = await _askCode('Code de confirmation du client', 6);
         if (code == null) return;
