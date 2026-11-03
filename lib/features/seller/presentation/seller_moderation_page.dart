@@ -1,6 +1,9 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:video_player/video_player.dart';
 
 import '../../../core/providers/repository_providers.dart';
 
@@ -33,7 +36,9 @@ class _SellerModerationPageState extends ConsumerState<SellerModerationPage> {
 
   Future<void> _respond(Map<String, dynamic> finding) async {
     final controller = TextEditingController();
-    XFile? photo;
+    XFile? media;
+    String? mediaType;
+    num? durationSeconds;
     final result = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
@@ -53,19 +58,61 @@ class _SellerModerationPageState extends ConsumerState<SellerModerationPage> {
                 ),
               ),
               const SizedBox(height: 8),
-              OutlinedButton.icon(
-                onPressed: () async {
-                  final picked = await ImagePicker().pickImage(
-                    source: ImageSource.camera,
-                    imageQuality: 75,
-                    maxWidth: 1600,
-                  );
-                  if (picked != null) setDialogState(() => photo = picked);
-                },
-                icon: const Icon(Icons.camera_alt_outlined),
-                label: const Text('Joindre une photo'),
+              Wrap(
+                spacing: 8,
+                children: [
+                  OutlinedButton.icon(
+                    onPressed: () async {
+                      final picked = await ImagePicker().pickImage(
+                        source: ImageSource.camera,
+                        imageQuality: 75,
+                        maxWidth: 1600,
+                      );
+                      if (picked != null) {
+                        setDialogState(() {
+                          media = picked;
+                          mediaType = 'IMAGE';
+                          durationSeconds = null;
+                        });
+                      }
+                    },
+                    icon: const Icon(Icons.camera_alt_outlined),
+                    label: const Text('Photo'),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: () async {
+                      final picked = await ImagePicker().pickVideo(
+                        source: ImageSource.gallery,
+                        maxDuration: const Duration(seconds: 10),
+                      );
+                      if (picked == null) return;
+                      final controller = VideoPlayerController.file(File(picked.path));
+                      try {
+                        await controller.initialize();
+                        final seconds = controller.value.duration.inMilliseconds / 1000;
+                        if (seconds <= 0 || seconds > 10) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('La vidéo doit durer 10 secondes maximum.')),
+                            );
+                          }
+                          return;
+                        }
+                        setDialogState(() {
+                          media = picked;
+                          mediaType = 'VIDEO';
+                          durationSeconds = seconds;
+                        });
+                      } finally {
+                        await controller.dispose();
+                      }
+                    },
+                    icon: const Icon(Icons.videocam_outlined),
+                    label: const Text('Vidéo (10 s)'),
+                  ),
+                ],
               ),
-              if (photo != null) Text(photo!.name),
+              if (media != null) Text(media!.name),
             ],
           ),
           actions: [
@@ -92,17 +139,20 @@ class _SellerModerationPageState extends ConsumerState<SellerModerationPage> {
       final user = client?.auth.currentUser;
       if (client == null || user == null) throw StateError('Session indisponible.');
       String? mediaPath;
-      if (photo != null) {
-        final bytes = await photo!.readAsBytes();
+      if (media != null) {
+        final bytes = await media!.readAsBytes();
         if (bytes.isEmpty || bytes.length > 5 * 1024 * 1024) {
           throw StateError('La photo doit faire au maximum 5 Mo.');
         }
-        mediaPath = '${user.id}/moderation/${finding['finding_id']}_${DateTime.now().microsecondsSinceEpoch}.jpg';
+        final extension = media!.name.contains('.')
+            ? media!.name.split('.').last.toLowerCase()
+            : (mediaType == 'VIDEO' ? 'mp4' : 'jpg');
+        mediaPath = '${user.id}/moderation/${finding['finding_id']}_${DateTime.now().microsecondsSinceEpoch}.$extension';
         await client.storage.from('order-feedback-media').uploadBinary(
           mediaPath,
           bytes,
           fileOptions: FileOptions(
-            contentType: photo!.mimeType ?? 'image/jpeg',
+            contentType: media!.mimeType ?? (mediaType == 'VIDEO' ? 'video/mp4' : 'image/jpeg'),
             upsert: false,
           ),
         );
@@ -111,6 +161,8 @@ class _SellerModerationPageState extends ConsumerState<SellerModerationPage> {
         'p_finding_id': finding['finding_id'],
         'p_response_text': message,
         'p_media_storage_path': mediaPath,
+        'p_media_type': mediaType,
+        'p_duration_seconds': durationSeconds,
       });
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
