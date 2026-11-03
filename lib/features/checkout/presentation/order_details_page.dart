@@ -124,6 +124,26 @@ class _OrderDetailsPageState extends ConsumerState<OrderDetailsPage> {
         ? Map<String, dynamic>.from(paymentRows.first as Map)
         : null;
 
+    final evidenceRaw = await client.rpc(
+      'get_customer_delivery_evidence',
+      params: {'p_order_id': widget.orderId},
+    );
+    final deliveryEvidence = <Map<String, dynamic>>[];
+    if (evidenceRaw is List) {
+      for (final rawEvidence in evidenceRaw) {
+        final evidence = Map<String, dynamic>.from(rawEvidence as Map);
+        final path = evidence['storage_path']?.toString();
+        if (path != null && path.isNotEmpty) {
+          try {
+            evidence['signed_url'] = await client.storage
+                .from('order-feedback-media')
+                .createSignedUrl(path, 300);
+          } catch (_) {}
+        }
+        deliveryEvidence.add(evidence);
+      }
+    }
+
     return _OrderDetails(
       order: Map<String, dynamic>.from(order),
       groups: (groups as List)
@@ -137,6 +157,7 @@ class _OrderDetailsPageState extends ConsumerState<OrderDetailsPage> {
           .toList(),
       refunds: refunds,
       payment: payment,
+      deliveryEvidence: deliveryEvidence,
     );
   }
 
@@ -538,6 +559,42 @@ class _OrderDetailsPageState extends ConsumerState<OrderDetailsPage> {
                   icon: const Icon(Icons.local_shipping_outlined),
                   label: const Text('Suivre la livraison'),
                 ),
+              if (data.deliveryEvidence.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                Text(
+                  'Preuve de remise du colis',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+                ...data.deliveryEvidence.map((evidence) {
+                  final url = evidence['signed_url']?.toString();
+                  return Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(10),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Photo du colis livré'),
+                          if (url != null && url.isNotEmpty)
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Image.network(
+                                url,
+                                height: 180,
+                                width: double.infinity,
+                                fit: BoxFit.contain,
+                                errorBuilder: (_, __, ___) =>
+                                    const Text('Photo indisponible.'),
+                              ),
+                            )
+                          else
+                            const Text('Photo indisponible.'),
+                          Text(evidence['created_at']?.toString() ?? ''),
+                        ],
+                      ),
+                    ),
+                  );
+                }),
+              ],
               if (delivered) ...[
                 const SizedBox(height: 8),
                 OutlinedButton.icon(
@@ -680,6 +737,7 @@ class _OrderDetails {
     required this.disputes,
     required this.payment,
     required this.refunds,
+    required this.deliveryEvidence,
   });
 
   final Map<String, dynamic> order;
@@ -688,6 +746,7 @@ class _OrderDetails {
   final List<Map<String, dynamic>> disputes;
   final Map<String, dynamic>? payment;
   final List<Map<String, dynamic>> refunds;
+  final List<Map<String, dynamic>> deliveryEvidence;
 }
 
 class _ReviewForm {
