@@ -966,6 +966,7 @@ class _ReviewDialogState extends State<_ReviewDialog> {
               media: media,
               mediaType: mediaType,
               durationSeconds: durationSeconds,
+              issueCodes: issueCodes.toList(),
             ),
           ),
           child: const Text('Envoyer'),
