@@ -164,6 +164,11 @@ class _AdminReviewModerationPageState
                       Text('Note : ${row['rating'] ?? '-'} / 5'),
                       const SizedBox(height: 8),
                       Text(row['body']?.toString() ?? ''),
+                      const SizedBox(height: 6),
+                      const Text(
+                        'Publier les avis négatifs sincères. Refuser les insultes, menaces, données personnelles, spam ou contenus manifestement frauduleux.',
+                        style: TextStyle(fontSize: 12),
+                      ),
                       if (media.isNotEmpty) ...[
                         const Divider(),
                         const Text('Photos et vidéos jointes'),
