@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 
@@ -84,10 +85,41 @@ class _CourierPageState extends ConsumerState<CourierPage> {
     if (repo == null) return;
 
     try {
+      final packageId = assignment['package_id'].toString();
       if (action == 'accept') {
         await repo.accept(assignment['id'].toString());
-      } else {
-        await repo.start(assignment['package_id'].toString());
+      } else if (action == 'pickup') {
+        final photo = await ImagePicker().pickImage(
+          source: ImageSource.camera,
+          imageQuality: 75,
+          maxWidth: 1600,
+        );
+        if (photo == null) return;
+        await repo.uploadEvidence(
+          packageId: packageId,
+          file: photo,
+          evidenceType: 'PICKUP',
+        );
+        final code = await _askCode('Code de retrait', 4);
+        if (code == null) return;
+        await repo.confirmPickup(packageId: packageId, pickupCode: code);
+      } else if (action == 'start') {
+        await repo.start(packageId);
+      } else if (action == 'deliver') {
+        final photo = await ImagePicker().pickImage(
+          source: ImageSource.camera,
+          imageQuality: 75,
+          maxWidth: 1600,
+        );
+        if (photo == null) return;
+        await repo.uploadEvidence(
+          packageId: packageId,
+          file: photo,
+          evidenceType: 'DELIVERY',
+        );
+        final code = await _askCode('Code de confirmation du client', 6);
+        if (code == null) return;
+        await repo.confirmDelivery(packageId: packageId, deliveryCode: code);
       }
 
       if (!mounted) return;
@@ -102,6 +134,150 @@ class _CourierPageState extends ConsumerState<CourierPage> {
         SnackBar(content: Text('Action impossible : ' + error.toString())),
       );
     }
+  }
+
+  Future<String?> _askCode(String title, int length) async {
+    final controller = TextEditingController();
+    final result = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(title),
+        content: TextField(
+          controller: controller,
+          keyboardType: TextInputType.number,
+          maxLength: length,
+          decoration: InputDecoration(
+            labelText: 'Code à $length chiffres',
+            border: const OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Annuler'),
+          ),
+          FilledButton(
+            onPressed: () {
+              final value = controller.text.trim();
+              if (value.length == length && RegExp(r'^\\d+
+    _locationTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Espace livreur'),
+        actions: [
+          IconButton(
+            tooltip: 'Partager ma position',
+            onPressed: _toggleLocation,
+            icon: Icon(
+              _sharingLocation
+                  ? Icons.location_on
+                  : Icons.location_off_outlined,
+            ),
+          ),
+        ],
+      ),
+      body: FutureBuilder<List<Map<String, dynamic>>>(
+        future: _future,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          if (snapshot.hasError) {
+            return Center(
+              child: Text('Erreur : ' + snapshot.error.toString()),
+            );
+          }
+
+          final items =
+              snapshot.data ?? const <Map<String, dynamic>>[];
+
+          if (items.isEmpty) {
+            return const Center(
+              child: Text('Aucune livraison affectée.'),
+            );
+          }
+
+          return ListView.separated(
+            padding: const EdgeInsets.all(12),
+            itemCount: items.length,
+            separatorBuilder: (_, __) => const SizedBox(height: 8),
+            itemBuilder: (_, index) {
+              final item = items[index];
+              final status = item['status']?.toString();
+
+              return Card(
+                child: ListTile(
+                  title: Text(
+                    'Colis ' + (item['package_id']?.toString() ?? '-'),
+                  ),
+                  subtitle: Text(
+                    'État : ' +
+                        (status ?? '-') +
+                        '\nAffecté le : ' +
+                        (item['assigned_at']?.toString() ?? '-'),
+                  ),
+                  trailing: _actions(item, status),
+                ),
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _actions(
+    Map<String, dynamic> item,
+    String? status,
+  ) {
+    if (status == 'ASSIGNED') {
+      return FilledButton(
+        onPressed: () => _action(item, 'accept'),
+        child: const Text('Accepter'),
+      );
+    }
+
+    if (status == 'ACCEPTED') {
+      return FilledButton.tonal(
+        onPressed: () => _action(item, 'pickup'),
+        child: const Text('Photo + retrait'),
+      );
+    }
+
+    if (status == 'PICKED_UP') {
+      return FilledButton.tonal(
+        onPressed: () => _action(item, 'start'),
+        child: const Text('Démarrer'),
+      );
+    }
+
+    if (status == 'IN_TRANSIT') {
+      return FilledButton(
+        onPressed: () => _action(item, 'deliver'),
+        child: const Text('Livrer le colis'),
+      );
+    }
+
+    return const Icon(Icons.check_circle_outline);
+  }
+}
+).hasMatch(value)) {
+                Navigator.pop(dialogContext, value);
+              }
+            },
+            child: const Text('Confirmer'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    return result;
   }
 
   @override
