@@ -520,7 +520,7 @@ class _OrderDetailsPageState extends ConsumerState<OrderDetailsPage> {
                     children: [
                       ..._items(
                         group: group,
-                        delivered: delivered,
+                        delivered: group['status']?.toString() == 'DELIVERED',
                         onReturn: _openReturn,
                         onReview: _review,
                       ),
@@ -641,24 +641,28 @@ class _OrderDetailsPageState extends ConsumerState<OrderDetailsPage> {
               ' XOF',
         ),
         trailing: delivered
-            ? PopupMenuButton<String>(
-                onSelected: (value) {
-                  if (value == 'return' && itemId.isNotEmpty) {
-                    onReturn(itemId);
-                  } else if (value == 'review' &&
-                      productId.isNotEmpty &&
-                      shopId.isNotEmpty) {
-                    onReview(productId, shopId);
-                  }
-                },
-                itemBuilder: (_) => const [
-                  PopupMenuItem(
-                    value: 'return',
-                    child: Text('Demander un retour'),
+            ? Wrap(
+                spacing: 4,
+                children: [
+                  TextButton.icon(
+                    onPressed: productId.isNotEmpty && shopId.isNotEmpty
+                        ? () => onReview(productId, shopId)
+                        : null,
+                    icon: const Icon(Icons.star_outline, size: 18),
+                    label: const Text('Noter'),
                   ),
-                  PopupMenuItem(
-                    value: 'review',
-                    child: Text('Laisser un avis'),
+                  PopupMenuButton<String>(
+                    onSelected: (value) {
+                      if (value == 'return' && itemId.isNotEmpty) {
+                        onReturn(itemId);
+                      }
+                    },
+                    itemBuilder: (_) => const [
+                      PopupMenuItem(
+                        value: 'return',
+                        child: Text('Demander un retour'),
+                      ),
+                    ],
                   ),
                 ],
               )
