@@ -383,6 +383,12 @@ class _AdminDashboardPageState
               ),
               const SizedBox(height: 8),
               FilledButton.icon(
+                onPressed: () => context.push('/admin/reviews'),
+                icon: const Icon(Icons.rate_review_outlined),
+                label: const Text('Modérer les avis clients'),
+              ),
+              const SizedBox(height: 8),
+              FilledButton.icon(
                 onPressed: () => context.push('/admin/platform-health'),
                 icon: const Icon(Icons.monitor_heart_outlined),
                 label: const Text('Surveillance et réparations'),
