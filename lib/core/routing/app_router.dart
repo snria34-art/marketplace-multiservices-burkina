@@ -42,6 +42,7 @@ import '../../features/verticals/presentation/vertical_discovery_page.dart';
 import '../../features/admin/presentation/admin_dashboard_page.dart';
 import '../../features/admin/presentation/admin_catalog_moderation_page.dart';
 import '../../features/admin/presentation/admin_platform_health_page.dart';
+import '../../features/admin/presentation/admin_review_moderation_page.dart';
 import '../../features/admin/presentation/admin_accounts_page.dart';
 import '../../features/admin/presentation/admin_refunds_page.dart';
 
@@ -149,6 +150,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/admin/platform-health',
         builder: (_, __) => const AdminPlatformHealthPage(),
+      ),
+      GoRoute(
+        path: '/admin/reviews',
+        builder: (_, __) => const AdminReviewModerationPage(),
       ),
       GoRoute(
         path: '/admin/accounts',
