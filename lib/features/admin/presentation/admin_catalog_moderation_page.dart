@@ -181,6 +181,9 @@ class _AdminCatalogModerationPageState
               final response = row['latest_seller_response'] is Map
                   ? Map<String, dynamic>.from(row['latest_seller_response'] as Map)
                   : null;
+              final ai = row['ai_analysis'] is Map
+                  ? Map<String, dynamic>.from(row['ai_analysis'] as Map)
+                  : null;
               return Card(
                 child: Padding(
                   padding: const EdgeInsets.all(14),
@@ -196,6 +199,13 @@ class _AdminCatalogModerationPageState
                       Text('Vendeur : ${shop['seller_name'] ?? '-'}'),
                       Text('Règle : ${row['rule_code'] ?? '-'} • Niveau : ${row['severity'] ?? '-'}'),
                       Text('Éléments détectés : ${(row['matched_terms'] as List? ?? const []).join(', ')}'),
+                      if (row['ai_model'] != null)
+                        Text('Analyse IA : ${row['ai_model']} • confiance ${row['ai_confidence'] ?? '-'}'),
+                      if (ai != null) ...[
+                        Text('Correspondance image/description : ${ai['image_description_match'] == true ? 'Oui' : 'À vérifier'}'),
+                        Text('Emballage visible : ${ai['packaging_observed'] == true ? 'Oui' : 'Non / illisible'}'),
+                      ] else
+                        const Text('Analyse IA : en attente ou non configurée.'),
                       if ((product['description']?.toString() ?? '').isNotEmpty) ...[
                         const SizedBox(height: 6),
                         Text(product['description'].toString()),
