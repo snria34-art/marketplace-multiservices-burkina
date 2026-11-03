@@ -786,6 +786,18 @@ class _ReviewDialogState extends State<_ReviewDialog> {
   num? durationSeconds;
   final Set<String> issueCodes = {};
 
+  void _toggleIssue(String code, bool selected) {
+    if (selected && issueCodes.length >= 5) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Vous pouvez signaler au maximum 5 problèmes.')),
+      );
+      return;
+    }
+    setState(() {
+      selected ? issueCodes.add(code) : issueCodes.remove(code);
+    });
+  }
+
   Future<void> _pickPhoto() async {
     final picked = await ImagePicker().pickImage(
       source: ImageSource.gallery,
@@ -873,51 +885,37 @@ class _ReviewDialogState extends State<_ReviewDialog> {
               FilterChip(
                 label: const Text('Différent de l’image'),
                 selected: issueCodes.contains('NOT_AS_DESCRIBED'),
-                onSelected: (selected) => setState(() {
-                  selected ? issueCodes.add('NOT_AS_DESCRIBED') : issueCodes.remove('NOT_AS_DESCRIBED');
-                }),
+                onSelected: (selected) => _toggleIssue('NOT_AS_DESCRIBED', selected),
               ),
               FilterChip(
                 label: const Text('Endommagé'),
                 selected: issueCodes.contains('DAMAGED'),
-                onSelected: (selected) => setState(() {
-                  selected ? issueCodes.add('DAMAGED') : issueCodes.remove('DAMAGED');
-                }),
+                onSelected: (selected) => _toggleIssue('DAMAGED', selected),
               ),
               FilterChip(
                 label: const Text('Mauvais article'),
                 selected: issueCodes.contains('WRONG_ITEM'),
-                onSelected: (selected) => setState(() {
-                  selected ? issueCodes.add('WRONG_ITEM') : issueCodes.remove('WRONG_ITEM');
-                }),
+                onSelected: (selected) => _toggleIssue('WRONG_ITEM', selected),
               ),
               FilterChip(
                 label: const Text('Pièce manquante'),
                 selected: issueCodes.contains('MISSING_PARTS'),
-                onSelected: (selected) => setState(() {
-                  selected ? issueCodes.add('MISSING_PARTS') : issueCodes.remove('MISSING_PARTS');
-                }),
+                onSelected: (selected) => _toggleIssue('MISSING_PARTS', selected),
               ),
               FilterChip(
                 label: const Text('Qualité insuffisante'),
                 selected: issueCodes.contains('QUALITY_ISSUE'),
-                onSelected: (selected) => setState(() {
-                  selected ? issueCodes.add('QUALITY_ISSUE') : issueCodes.remove('QUALITY_ISSUE');
-                }),
+                onSelected: (selected) => _toggleIssue('QUALITY_ISSUE', selected),
               ),
               FilterChip(
                 label: const Text('Emballage abîmé'),
                 selected: issueCodes.contains('PACKAGING_ISSUE'),
-                onSelected: (selected) => setState(() {
-                  selected ? issueCodes.add('PACKAGING_ISSUE') : issueCodes.remove('PACKAGING_ISSUE');
-                }),
+                onSelected: (selected) => _toggleIssue('PACKAGING_ISSUE', selected),
               ),
               FilterChip(
                 label: const Text('Autre'),
                 selected: issueCodes.contains('OTHER'),
-                onSelected: (selected) => setState(() {
-                  selected ? issueCodes.add('OTHER') : issueCodes.remove('OTHER');
-                }),
+                onSelected: (selected) => _toggleIssue('OTHER', selected),
               ),
             ],
           ),
