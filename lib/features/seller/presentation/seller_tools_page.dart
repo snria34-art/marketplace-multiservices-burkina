@@ -71,6 +71,12 @@ class SellerToolsPage extends StatelessWidget {
             onTap: () => context.push('/seller/clients'),
           ),
           ListTile(
+            leading: const Icon(Icons.fact_check_outlined),
+            title: const Text('Contrôle et réponses aux annonces'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push('/seller/moderation'),
+          ),
+          ListTile(
             leading: const Icon(Icons.rate_review_outlined),
             title: const Text('Avis'),
             trailing: const Icon(Icons.chevron_right),
