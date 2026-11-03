@@ -34,9 +34,10 @@ class _OrderDetailsPageState extends ConsumerState<OrderDetailsPage> {
 
   void _startRealtime() {
     final client = ref.read(supabaseProvider);
-    if (client?.auth.currentUser == null) return;
+    final user = client?.auth.currentUser;
+    if (client == null || user == null) return;
 
-    _orderChannel = client!
+    _orderChannel = client
         .channel('order-payment-' + widget.orderId)
         .onPostgresChanges(
           event: PostgresChangeEvent.all,
@@ -74,6 +75,20 @@ class _OrderDetailsPageState extends ConsumerState<OrderDetailsPage> {
           event: PostgresChangeEvent.all,
           schema: 'public',
           table: 'order_packages',
+          callback: (_) {
+            if (!mounted) return;
+            setState(() => _future = _load());
+          },
+        )
+        .onPostgresChanges(
+          event: PostgresChangeEvent.insert,
+          schema: 'public',
+          table: 'notifications',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'user_id',
+            value: user.id,
+          ),
           callback: (_) {
             if (!mounted) return;
             setState(() => _future = _load());
