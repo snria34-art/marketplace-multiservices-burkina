@@ -383,6 +383,12 @@ class _AdminDashboardPageState
               ),
               const SizedBox(height: 8),
               FilledButton.icon(
+                onPressed: () => context.push('/admin/platform-health'),
+                icon: const Icon(Icons.monitor_heart_outlined),
+                label: const Text('Surveillance et réparations'),
+              ),
+              const SizedBox(height: 8),
+              FilledButton.icon(
                 onPressed: () => context.push('/admin/catalog-moderation'),
                 icon: const Icon(Icons.fact_check_outlined),
                 label: const Text('Examiner les annonces signalées'),
