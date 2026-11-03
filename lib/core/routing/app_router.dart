@@ -40,6 +40,7 @@ import '../../features/seller/presentation/seller_moderation_page.dart';
 import '../../features/verticals/data/vertical_repository.dart';
 import '../../features/verticals/presentation/vertical_discovery_page.dart';
 import '../../features/admin/presentation/admin_dashboard_page.dart';
+import '../../features/admin/presentation/admin_assistant_page.dart';
 import '../../features/admin/presentation/admin_catalog_moderation_page.dart';
 import '../../features/admin/presentation/admin_platform_health_page.dart';
 import '../../features/admin/presentation/admin_review_moderation_page.dart';
@@ -146,6 +147,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/admin/catalog-moderation',
         builder: (_, __) => const AdminCatalogModerationPage(),
+      ),
+      GoRoute(
+        path: '/admin/assistant',
+        builder: (_, __) => const AdminAssistantPage(),
       ),
       GoRoute(
         path: '/admin/platform-health',
