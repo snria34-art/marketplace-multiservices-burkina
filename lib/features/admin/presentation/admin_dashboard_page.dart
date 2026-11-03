@@ -395,6 +395,12 @@ class _AdminDashboardPageState
               ),
               const SizedBox(height: 8),
               FilledButton.icon(
+                onPressed: () => context.push('/admin/assistant'),
+                icon: const Icon(Icons.support_agent_outlined),
+                label: const Text('Ouvrir mon assistant technique IA'),
+              ),
+              const SizedBox(height: 8),
+              FilledButton.icon(
                 onPressed: () => context.push('/admin/catalog-moderation'),
                 icon: const Icon(Icons.fact_check_outlined),
                 label: const Text('Examiner les annonces signalées'),
