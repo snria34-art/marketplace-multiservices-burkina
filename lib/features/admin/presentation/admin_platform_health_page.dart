@@ -77,6 +77,21 @@ class _AdminPlatformHealthPageState
     }
   }
 
+  String _statusLabel(String status) {
+    switch (status) {
+      case 'UP':
+        return 'Disponible';
+      case 'DEGRADED':
+        return 'Dégradé';
+      case 'DOWN':
+        return 'Indisponible';
+      case 'NOT_CONFIGURED':
+        return 'Clé non configurée';
+      default:
+        return 'Non testé';
+    }
+  }
+
   Color _statusColor(String status) {
     switch (status) {
       case 'UP':
@@ -161,7 +176,7 @@ class _AdminPlatformHealthPageState
                     leading: Icon(Icons.circle, color: _statusColor(status), size: 14),
                     title: Text(row['component']?.toString() ?? 'Service'),
                     subtitle: Text(
-                      '$status • ${row['response_ms'] ?? '-'} ms\n'
+                      '${_statusLabel(status)} • ${row['response_ms'] ?? '-'} ms\n'
                       '${details['reason'] ?? details['http_status'] ?? ''}',
                     ),
                     trailing: Text(
