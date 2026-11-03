@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:video_player/video_player.dart';
 
 import '../../../core/providers/repository_providers.dart';
 
@@ -54,9 +55,30 @@ class _SellerReviewsPageState extends ConsumerState<SellerReviewsPage> {
         .order('created_at', ascending: false)
         .limit(200);
 
-    return (rows as List)
-        .map((row) => Map<String, dynamic>.from(row as Map))
-        .toList();
+    final result = <Map<String, dynamic>>[];
+    for (final rawRow in rows as List) {
+      final row = Map<String, dynamic>.from(rawRow as Map);
+      final mediaRaw = await client.rpc(
+        'get_public_review_media',
+        params: {'p_review_id': row['id']},
+      );
+      final media = <Map<String, dynamic>>[];
+      for (final rawMedia in (mediaRaw is List ? mediaRaw : const [])) {
+        final item = Map<String, dynamic>.from(rawMedia as Map);
+        final path = item['storage_path']?.toString();
+        if (path != null && path.isNotEmpty) {
+          try {
+            item['signed_url'] = await client.storage
+                .from('order-feedback-media')
+                .createSignedUrl(path, 300);
+          } catch (_) {}
+        }
+        media.add(item);
+      }
+      row['media'] = media;
+      result.add(row);
+    }
+    return result;
   }
 
   @override
@@ -93,20 +115,133 @@ class _SellerReviewsPageState extends ConsumerState<SellerReviewsPage> {
               final product = row['products'] is Map
                   ? Map<String, dynamic>.from(row['products'] as Map)
                   : const <String, dynamic>{};
+              final media = row['media'] as List? ?? const [];
               return Card(
-                child: ListTile(
-                  leading: CircleAvatar(
-                    child: Text(row['rating']?.toString() ?? '-'),
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          CircleAvatar(
+                            child: Text(row['rating']?.toString() ?? '-'),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              product['name']?.toString() ?? 'Produit',
+                              style: Theme.of(context).textTheme.titleMedium,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(row['body']?.toString() ?? ''),
+                      if (media.isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        const Text('Médias joints par le client'),
+                        ...media.map((rawMedia) {
+                          final item = Map<String, dynamic>.from(rawMedia as Map);
+                          final url = item['signed_url']?.toString();
+                          if (url == null || url.isEmpty) {
+                            return const Text('Média indisponible.');
+                          }
+                          return _SellerReviewMedia(
+                            url: url,
+                            isVideo: item['media_type'] == 'VIDEO',
+                          );
+                        }),
+                      ],
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: Text(
+                          row['created_at']?.toString() ?? '',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ),
+                    ],
                   ),
-                  title: Text(product['name']?.toString() ?? 'Produit'),
-                  subtitle: Text(row['body']?.toString() ?? ''),
-                  trailing: Text(row['created_at']?.toString() ?? ''),
                 ),
               );
             },
           );
         },
       ),
+    );
+  }
+}
+
+
+class _SellerReviewMedia extends StatefulWidget {
+  const _SellerReviewMedia({required this.url, required this.isVideo});
+
+  final String url;
+  final bool isVideo;
+
+  @override
+  State<_SellerReviewMedia> createState() => _SellerReviewMediaState();
+}
+
+class _SellerReviewMediaState extends State<_SellerReviewMedia> {
+  VideoPlayerController? _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.isVideo) {
+      _controller = VideoPlayerController.networkUrl(Uri.parse(widget.url))
+        ..initialize().then((_) {
+          if (mounted) setState(() {});
+        });
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller?.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!widget.isVideo) {
+      return Padding(
+        padding: const EdgeInsets.only(top: 8),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: Image.network(
+            widget.url,
+            height: 160,
+            width: double.infinity,
+            fit: BoxFit.contain,
+            errorBuilder: (_, __, ___) => const Text('Photo indisponible.'),
+          ),
+        ),
+      );
+    }
+    final controller = _controller;
+    if (controller == null || !controller.value.isInitialized) {
+      return const Padding(
+        padding: EdgeInsets.all(12),
+        child: CircularProgressIndicator(),
+      );
+    }
+    return Column(
+      children: [
+        AspectRatio(
+          aspectRatio: controller.value.aspectRatio,
+          child: VideoPlayer(controller),
+        ),
+        IconButton(
+          onPressed: () {
+            setState(() {
+              controller.value.isPlaying ? controller.pause() : controller.play();
+            });
+          },
+          icon: Icon(controller.value.isPlaying ? Icons.pause : Icons.play_arrow),
+        ),
+      ],
     );
   }
 }
