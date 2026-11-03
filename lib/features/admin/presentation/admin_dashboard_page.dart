@@ -383,6 +383,12 @@ class _AdminDashboardPageState
               ),
               const SizedBox(height: 8),
               FilledButton.icon(
+                onPressed: () => context.push('/admin/catalog-moderation'),
+                icon: const Icon(Icons.fact_check_outlined),
+                label: const Text('Examiner les annonces signalées'),
+              ),
+              const SizedBox(height: 8),
+              FilledButton.icon(
                 onPressed: () => context.push('/admin/accounts'),
                 icon: const Icon(Icons.manage_accounts_outlined),
                 label: const Text('Gérer les comptes utilisateurs'),
