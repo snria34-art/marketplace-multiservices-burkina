@@ -401,6 +401,12 @@ class _AdminDashboardPageState
               ),
               const SizedBox(height: 8),
               FilledButton.icon(
+                onPressed: () => context.push('/admin/return-policies'),
+                icon: const Icon(Icons.assignment_return_outlined),
+                label: const Text('Configurer les délais de retour'),
+              ),
+              const SizedBox(height: 8),
+              FilledButton.icon(
                 onPressed: () => context.push('/admin/catalog-moderation'),
                 icon: const Icon(Icons.fact_check_outlined),
                 label: const Text('Examiner les annonces signalées'),
