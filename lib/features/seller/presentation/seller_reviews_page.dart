@@ -49,7 +49,7 @@ class _SellerReviewsPageState extends ConsumerState<SellerReviewsPage> {
     final rows = await client
         .from('reviews')
         .select(
-          'id,rating,body,created_at,product_id,products(name),shop_id',
+          'id,rating,body,issue_codes,created_at,product_id,products(name),shop_id',
         )
         .inFilter('shop_id', shopIds)
         .order('created_at', ascending: false)
