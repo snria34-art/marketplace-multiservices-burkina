@@ -75,7 +75,10 @@ class _OrdersPageState extends ConsumerState<OrdersPage> {
               separatorBuilder: (_, __) => const SizedBox(height: 8),
               itemBuilder: (_, index) {
                 final order = orders[index];
-                final status = order['status']?.toString() ?? '';
+                final rawStatus = order['status']?.toString() ?? '';
+                final status = order['completed_at'] != null
+                    ? 'Commande terminée'
+                    : rawStatus.replaceAll('_', ' ');
                 final orderId = order['order_id']?.toString() ?? '';
 
                 return Card(
