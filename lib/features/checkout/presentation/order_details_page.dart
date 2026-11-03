@@ -474,6 +474,35 @@ class _OrderDetailsPageState extends ConsumerState<OrderDetailsPage> {
     }
   }
 
+  String _statusLabel(String? raw) {
+    switch (raw) {
+      case 'PENDING_PAYMENT':
+        return 'Paiement en attente';
+      case 'PAID':
+        return 'Paiement confirmé';
+      case 'CONFIRMED':
+        return 'Commande confirmée';
+      case 'PREPARING':
+        return 'En cours de préparation';
+      case 'READY_FOR_PICKUP':
+        return 'Prête à être récupérée';
+      case 'PARTIALLY_FULFILLED':
+        return 'Commande partiellement traitée';
+      case 'IN_TRANSIT':
+        return 'En cours de livraison';
+      case 'DELIVERED':
+        return 'Livrée';
+      case 'CANCELLED':
+        return 'Annulée';
+      case 'REFUNDED':
+        return 'Remboursée';
+      case 'DISPUTED':
+        return 'En litige';
+      default:
+        return (raw ?? 'Statut inconnu').replaceAll('_', ' ');
+    }
+  }
+
   void _showReviewMessage(String message) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
@@ -525,7 +554,7 @@ class _OrderDetailsPageState extends ConsumerState<OrderDetailsPage> {
                   ),
                   title: Text(widget.orderId),
                   subtitle: Text(
-                    status + ' • ' + (order['created_at']?.toString() ?? ''),
+                    _statusLabel(status) + ' • ' + (order['created_at']?.toString() ?? ''),
                   ),
                   trailing: Text(
                     (order['total']?.toString() ?? '0') +
@@ -577,7 +606,8 @@ class _OrderDetailsPageState extends ConsumerState<OrderDetailsPage> {
                           : 'Boutique',
                     ),
                     subtitle: Text(
-                      (group['subtotal']?.toString() ?? '0') + ' XOF',
+                      _statusLabel(group['status']?.toString()) +
+                          ' • ' + (group['subtotal']?.toString() ?? '0') + ' XOF',
                     ),
                     children: [
                       ..._items(
