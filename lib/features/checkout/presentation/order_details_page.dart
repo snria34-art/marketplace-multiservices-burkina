@@ -1,4 +1,8 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:video_player/video_player.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -376,9 +380,37 @@ class _OrderDetailsPageState extends ConsumerState<OrderDetailsPage> {
           'p_body': form.body,
         },
       );
+      final media = form.media;
+      if (media != null) {
+        final clientUser = client?.auth.currentUser;
+        if (client == null || clientUser == null || id == null) {
+          throw StateError('Avis créé, mais média non associé : session indisponible.');
+        }
+        final bytes = await media.readAsBytes();
+        if (bytes.isEmpty || bytes.length > 5 * 1024 * 1024) {
+          throw StateError('Avis créé, mais le média dépasse la limite de 5 Mo.');
+        }
+        final extension = media.name.contains('.')
+            ? media.name.split('.').last.toLowerCase()
+            : (form.mediaType == 'VIDEO' ? 'mp4' : 'jpg');
+        final storagePath = '${clientUser.id}/reviews/${id}_${DateTime.now().microsecondsSinceEpoch}.$extension';
+        final mime = media.mimeType ??
+            (form.mediaType == 'VIDEO' ? 'video/mp4' : 'image/jpeg');
+        await client.storage.from('order-feedback-media').uploadBinary(
+          storagePath,
+          bytes,
+          fileOptions: FileOptions(contentType: mime, upsert: false),
+        );
+        await client.rpc('attach_review_media', params: {
+          'p_review_id': id.toString(),
+          'p_storage_path': storagePath,
+          'p_media_type': form.mediaType,
+          'p_duration_seconds': form.durationSeconds,
+        });
+      }
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Avis envoyé pour modération : ' + id.toString())),
+        SnackBar(content: Text('Avis envoyé pour modération' + (media == null ? '.' : ' avec média.'))),
       );
     } catch (error) {
       if (!mounted) return;
@@ -655,10 +687,19 @@ class _OrderDetails {
 }
 
 class _ReviewForm {
-  const _ReviewForm({required this.rating, required this.body});
+  const _ReviewForm({
+    required this.rating,
+    required this.body,
+    this.media,
+    this.mediaType,
+    this.durationSeconds,
+  });
 
   final int rating;
   final String body;
+  final XFile? media;
+  final String? mediaType;
+  final num? durationSeconds;
 }
 
 class _ReviewDialog extends StatefulWidget {
@@ -671,6 +712,51 @@ class _ReviewDialog extends StatefulWidget {
 class _ReviewDialogState extends State<_ReviewDialog> {
   int rating = 5;
   final body = TextEditingController();
+  XFile? media;
+  String? mediaType;
+  num? durationSeconds;
+
+  Future<void> _pickPhoto() async {
+    final picked = await ImagePicker().pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 75,
+      maxWidth: 1600,
+    );
+    if (picked == null) return;
+    setState(() {
+      media = picked;
+      mediaType = 'IMAGE';
+      durationSeconds = null;
+    });
+  }
+
+  Future<void> _pickVideo() async {
+    final picked = await ImagePicker().pickVideo(
+      source: ImageSource.gallery,
+      maxDuration: const Duration(seconds: 10),
+    );
+    if (picked == null) return;
+    final controller = VideoPlayerController.file(File(picked.path));
+    try {
+      await controller.initialize();
+      final seconds = controller.value.duration.inMilliseconds / 1000;
+      if (seconds <= 0 || seconds > 10) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('La vidéo doit durer 10 secondes maximum.')),
+          );
+        }
+        return;
+      }
+      setState(() {
+        media = picked;
+        mediaType = 'VIDEO';
+        durationSeconds = seconds;
+      });
+    } finally {
+      await controller.dispose();
+    }
+  }
 
   @override
   void dispose() {
@@ -702,11 +788,31 @@ class _ReviewDialogState extends State<_ReviewDialog> {
           TextField(
             controller: body,
             maxLines: 4,
+            maxLength: 2000,
             decoration: const InputDecoration(
               labelText: 'Commentaire (optionnel)',
+              helperText: 'Critiquez le produit sans insultes ni propos haineux.',
               border: OutlineInputBorder(),
             ),
           ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            children: [
+              OutlinedButton.icon(
+                onPressed: _pickPhoto,
+                icon: const Icon(Icons.photo_outlined),
+                label: const Text('Photo'),
+              ),
+              OutlinedButton.icon(
+                onPressed: _pickVideo,
+                icon: const Icon(Icons.videocam_outlined),
+                label: const Text('Vidéo (10 s max.)'),
+              ),
+            ],
+          ),
+          if (media != null)
+            Text('Média sélectionné : ${media!.name}'),
         ],
       ),
       actions: [
@@ -717,7 +823,13 @@ class _ReviewDialogState extends State<_ReviewDialog> {
         FilledButton(
           onPressed: () => Navigator.pop(
             context,
-            _ReviewForm(rating: rating, body: body.text.trim()),
+            _ReviewForm(
+              rating: rating,
+              body: body.text.trim(),
+              media: media,
+              mediaType: mediaType,
+              durationSeconds: durationSeconds,
+            ),
           ),
           child: const Text('Envoyer'),
         ),
