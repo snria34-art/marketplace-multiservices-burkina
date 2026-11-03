@@ -42,6 +42,8 @@ class CourierRepository {
     required String packageId,
     required XFile file,
     required String evidenceType,
+    bool personVisible = false,
+    bool personConsent = false,
   }) async {
     final user = client.auth.currentUser;
     if (user == null) throw StateError('Authentification requise.');
