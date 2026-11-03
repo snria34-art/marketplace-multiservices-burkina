@@ -108,6 +108,19 @@ class _AdminReviewModerationPageState
     }
   }
 
+  String _issueLabel(dynamic code) {
+    const labels = {
+      'NOT_AS_DESCRIBED': 'Différent de l’image',
+      'DAMAGED': 'Endommagé',
+      'WRONG_ITEM': 'Mauvais article',
+      'MISSING_PARTS': 'Pièce manquante',
+      'QUALITY_ISSUE': 'Qualité insuffisante',
+      'PACKAGING_ISSUE': 'Emballage abîmé',
+      'OTHER': 'Autre',
+    };
+    return labels[code.toString()] ?? code.toString();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
