@@ -67,8 +67,8 @@ class CourierRepository {
       'p_media_type': mime.startsWith('video/') ? 'VIDEO' : 'IMAGE',
       'p_evidence_type': evidenceType,
       'p_duration_seconds': null,
-      'p_person_visible': false,
-      'p_person_consent': false,
+      'p_person_visible': personVisible,
+      'p_person_consent': personConsent,
     });
   }
 
