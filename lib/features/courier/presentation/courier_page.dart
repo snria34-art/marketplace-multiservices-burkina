@@ -159,7 +159,21 @@ class _CourierPageState extends ConsumerState<CourierPage> {
           FilledButton(
             onPressed: () {
               final value = controller.text.trim();
-              if (value.length == length && RegExp(r'^\\d+
+              if (value.length == length && RegExp(r'^\d+$').hasMatch(value)) {
+                Navigator.pop(dialogContext, value);
+              }
+            },
+            child: const Text('Confirmer'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    return result;
+  }
+
+  @override
+  void dispose() {
     _locationTimer?.cancel();
     super.dispose();
   }
@@ -261,114 +275,6 @@ class _CourierPageState extends ConsumerState<CourierPage> {
       return FilledButton(
         onPressed: () => _action(item, 'deliver'),
         child: const Text('Livrer le colis'),
-      );
-    }
-
-    return const Icon(Icons.check_circle_outline);
-  }
-}
-).hasMatch(value)) {
-                Navigator.pop(dialogContext, value);
-              }
-            },
-            child: const Text('Confirmer'),
-          ),
-        ],
-      ),
-    );
-    controller.dispose();
-    return result;
-  }
-
-  @override
-  void dispose() {
-    _locationTimer?.cancel();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Espace livreur'),
-        actions: [
-          IconButton(
-            tooltip: 'Partager ma position',
-            onPressed: _toggleLocation,
-            icon: Icon(
-              _sharingLocation
-                  ? Icons.location_on
-                  : Icons.location_off_outlined,
-            ),
-          ),
-        ],
-      ),
-      body: FutureBuilder<List<Map<String, dynamic>>>(
-        future: _future,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          if (snapshot.hasError) {
-            return Center(
-              child: Text('Erreur : ' + snapshot.error.toString()),
-            );
-          }
-
-          final items =
-              snapshot.data ?? const <Map<String, dynamic>>[];
-
-          if (items.isEmpty) {
-            return const Center(
-              child: Text('Aucune livraison affectée.'),
-            );
-          }
-
-          return ListView.separated(
-            padding: const EdgeInsets.all(12),
-            itemCount: items.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 8),
-            itemBuilder: (_, index) {
-              final item = items[index];
-              final status = item['status']?.toString();
-
-              return Card(
-                child: ListTile(
-                  title: Text(
-                    'Colis ' + (item['package_id']?.toString() ?? '-'),
-                  ),
-                  subtitle: Text(
-                    'État : ' +
-                        (status ?? '-') +
-                        '\nAffecté le : ' +
-                        (item['assigned_at']?.toString() ?? '-'),
-                  ),
-                  trailing: _actions(item, status),
-                ),
-              );
-            },
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _actions(
-    Map<String, dynamic> item,
-    String? status,
-  ) {
-    if (status == 'ASSIGNED') {
-      return FilledButton(
-        onPressed: () => _action(item, 'accept'),
-        child: const Text('Accepter'),
-      );
-    }
-
-    if (status == 'ACCEPTED' || status == 'PICKED_UP') {
-      return FilledButton.tonal(
-        onPressed: () => _action(item, 'start'),
-        child: const Text('Démarrer'),
       );
     }
 
