@@ -144,8 +144,17 @@ Deno.serve(async (req: Request) => {
       return json(422, { error: "product_images_required" });
     }
 
-    const selectedImages = images.slice(0, 4);
+    const productImages = images.filter((item: any) => item.image_role === "PRODUCT");
+    const packagingImages = images.filter((item: any) => item.image_role === "PACKAGING");
+    const labelImages = images.filter((item: any) => item.image_role === "LABEL");
+    const selectedImages = [
+      ...productImages.slice(0, 2),
+      ...packagingImages.slice(0, 1),
+      ...labelImages.slice(0, 1),
+      ...productImages.slice(2, 4),
+    ].slice(0, 4);
     const imageParts: Array<Record<string, unknown>> = [];
+    const imageRoles: Array<Record<string, unknown>> = [];
     for (const item of selectedImages) {
       const path = String(item.storage_path ?? "");
       if (!path.startsWith("products/" + productId + "/")) continue;
@@ -166,20 +175,20 @@ Deno.serve(async (req: Request) => {
           detail: "high",
         },
       });
+      imageRoles.push({
+        role: item.image_role ?? "PRODUCT",
+        alt_text: item.alt_text ?? null,
+      });
     }
 
     if (imageParts.length === 0) {
       return json(422, { error: "no_readable_product_images" });
     }
 
-    const roles = selectedImages.map((image: any) => ({
-      role: image.image_role ?? "PRODUCT",
-      alt_text: image.alt_text ?? null,
-    }));
     const prompt = "Examine cette annonce d'une marketplace au Burkina Faso.\n" +
       "Nom: " + String(product.name ?? "") + "\n" +
       "Description: " + String(product.description ?? "") + "\n" +
-      "Rôles des images dans le même ordre: " + JSON.stringify(roles) + "\n\n" +
+      "Rôles des images dans le même ordre: " + JSON.stringify(imageRoles) + "\n\n" +
       "Tu es un outil de pré-modération, pas un juge final. Compare précisément le produit visible, les emballages, les étiquettes et les allégations de la description.\n" +
       "Règles:\n" +
       "- Distingue une vraie arme fonctionnelle d'un jouet clairement identifiable (pistolet-jouet, pistolet à eau, jouet en plastique). Un jouet clairement identifiable ne doit pas être classé comme arme réelle; signale-le en REVIEW si ambigu.\n" +
