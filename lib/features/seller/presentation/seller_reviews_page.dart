@@ -81,6 +81,19 @@ class _SellerReviewsPageState extends ConsumerState<SellerReviewsPage> {
     return result;
   }
 
+  String _issueLabel(dynamic code) {
+    const labels = {
+      'NOT_AS_DESCRIBED': 'Différent de l’image',
+      'DAMAGED': 'Endommagé',
+      'WRONG_ITEM': 'Mauvais article',
+      'MISSING_PARTS': 'Pièce manquante',
+      'QUALITY_ISSUE': 'Qualité insuffisante',
+      'PACKAGING_ISSUE': 'Emballage abîmé',
+      'OTHER': 'Autre',
+    };
+    return labels[code.toString()] ?? code.toString();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -138,6 +151,13 @@ class _SellerReviewsPageState extends ConsumerState<SellerReviewsPage> {
                       ),
                       const SizedBox(height: 8),
                       Text(row['body']?.toString() ?? ''),
+                      if ((row['issue_codes'] as List? ?? const []).isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 6),
+                          child: Text(
+                            'Problèmes signalés : ${(row['issue_codes'] as List).map(_issueLabel).join(', ')}',
+                          ),
+                        ),
                       if (media.isNotEmpty) ...[
                         const SizedBox(height: 8),
                         const Text('Médias joints par le client'),
