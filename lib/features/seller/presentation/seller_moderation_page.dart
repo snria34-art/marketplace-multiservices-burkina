@@ -141,8 +141,11 @@ class _SellerModerationPageState extends ConsumerState<SellerModerationPage> {
       String? mediaPath;
       if (media != null) {
         final bytes = await media!.readAsBytes();
-        if (bytes.isEmpty || bytes.length > 5 * 1024 * 1024) {
-          throw StateError('La photo doit faire au maximum 5 Mo.');
+        final maxBytes = mediaType == 'VIDEO' ? 20 * 1024 * 1024 : 5 * 1024 * 1024;
+        if (bytes.isEmpty || bytes.length > maxBytes) {
+          throw StateError(mediaType == 'VIDEO'
+              ? 'La vidéo doit faire au maximum 20 Mo.'
+              : 'La photo doit faire au maximum 5 Mo.');
         }
         final extension = media!.name.contains('.')
             ? media!.name.split('.').last.toLowerCase()
