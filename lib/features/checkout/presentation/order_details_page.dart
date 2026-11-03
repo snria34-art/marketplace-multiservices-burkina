@@ -397,7 +397,7 @@ class _OrderDetailsPageState extends ConsumerState<OrderDetailsPage> {
       return;
     }
 
-    Uint8List? mediaBytes;
+    List<int>? mediaBytes;
     if (form.media != null) {
       mediaBytes = await form.media!.readAsBytes();
       final maxBytes = form.mediaType == 'VIDEO'
