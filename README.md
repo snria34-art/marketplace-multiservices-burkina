@@ -37,8 +37,10 @@ Le workflow GitHub Actions prévu exécute `flutter analyze` et `flutter test`. 
 
 ## Base de données et migrations
 
-Au 11 octobre 2026, la base Supabase active indique **243 migrations appliquées**. Ce chiffre décrit l'historique distant, pas le degré de complétude fonctionnelle.
+Au 4 novembre 2026, la base Supabase active indique **258 migrations appliquées**. Ce chiffre décrit l'historique distant, pas le degré de complétude fonctionnelle.
 
-**Point bloquant détecté pendant l'audit :** le dépôt GitHub ne permet pas actuellement de retrouver les migrations initiales par leur nom/version, alors que la base distante contient un historique beaucoup plus long. Les migrations de correction ajoutées pendant l'audit sont dans `supabase/migrations/`, mais l'historique complet doit être synchronisé avant de prétendre qu'un nouvel environnement peut être recréé de zéro de façon reproductible.
+Les corrections récentes du stock par variante, des annulations, des fonctions administrateur et des RPC coursier sont documentées dans [l'audit du 4 novembre 2026](docs/audit-2026-11-04.md).
 
-Consulter `docs/audit-2026-10-11.md` pour les constats confirmés et les points encore ouverts.
+**Point bloquant de reproductibilité :** l'historique SQL complet n'est pas encore synchronisé dans le dépôt. Les migrations appliquées à distance doivent être ajoutées et vérifiées dans `supabase/migrations/` avant de considérer le dépôt comme capable de recréer une base vide de façon déterministe.
+
+Consulter également [l'audit du 11 octobre 2026](docs/audit-2026-10-11.md) pour les constats historiques.
