@@ -41,6 +41,6 @@ Au 4 novembre 2026, la base Supabase active indique **258 migrations appliquées
 
 Les corrections récentes du stock par variante, des annulations, des fonctions administrateur et des RPC coursier sont documentées dans [l'audit du 4 novembre 2026](docs/audit-2026-11-04.md).
 
-**Point bloquant de reproductibilité :** l'historique SQL complet n'est pas encore synchronisé dans le dépôt. Les migrations appliquées à distance doivent être ajoutées et vérifiées dans `supabase/migrations/` avant de considérer le dépôt comme capable de recréer une base vide de façon déterministe.
+**Point bloquant de reproductibilité :** les 15 migrations de correction de novembre 2026 sont maintenant présentes dans `supabase/migrations/`. L'historique SQL plus ancien reste incomplet dans le dépôt ; la reconstruction d'une base vide n'est donc pas encore démontrée.
 
 Consulter également [l'audit du 11 octobre 2026](docs/audit-2026-10-11.md) pour les constats historiques.
