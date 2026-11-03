@@ -185,6 +185,9 @@ class _AdminCatalogModerationPageState
               final ai = row['ai_analysis'] is Map
                   ? Map<String, dynamic>.from(row['ai_analysis'] as Map)
                   : null;
+              final restriction = row['active_listing_restriction'] is Map
+                  ? Map<String, dynamic>.from(row['active_listing_restriction'] as Map)
+                  : null;
               return Card(
                 child: Padding(
                   padding: const EdgeInsets.all(14),
