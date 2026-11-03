@@ -133,11 +133,20 @@ Deno.serve(async (req: Request) => {
   }));
 
   results.push(await timed("SUPABASE_STORAGE", async () => {
-    const res = await fetch(url + "/storage/v1/bucket/order-feedback-media", {
-      headers: { apikey: serviceKey, Authorization: "Bearer " + serviceKey },
-      signal: AbortSignal.timeout(8000),
-    });
-    return { status: res.ok ? "UP" : res.status < 500 ? "DEGRADED" : "DOWN", details: { http_status: res.status, bucket: "order-feedback-media" } };
+    const bucketNames = ["order-feedback-media", "product-media"];
+    const bucketResults = await Promise.all(bucketNames.map(async (bucket) => {
+      const res = await fetch(url + "/storage/v1/bucket/" + bucket, {
+        headers: { apikey: serviceKey, Authorization: "Bearer " + serviceKey },
+        signal: AbortSignal.timeout(8000),
+      });
+      return { bucket, status: res.ok ? "UP" : res.status < 500 ? "DEGRADED" : "DOWN", http_status: res.status };
+    }));
+    const status = bucketResults.every((item) => item.status === "UP")
+      ? "UP"
+      : bucketResults.some((item) => item.status === "DOWN")
+        ? "DOWN"
+        : "DEGRADED";
+    return { status, details: { buckets: bucketResults } };
   }));
 
   results.push(await timed("NETWORK", async () => {
