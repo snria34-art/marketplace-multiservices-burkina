@@ -55,6 +55,29 @@ class _OrderDetailsPageState extends ConsumerState<OrderDetailsPage> {
             setState(() => _future = _load());
           },
         )
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'order_groups',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'order_id',
+            value: widget.orderId,
+          ),
+          callback: (_) {
+            if (!mounted) return;
+            setState(() => _future = _load());
+          },
+        )
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'order_packages',
+          callback: (_) {
+            if (!mounted) return;
+            setState(() => _future = _load());
+          },
+        )
         .subscribe();
   }
 
