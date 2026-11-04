@@ -84,6 +84,8 @@ class PushNotificationService {
         case AuthChangeEvent.tokenRefreshed:
         case AuthChangeEvent.userUpdated:
           await _registerCurrentToken();
+        case AuthChangeEvent.passwordRecovery:
+          break;
         case AuthChangeEvent.signedOut:
           final token = _currentToken;
           if (token != null) {
