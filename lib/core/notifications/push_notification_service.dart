@@ -86,6 +86,10 @@ class PushNotificationService {
           await _registerCurrentToken();
         case AuthChangeEvent.passwordRecovery:
           break;
+        case AuthChangeEvent.userDeleted:
+          // The account no longer exists; avoid an RPC with a deleted session.
+          _currentToken = null;
+          break;
         case AuthChangeEvent.signedOut:
           final token = _currentToken;
           if (token != null) {
