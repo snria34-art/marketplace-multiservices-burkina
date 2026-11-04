@@ -39,5 +39,12 @@ begin
 end;
 $function$;
 revoke all on function private.scan_toy_weapon_products() from public,anon,authenticated;
+
+-- Keep the scheduled classifier idempotent when this migration is applied
+-- to a project where the job was previously created manually.
+select cron.unschedule(jobid)
+from cron.job
+where jobname='toy-weapon-classifier';
+
 select cron.schedule('toy-weapon-classifier','*/10 * * * *',
-  $$select private.scan_toy_weapon_products();$$);
+  $select private.scan_toy_weapon_products();$);
