@@ -202,6 +202,11 @@ class _AdminCatalogModerationPageState
                       Text('Boutique : ${shop['name'] ?? '-'}'),
                       Text('Vendeur : ${shop['seller_name'] ?? '-'}'),
                       Text('Règle : ${row['rule_code'] ?? '-'} • Niveau : ${row['severity'] ?? '-'}'),
+                      if (restriction != null)
+                        Text(
+                          'Restriction active : ${restriction['reason'] ?? restriction['restriction_type'] ?? 'Annonce temporairement masquée'}',
+                          style: const TextStyle(fontWeight: FontWeight.w600),
+                        ),
                       Text('Éléments détectés : ${(row['matched_terms'] as List? ?? const []).join(', ')}'),
                       if (row['ai_model'] != null)
                         Text('Analyse IA : ${row['ai_model']} • confiance ${row['ai_confidence'] ?? '-'}'),
