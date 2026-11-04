@@ -8,7 +8,7 @@ Ces comptes servent à tester les parcours Flutter et les autorisations Supabase
 2. Depuis la racine du dépôt, exécuter : supabase start
 3. Sur une base locale neuve, exécuter : supabase db reset. Cette commande réinitialise la base LOCALE et applique les migrations puis les données de démonstration.
 4. Récupérer l'URL et la clé publishable locales avec : supabase status
-5. Lancer Flutter avec --dart-define=SUPABASE_URL=http://127.0.0.1:54321 et la clé publishable locale affichée par la CLI.
+5. Lancer Flutter en injectant uniquement les identifiants locaux : flutter run --dart-define=SUPABASE_URL=http://127.0.0.1:54321 --dart-define=SUPABASE_PUBLISHABLE_KEY=COLLER_ICI_LA_CLE_PUBLISHABLE_LOCALE. Ne jamais utiliser la clé du projet hébergé pour ces comptes.
 
 Ne pas utiliser supabase db reset --linked, supabase db push ou supabase config push pour créer ces comptes dans le projet hébergé.
 
