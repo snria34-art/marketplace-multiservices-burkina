@@ -90,6 +90,9 @@ class PushNotificationService {
           // The account no longer exists; avoid an RPC with a deleted session.
           _currentToken = null;
           break;
+        case AuthChangeEvent.mfaChallengeVerified:
+          // MFA verification does not change push-token ownership.
+          break;
         case AuthChangeEvent.signedOut:
           final token = _currentToken;
           if (token != null) {
