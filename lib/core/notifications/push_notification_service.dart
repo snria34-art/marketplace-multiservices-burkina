@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -78,6 +79,7 @@ class PushNotificationService {
 
     _authSubscription = client.auth.onAuthStateChange.listen((state) async {
       switch (state.event) {
+        case AuthChangeEvent.initialSession:
         case AuthChangeEvent.signedIn:
         case AuthChangeEvent.tokenRefreshed:
         case AuthChangeEvent.userUpdated:
@@ -117,7 +119,7 @@ class PushNotificationService {
     const iosSettings = DarwinInitializationSettings();
 
     await _local.initialize(
-      const InitializationSettings(
+      settings: const InitializationSettings(
         android: androidSettings,
         iOS: iosSettings,
       ),
@@ -212,10 +214,10 @@ class PushNotificationService {
     final data = Map<String, dynamic>.from(message.data);
 
     await _local.show(
-      (message.messageId?.hashCode ?? DateTime.now().millisecondsSinceEpoch) & 0x7fffffff,
-      notification.title ?? 'Marketplace Burkina',
-      notification.body ?? '',
-      const NotificationDetails(
+      id: (message.messageId?.hashCode ?? DateTime.now().millisecondsSinceEpoch) & 0x7fffffff,
+      title: notification.title ?? 'Marketplace Burkina',
+      body: notification.body ?? '',
+      notificationDetails: const NotificationDetails(
         android: AndroidNotificationDetails(
           'marketplace_default',
           'Marketplace',
