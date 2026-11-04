@@ -1,5 +1,5 @@
 begin;
-select plan(7);
+select plan(10);
 
 select is(
   (select count(*)::integer from auth.users where email like 'demo.%@marketplace.test'),
@@ -39,6 +39,34 @@ select ok(
   ),
   'the demo seller profile is seeded'
 );
+
+select is(
+  (select count(*)::integer from public.profiles where id in (select id from auth.users where email like 'demo.%@marketplace.test')),
+  9,
+  'all demo auth users receive profile rows through the auth trigger'
+);
+
+select ok(
+  exists (
+    select 1 from public.shops sh
+    join public.sellers s on s.id=sh.seller_id
+    join auth.users u on u.id=s.user_id
+    where u.email='demo.seller@marketplace.test' and sh.normalized_name='boutique-demo-locale'
+  ),
+  'the demo seller has a local draft shop'
+);
+
+select ok(
+  exists (
+    select 1 from public.restaurant_profiles rp
+    join public.shops sh on sh.id=rp.shop_id
+    join public.sellers s on s.id=sh.seller_id
+    join auth.users u on u.id=s.user_id
+    where u.email='demo.restaurant@marketplace.test' and sh.normalized_name='restaurant-demo'
+  ),
+  'the demo restaurant has a restaurant profile and draft shop'
+);
+
 
 select ok(
   exists (
