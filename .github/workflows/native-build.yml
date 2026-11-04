@@ -41,4 +41,4 @@ jobs:
       - name: Dependencies
         run: flutter pub get
       - name: Build iOS simulator (unsigned)
-        run: flutter build ios --simulator --release
+        run: flutter build ios --simulator --debug
