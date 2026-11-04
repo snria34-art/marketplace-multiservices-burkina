@@ -13,7 +13,7 @@ revoke execute on function public.mark_notification_read(uuid) from public,anon,
 grant execute on function public.mark_notification_read(uuid) to authenticated;
 
 create or replace function public.register_notification_device(
- p_platform text,push_token text
+ p_platform text,p_push_token text
 ) returns uuid language plpgsql security definer
 set search_path=pg_catalog,public
 as $$
