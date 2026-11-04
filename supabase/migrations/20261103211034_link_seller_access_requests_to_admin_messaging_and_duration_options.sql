@@ -1,3 +1,4 @@
+
 alter table private.seller_access_requests
   add column if not exists conversation_id uuid,
   add column if not exists initial_message_id uuid;
@@ -101,9 +102,9 @@ begin
   insert into public.messages(conversation_id,sender_id,body)
   values (
     v_conversation_id,v_owner,
-    'Demande de partage de boutique #'||v_request_id::text||E'\\nMotif : '||btrim(p_reason)
-      ||E'\\nPérimètre demandé : '||array_to_string(array(select distinct unnest(p_scopes)),', ')
-      ||E'\\nMessage du propriétaire : '||btrim(p_owner_message)
+    'Demande de partage de boutique #'||v_request_id::text||E'\nMotif : '||btrim(p_reason)
+      ||E'\nPérimètre demandé : '||array_to_string(array(select distinct unnest(p_scopes)),', ')
+      ||E'\nMessage du propriétaire : '||btrim(p_owner_message)
   ) returning id into v_message_id;
 
   update private.seller_access_requests

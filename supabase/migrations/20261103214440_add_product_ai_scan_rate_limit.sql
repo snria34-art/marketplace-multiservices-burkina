@@ -1,3 +1,4 @@
+
 create table if not exists private.catalog_ai_product_scan_locks (
   product_id uuid primary key references public.products(id) on delete cascade,
   locked_until timestamptz not null,
@@ -30,7 +31,6 @@ end;
 $$;
 revoke all on function private.claim_ai_product_scan(uuid) from public,anon,authenticated;
 grant execute on function private.claim_ai_product_scan(uuid) to service_role;
-grant usage on schema private to service_role;
 
 create or replace function public.claim_ai_product_scan(p_product_id uuid)
 returns boolean language sql security invoker set search_path='' as $$

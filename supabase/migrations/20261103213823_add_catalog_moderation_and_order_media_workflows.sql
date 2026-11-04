@@ -1,3 +1,4 @@
+
 create table if not exists public.review_media (
   id uuid primary key default gen_random_uuid(),
   review_id uuid not null references public.reviews(id) on delete cascade,
@@ -282,7 +283,7 @@ begin
   where id=p_finding_id for update;
   if v_product is null then raise exception 'finding_not_found'; end if;
   if v_decision='REQUEST_INFO' then
-    update private.catalog_moderation_findings set status='UNDER_REVIEW',review_notes=trim(p_note) where id=p_finding_id;
+    update private.catalog_moderation_findings set status='UNDER_REVIEW',reviewed_by=v_uid,reviewed_at=now(),review_notes=trim(p_note) where id=p_finding_id;
   elsif v_decision='CLEAR' then
     update private.catalog_moderation_findings set status='CLEARED',reviewed_by=v_uid,reviewed_at=now(),review_notes=trim(p_note) where id=p_finding_id;
     update private.product_listing_restrictions set active=false,restored_by=v_uid,restored_at=now()
