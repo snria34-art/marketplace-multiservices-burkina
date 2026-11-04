@@ -40,10 +40,14 @@ class _AdminRefundsPageState extends ConsumerState<AdminRefundsPage> {
 
   Future<void> _approve(String refundId) async {
     await _runAction(
-      () => ref.read(supabaseProvider)?.rpc(
-        'admin_approve_refund',
-        params: {'p_refund_id': refundId},
-      ),
+      () async {
+        final client = ref.read(supabaseProvider);
+        if (client == null) throw StateError('Connexion Supabase indisponible.');
+        return await client.rpc(
+          'admin_approve_refund',
+          params: {'p_refund_id': refundId},
+        );
+      },
       'Demande approuvée.',
     );
   }
@@ -75,13 +79,17 @@ class _AdminRefundsPageState extends ConsumerState<AdminRefundsPage> {
     if (reason == null) return;
 
     await _runAction(
-      () => ref.read(supabaseProvider)?.rpc(
-        'admin_reject_refund',
-        params: {
-          'p_refund_id': refundId,
-          'p_reason': reason.isEmpty ? null : reason,
-        },
-      ),
+      () async {
+        final client = ref.read(supabaseProvider);
+        if (client == null) throw StateError('Connexion Supabase indisponible.');
+        return await client.rpc(
+          'admin_reject_refund',
+          params: {
+            'p_refund_id': refundId,
+            'p_reason': reason.isEmpty ? null : reason,
+          },
+        );
+      },
       'Demande refusée.',
     );
   }
@@ -115,13 +123,17 @@ class _AdminRefundsPageState extends ConsumerState<AdminRefundsPage> {
     if (reference == null || reference.isEmpty) return;
 
     await _runAction(
-      () => ref.read(supabaseProvider)?.rpc(
-        'admin_complete_manual_refund',
-        params: {
-          'p_refund_id': refundId,
-          'p_provider_reference': reference,
-        },
-      ),
+      () async {
+        final client = ref.read(supabaseProvider);
+        if (client == null) throw StateError('Connexion Supabase indisponible.');
+        return await client.rpc(
+          'admin_complete_manual_refund',
+          params: {
+            'p_refund_id': refundId,
+            'p_provider_reference': reference,
+          },
+        );
+      },
       'Remboursement fournisseur confirmé.',
     );
   }
