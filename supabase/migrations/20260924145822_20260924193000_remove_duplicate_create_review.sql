@@ -1,0 +1,1 @@
+DROP FUNCTION IF EXISTS public.create_review(uuid, uuid, smallint, text);
