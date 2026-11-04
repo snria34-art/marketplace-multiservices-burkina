@@ -67,6 +67,33 @@ insert into public.sellers(user_id,business_name,verification_status)
 values ('10000000-0000-4000-8000-000000000002','Boutique Démo Locale','PENDING'::public.verification_status)
 on conflict do nothing;
 
+insert into public.sellers(user_id,business_name,verification_status)
+values ('10000000-0000-4000-8000-000000000004','Restaurant Démo','PENDING'::public.verification_status)
+on conflict (user_id) do nothing;
+
+insert into public.shops(seller_id,name,normalized_name,description,status,verification_status)
+select id,'Boutique Démo Locale','boutique-demo-locale','Boutique de démonstration locale','DRAFT'::public.shop_status,'PENDING'::public.verification_status
+from public.sellers where user_id='10000000-0000-4000-8000-000000000002'
+on conflict (normalized_name) do nothing;
+
+insert into public.shops(seller_id,name,normalized_name,description,status,verification_status)
+select id,'Restaurant Démo','restaurant-demo','Restaurant de démonstration locale','DRAFT'::public.shop_status,'PENDING'::public.verification_status
+from public.sellers where user_id='10000000-0000-4000-8000-000000000004'
+on conflict (normalized_name) do nothing;
+
+insert into public.restaurant_profiles(shop_id,cuisine_types,preparation_time_min,delivery_available)
+select id,array['LOCAL']::text[],25,true
+from public.shops where normalized_name='restaurant-demo'
+on conflict (shop_id) do nothing;
+
+insert into public.restaurant_menus(restaurant_id,name,description)
+select rp.id,'Menu de démonstration','Menu fictif réservé aux tests locaux'
+from public.restaurant_profiles rp
+join public.shops sh on sh.id=rp.shop_id
+where sh.normalized_name='restaurant-demo'
+and not exists(select 1 from public.restaurant_menus rm where rm.restaurant_id=rp.id and rm.name='Menu de démonstration');
+
+
 insert into public.mechanics(user_id,display_name,verification_status,active)
 values ('10000000-0000-4000-8000-000000000005','Mécanicien Démo','PENDING'::public.verification_status,true)
 on conflict do nothing;
