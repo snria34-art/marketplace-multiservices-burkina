@@ -10,7 +10,6 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/providers/repository_providers.dart';
-import '../data/checkout_repository.dart';
 
 class OrderDetailsPage extends ConsumerStatefulWidget {
   const OrderDetailsPage({required this.orderId, super.key});
