@@ -21,6 +21,8 @@ Future<void> main() async {
   );
 
   WidgetsBinding.instance.addPostFrameCallback((_) {
-    PushNotificationService.instance.initialize(client);
+    if (client != null) {
+      PushNotificationService.instance.initialize(client);
+    }
   });
 }
