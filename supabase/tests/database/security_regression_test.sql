@@ -175,7 +175,12 @@ select ok(
 
 select ok(
   not (select public from storage.buckets where id='documents')
-  and not has_function_privilege('anon','public.complete_refund(uuid,text)','EXECUTE'),
+  and not exists (
+    select 1 from pg_policies
+    where schemaname='storage' and tablename='objects'
+      and cmd='SELECT' and roles::text in ('{anon}','{public}','{anon,authenticated}')
+      and qual like '%documents%'
+  ),
   'seller documents bucket remains private'
 );
 
