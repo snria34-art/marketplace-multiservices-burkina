@@ -249,3 +249,11 @@ Aucune modification de la base de production n'a été nécessaire pour ces poin
 - La lecture client est désormais limitée aux affectations `ASSIGNED`, `ACCEPTED`, `PICKED_UP` ou `IN_TRANSIT`, aux colis en préparation de ramassage/en transit et aux commandes non annulées/non remboursées. Le livreur conserve l'accès à ses propres positions.
 - Migration distante appliquée : `20261105194137_restrict_courier_location_to_active_assignments`. La définition de la politique a été relue et les statuts actifs/inactifs vérifiés.
 - Une assertion pgTAP est ajoutée (plan total 38), sans exécution.
+
+
+### Démarrage du trajet par le livreur — 6 novembre 2026
+
+- Le dépôt Flutter appelle `start_package_delivery` depuis le client authentifié, mais la fonction SQL n'accordait auparavant l'exécution qu'à `service_role`. L'action de démarrage du trajet ne pouvait donc pas fonctionner depuis le parcours livreur.
+- L'exécution est maintenant accordée à `authenticated` et `service_role`, jamais à `anon`. La fonction exige un compte actif, le rôle `COURIER`, un colis au statut `PICKED_UP` et une affectation `PICKED_UP` appartenant au même utilisateur. Les deux changements d'état restent atomiques dans la transaction.
+- Migration distante appliquée : `20261105194234_allow_guarded_courier_start_delivery`. Vérification des privilèges et des contrôles internes effectuée.
+- Une assertion pgTAP est ajoutée (plan total 39), sans exécution ni changement de colis réel.
