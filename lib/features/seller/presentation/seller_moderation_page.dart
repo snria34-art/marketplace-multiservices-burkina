@@ -143,8 +143,14 @@ class _SellerModerationPageState extends ConsumerState<SellerModerationPage> {
       final user = client?.auth.currentUser;
       if (client == null || user == null) throw StateError('Session indisponible.');
       if (media != null) {
-        final bytes = await media!.readAsBytes();
         final maxBytes = mediaType == 'VIDEO' ? 20 * 1024 * 1024 : 5 * 1024 * 1024;
+        final fileSize = await media!.length();
+        if (fileSize <= 0 || fileSize > maxBytes) {
+          throw StateError(mediaType == 'VIDEO'
+              ? 'La vidéo doit faire au maximum 20 Mo.'
+              : 'La photo doit faire au maximum 5 Mo.');
+        }
+        final bytes = await media!.readAsBytes();
         if (bytes.isEmpty || bytes.length > maxBytes) {
           throw StateError(mediaType == 'VIDEO'
               ? 'La vidéo doit faire au maximum 20 Mo.'
