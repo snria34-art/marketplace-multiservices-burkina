@@ -358,3 +358,13 @@ Relecture en lecture seule des définitions SQL actuellement déployées (`compl
 - Une erreur de traitement d'une notification n'interrompt plus le lot entier ; la réponse conserve un résultat par identifiant avec un code d'erreur générique, sans renvoyer de détails internes.
 - La limite réduit les pointes de concurrence, mais ne constitue pas un test de charge. Le déploiement de l'Edge Function et les tests restent à faire plus tard, après autorisation explicite.
 - Vérification effectuée : relecture du fichier sur la branche `main`, présence confirmée du worker limité à 5 pour les appareils et les notifications, et des chemins d'erreur isolés.
+
+
+### Audit notifications — appareils, accès aux données et état du déploiement — 6 novembre 2026
+
+- `notification_devices` : RLS limité au propriétaire et aux comptes actifs ; le jeton push est unique globalement ; la RPC `register_notification_device` n'accepte que ANDROID/IOS, rejette les jetons vides ou supérieurs à 4096 caractères et empêche un autre compte de revendiquer un jeton existant.
+- `notification_preferences` : lecture/écriture limitée au propriétaire et compte actif.
+- `notifications` : lecture limitée au propriétaire ; UPDATE accordé uniquement sur la colonne `read_at`, et non sur les champs système de dispatch. Les utilisateurs ne peuvent donc pas falsifier `push_sent_at`, `push_attempts` ou le contenu de notification via cette table.
+- `claim_notification_for_push` verrouille la notification, refuse les éléments déjà envoyés et les traitements récents (fenêtre de 5 minutes), puis marque le traitement en cours. Cela réduit le risque de double traitement concurrent.
+- Limite connue à traiter avant un fort volume multi-appareils : le modèle stocke le résultat d'envoi au niveau notification, pas au niveau de chaque appareil. Lorsqu'une notification réussit sur au moins un appareil mais échoue sur un autre, l'état actuel évite un renvoi global qui dupliquerait les notifications déjà reçues, mais ne permet pas de retenter uniquement l'appareil en échec. Une table d'état par couple notification/appareil serait nécessaire pour une reprise précise.
+- La fonction Edge `dispatch-push-notifications` est actuellement déployée en version 7 ; le code du dépôt contient maintenant le worker à concurrence limitée. **Le code modifié n'a pas été déployé**. Aucun appel de dispatch n'a été fait, aucun push réel n'a été envoyé.
