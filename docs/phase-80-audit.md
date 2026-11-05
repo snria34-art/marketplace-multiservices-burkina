@@ -124,7 +124,7 @@ Les tests de charge, les tests de restauration de sauvegarde et les essais de pa
 - Vérification après application : les trois politiques ont disparu. Les politiques de lecture du propriétaire vendeur restent présentes pour les commissions et le registre ; la politique propriétaire/administrateur reste présente pour les paiements vendeur. Les garde-fous `active_account_guard` sont conservés.
 - Le fichier SQL correspondant est versionné dans `supabase/migrations/20261105184635_disable_unsafe_shared_financial_reads.sql`.
 - Effet attendu : un collaborateur ne peut plus obtenir les données financières via le partage de boutique. Le propriétaire vendeur et les administrateurs conservent leurs politiques de lecture existantes.
-- Limite restante : le scope `financial_read` est encore accepté par la fonction de demande, mais ne donne plus de visibilité financière via ces politiques. Il faudra retirer ce scope de la RPC et de l'interface après inspection de ses dépendances.
+- État historique au moment de ce premier correctif : le scope `financial_read` était encore accepté par la fonction de demande. Cette limite a été résolue par la migration `20261105184743` décrite plus bas, qui retire ce scope des nouvelles demandes.
 - Aucun solde, paiement, remboursement ou écriture du registre n'a été modifié. Aucun test avec de vrais fonds n'a été effectué.
 
 
@@ -135,3 +135,24 @@ Les tests de charge, les tests de restauration de sauvegarde et les essais de pa
 - Le fichier SQL est versionné dans `supabase/migrations/20261105184743_remove_financial_read_from_seller_access_requests.sql`.
 - Les demandes historiques peuvent encore contenir la valeur ancienne, mais les politiques de lecture financière partagée ont déjà été supprimées : ces anciennes autorisations ne donnent plus accès aux tables financières.
 - Les migrations ont été appliquées et les fichiers SQL enregistrés. Les tests d'intégration automatisés n'ont pas encore pu être exécutés, car les runners GitHub Actions du dépôt ne s'attribuent pas (`runner_id=0`).
+
+
+### Audit complémentaire — droits des RPC financières et stockage — 6 novembre 2026
+
+Contrôles effectués en lecture seule sur le projet Supabase actif :
+
+- `public.complete_refund(uuid,text)` et `public.process_payment_event(uuid,text,payment_status,text,numeric,jsonb)` sont des fonctions `SECURITY DEFINER` dont l'exécution est réservée à `service_role` et au propriétaire PostgreSQL. Les rôles `anon` et `authenticated` n'ont pas le droit EXECUTE.
+- Les RPC administratives de paiement vendeur et de remboursement sont exécutables par `authenticated`, mais leurs corps vérifient le rôle administrateur avant toute mutation. Elles ne sont pas exécutables par `anon`.
+- `request_seller_payout_secure` est exécutable par les utilisateurs authentifiés, pas par `anon`. La fonction vérifie que le vendeur appartient à l'utilisateur, est vérifié, verrouille la ligne vendeur avec `FOR UPDATE`, calcule le solde du registre, refuse un montant supérieur au solde puis inscrit le retrait et l'écriture négative dans la même transaction.
+- Les opérations de finalisation de remboursement verrouillent la ligne de remboursement et le paiement. La fonction de traitement des événements de paiement verrouille le paiement et vérifie le montant et la devise avant de modifier l'état.
+- Les buckets Storage `documents`, `order-feedback-media`, `product-media` et `shop-media` sont privés. Le bucket `avatars` est public, ce qui est cohérent avec des photos de profil destinées à être visibles. Les règles de lecture de documents vendeurs sont limitées au propriétaire du fichier ; aucune policy de lecture publique/anon du bucket `documents` n'a été trouvée.
+- Les médias de retours/avis ont des policies de lecture distinctes pour l'administrateur, le client/livreur autorisé, le propriétaire et les avis publiés.
+
+Aucune modification de la base de production n'a été nécessaire pour ces points : les droits observés correspondent au modèle de privilèges attendu. Les tests pgTAP ont été étendus pour figer ces garanties dans `supabase/tests/database/security_regression_test.sql` (plan 26). Ils ne sont pas exécutés tant que les runners GitHub Actions ne sont pas disponibles.
+
+#### Vérifications encore nécessaires avant certification financière
+
+- Tester avec des fixtures isolées et rollback la concurrence de deux demandes de retrait, les transitions de statut et la répétition de webhooks.
+- Vérifier la cohérence complète entre les événements de paiement, les remboursements partiels et les écritures vendeur.
+- Vérifier les chemins de stockage et les tailles/MIME côté application, en complément des restrictions de buckets et policies SQL.
+- Aucun paiement, remboursement ou retrait réel n'a été déclenché. Aucun workflow GitHub Actions n'a été lancé.
