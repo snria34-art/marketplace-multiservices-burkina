@@ -1,5 +1,5 @@
 begin;
-select plan(36);
+select plan(37);
 
 select ok(
   not has_table_privilege('anon','private.catalog_moderation_findings','SELECT')
@@ -256,6 +256,42 @@ select ok(
   and to_regclass('private.idx_seller_access_requests_reviewed_by_fk') is not null
   and to_regclass('private.idx_seller_access_requests_revoked_by_fk') is not null,
   'all previously uncovered private foreign keys now have covering indexes'
+);
+
+select ok(
+  not exists (
+    select 1 from pg_policies
+    where schemaname='public'
+      and policyname in (
+        'inventory_shared_access_read',
+        'inventory_movements_shared_access_read',
+        'order_groups_shared_access_read',
+        'order_items_shared_access_read',
+        'products_shared_access_read',
+        'shops_shared_access_read'
+      )
+  )
+  and (
+    select count(*) from pg_policies
+    where schemaname='public' and tablename='inventory'
+      and cmd='SELECT' and 'authenticated'=any(roles)
+  )=1
+  and (
+    select count(*) from pg_policies
+    where schemaname='public' and tablename='order_groups'
+      and cmd='SELECT' and 'authenticated'=any(roles)
+  )=1
+  and (
+    select count(*) from pg_policies
+    where schemaname='public' and tablename='products'
+      and cmd='SELECT' and 'authenticated'=any(roles)
+  )=1
+  and (
+    select count(*) from pg_policies
+    where schemaname='public' and tablename='shops'
+      and cmd='SELECT' and 'authenticated'=any(roles)
+  )=1,
+  'overlapping read policies are consolidated without removing authenticated access paths'
 );
 
 select * from finish();
