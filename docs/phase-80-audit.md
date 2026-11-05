@@ -109,3 +109,13 @@ Les tests de charge, les tests de restauration de sauvegarde et les essais de pa
 - Le workflow Flutter a été réduit aux permissions `contents: read` et ne tente plus de pousser automatiquement un lockfile depuis la CI.
 - Aucun résultat de test n'est déclaré réussi sur les commits récents tant que les jobs n'ont pas réellement exécuté leurs étapes.
 
+
+### Finding sécurité — portée du partage financier inter-boutiques — 6 novembre 2026
+
+- Relecture statique des migrations `20261103211236_enforce_approved_seller_access_scopes_in_rls.sql` et `20261103211258_limit_seller_access_requests_to_implemented_scopes.sql`.
+- Le flux de demande autorise actuellement le scope `financial_read`. Les politiques de lecture partagée de `commissions`, `seller_ledger` et `seller_payouts` recherchent une boutique du vendeur ayant accordé ce scope, puis filtrent les lignes par `seller_id` seulement.
+- Or un vendeur peut posséder plusieurs boutiques. Accorder `financial_read` sur une boutique peut donc rendre visibles au collaborateur des lignes financières du vendeur liées à ses autres boutiques ; pour `seller_payouts`, le modèle est également au niveau vendeur et non boutique.
+- **Risque : exposition inter-boutiques de données financières** à un collaborateur qui n'a reçu l'accès qu'à une seule boutique. Il s'agit d'un défaut de granularité de l'autorisation, pas d'une preuve d'accès à des données d'un autre vendeur.
+- Mesure corrective recommandée : retirer immédiatement `financial_read` de la liste des scopes acceptés et supprimer/désactiver les policies financières de partage tant que les données ne sont pas filtrables de manière fiable par boutique. Réintroduire cette permission uniquement après une modélisation financière par boutique et des tests RLS négatifs multi-boutiques.
+- Les tables `commissions`, `seller_ledger` et `seller_payouts` n'ont pas été modifiées pendant cet audit. Aucune migration n'a été appliquée à Supabase.
+- La correction doit être réalisée dans une nouvelle migration créée avec Supabase CLI, puis testée localement avec deux boutiques appartenant au même vendeur et deux comptes collaborateurs distincts. Ne pas modifier les migrations historiques déjà appliquées.
