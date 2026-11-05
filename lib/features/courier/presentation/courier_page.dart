@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/location/device_location_service.dart';
 import '../../../core/providers/repository_providers.dart';
@@ -128,6 +129,40 @@ class _CourierPageState extends ConsumerState<CourierPage> {
         ],
       ),
     );
+  }
+
+  Future<void> _openDirections({
+    required String address,
+    String? latitude,
+    String? longitude,
+  }) async {
+    final lat = double.tryParse(latitude ?? '');
+    final lon = double.tryParse(longitude ?? '');
+    final destination = address.trim();
+
+    if ((lat == null || lon == null) && destination.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Adresse ou coordonnées indisponibles.')),
+      );
+      return;
+    }
+
+    final uri = lat != null && lon != null
+        ? Uri.https('www.google.com', '/maps/dir/', {
+            'api': '1',
+            'destination': '$lat,$lon',
+          })
+        : Uri.https('www.google.com', '/maps/search/', {
+            'api': '1',
+            'query': destination,
+          });
+
+    final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!opened && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Impossible d’ouvrir l’itinéraire.')),
+      );
+    }
   }
 
   Future<void> _action(
@@ -288,18 +323,76 @@ class _CourierPageState extends ConsumerState<CourierPage> {
               final item = items[index];
               final status = item['status']?.toString();
 
+              final shopAddress = item['shop_address']?.toString() ?? '';
+              final deliveryLine = item['delivery_address_line']?.toString() ?? '';
+              final deliveryCity = item['delivery_city']?.toString() ?? '';
+              final deliveryAddress = [deliveryLine, deliveryCity]
+                  .where((part) => part.trim().isNotEmpty)
+                  .join(', ');
+              final recipientName = item['recipient_name']?.toString() ?? '';
+              final recipientPhone = item['recipient_phone']?.toString() ?? '';
+
               return Card(
-                child: ListTile(
-                  title: Text(
-                    'Colis ' + (item['package_id']?.toString() ?? '-'),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      ListTile(
+                        title: Text(
+                          'Colis ' + (item['package_id']?.toString() ?? '-'),
+                        ),
+                        subtitle: Text(
+                          'État : ' +
+                              (status ?? '-') +
+                              '\nAffecté le : ' +
+                              (item['assigned_at']?.toString() ?? '-'),
+                        ),
+                        trailing: _actions(item, status),
+                      ),
+                      if (shopAddress.isNotEmpty || deliveryAddress.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              if (shopAddress.isNotEmpty) ...[
+                                Text('Retrait : ' + shopAddress),
+                                Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: TextButton.icon(
+                                    onPressed: () => _openDirections(
+                                      address: shopAddress,
+                                    ),
+                                    icon: const Icon(Icons.store_outlined),
+                                    label: const Text('Itinéraire vers la boutique'),
+                                  ),
+                                ),
+                              ],
+                              if (deliveryAddress.isNotEmpty) ...[
+                                Text('Livraison : ' + deliveryAddress),
+                                if (recipientName.isNotEmpty)
+                                  Text('Destinataire : ' + recipientName),
+                                if (recipientPhone.isNotEmpty)
+                                  Text('Téléphone : ' + recipientPhone),
+                                Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: TextButton.icon(
+                                    onPressed: () => _openDirections(
+                                      address: deliveryAddress,
+                                      latitude: item['delivery_latitude']?.toString(),
+                                      longitude: item['delivery_longitude']?.toString(),
+                                    ),
+                                    icon: const Icon(Icons.directions_outlined),
+                                    label: const Text('Itinéraire vers le client'),
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                    ],
                   ),
-                  subtitle: Text(
-                    'État : ' +
-                        (status ?? '-') +
-                        '\nAffecté le : ' +
-                        (item['assigned_at']?.toString() ?? '-'),
-                  ),
-                  trailing: _actions(item, status),
                 ),
               );
             },
