@@ -1,10 +1,12 @@
+// deno-lint-ignore no-import-prefix no-unversioned-import
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
-const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), {
-  status,
-  headers: { "content-type": "application/json" },
-});
+const json = (body: unknown, status = 200) =>
+  new Response(JSON.stringify(body), {
+    status,
+    headers: { "content-type": "application/json" },
+  });
 
 function publishableKey(): string {
   const raw = Deno.env.get("SUPABASE_PUBLISHABLE_KEYS");
@@ -12,7 +14,9 @@ function publishableKey(): string {
     try {
       const parsed = JSON.parse(raw);
       if (parsed.default) return parsed.default;
-    } catch (_) {}
+    } catch (_) {
+      // Ignore malformed optional configuration and use the fallback environment variable.
+    }
   }
   return Deno.env.get("SUPABASE_ANON_KEY") ?? "";
 }
@@ -23,7 +27,9 @@ Deno.serve(async (req: Request) => {
   const auth = req.headers.get("Authorization");
   const url = Deno.env.get("SUPABASE_URL") ?? "";
   const key = publishableKey();
-  if (!auth || !url || !key) return json({ error: "supabase_not_configured" }, 503);
+  if (!auth || !url || !key) {
+    return json({ error: "supabase_not_configured" }, 503);
+  }
 
   const apiKey = Deno.env.get("CINETPAY_API_KEY") ?? "";
   const siteId = Deno.env.get("CINETPAY_SITE_ID") ?? "";
@@ -45,9 +51,9 @@ Deno.serve(async (req: Request) => {
     return json({ error: "provider_invalid" }, 400);
   }
 
-  const encodedOrderId = encodeURIComponent(orderId);
   const returnUrl = Deno.env.get("CINETPAY_RETURN_URL") ||
-    url + "/functions/v1/payment-return?status=success&order_id=" + encodedOrderId;
+    url + "/functions/v1/payment-return?status=success&order_id=" +
+      encodeURIComponent(orderId);
 
   const supabase = createClient(url, key, {
     global: { headers: { Authorization: auth } },
@@ -59,7 +65,7 @@ Deno.serve(async (req: Request) => {
       p_order_id: orderId,
       p_provider: provider,
     });
-    if (error) return json({ error: error.message }, 409);
+    if (error) return json({ error: "payment_operation_failed" }, 409);
     paymentId = String(data);
   }
 
@@ -73,21 +79,27 @@ Deno.serve(async (req: Request) => {
     paymentRows.length === 0
   ) {
     return json(
-      { error: paymentError?.message ?? "payment_not_found" },
+      { error: "payment_not_found" },
       404,
     );
   }
 
   const payment = paymentRows[0] as Record<string, unknown>;
-  if (String(payment.payment_id) !== paymentId) return json({ error: "payment_not_owned" }, 403);
-  if (String(payment.provider) !== provider) return json({ error: "provider_mismatch" }, 409);
+  if (String(payment.payment_id) !== paymentId) {
+    return json({ error: "payment_not_owned" }, 403);
+  }
+  if (String(payment.provider) !== provider) {
+    return json({ error: "provider_mismatch" }, 409);
+  }
 
   const paymentRecord = await supabase
     .from("payments")
     .select("status,provider_reference,metadata,amount,currency")
     .eq("id", paymentId)
     .maybeSingle();
-  if (paymentRecord.error || !paymentRecord.data) return json({ error: "payment_not_found" }, 404);
+  if (paymentRecord.error || !paymentRecord.data) {
+    return json({ error: "payment_not_found" }, 404);
+  }
 
   const existing = paymentRecord.data as Record<string, unknown>;
   const metadata = (existing.metadata ?? {}) as Record<string, unknown>;
@@ -108,7 +120,10 @@ Deno.serve(async (req: Request) => {
 
   const amount = Number(existing.amount);
   const currency = String(existing.currency ?? "");
-  if (!Number.isInteger(amount) || amount <= 0 || currency !== "XOF" || amount % 5 !== 0) {
+  if (
+    !Number.isInteger(amount) || amount <= 0 || currency !== "XOF" ||
+    amount % 5 !== 0
+  ) {
     return json({
       error: "payment_amount_invalid",
       detail: "CinetPay XOF amount must be a positive multiple of 5",
@@ -145,21 +160,24 @@ Deno.serve(async (req: Request) => {
       error: "cinetpay_api_error",
       provider_status: checkout.status,
       code: response?.code ?? null,
-      message: response?.message ?? response?.description ?? "CinetPay rejected the payment",
+      message: "CinetPay rejected the payment", 
     }, 502);
   }
 
-  const { error: prepareError } = await supabase.rpc("prepare_payment_processing", {
-    p_payment_id: paymentId,
-    p_provider_reference: transactionId,
-    p_metadata: {
-      gateway: "CINETPAY",
-      payment_url: paymentUrl,
-      requested_provider: provider,
-      notify_url: notifyUrl,
+  const { error: prepareError } = await supabase.rpc(
+    "prepare_payment_processing",
+    {
+      p_payment_id: paymentId,
+      p_provider_reference: transactionId,
+      p_metadata: {
+        gateway: "CINETPAY",
+        payment_url: paymentUrl,
+        requested_provider: provider,
+        notify_url: notifyUrl,
+      },
     },
-  });
-  if (prepareError) return json({ error: prepareError.message }, 409);
+  );
+  if (prepareError) return json({ error: "payment_processing_failed" }, 409);
 
   return json({
     payment_id: paymentId,
