@@ -264,3 +264,11 @@ Aucune modification de la base de production n'a été nécessaire pour ces poin
 - L'advisor de sécurité signale toujours `public.spatial_ref_sys` avec RLS désactivé. L'inspection des privilèges confirme que `anon` et `authenticated` disposent actuellement de SELECT, INSERT, UPDATE et DELETE sur cette table de métadonnées PostGIS.
 - La table et l'extension PostGIS appartiennent à `supabase_admin`. Le rôle SQL utilisé par les migrations (`postgres`) n'est ni propriétaire, ni membre de `supabase_admin`, ni superutilisateur. La tentative de verrouillage a échoué sur le contrôle de propriété et a été annulée intégralement ; aucun changement partiel n'a été appliqué.
 - Ne pas contourner cette propriété ni modifier les catalogues système. Il faut exécuter la correction depuis un contexte propriétaire `supabase_admin` : retirer les droits DML à `anon` et `authenticated`, conserver SELECT public en lecture seule, activer RLS et ajouter une politique SELECT explicite. Tant que cette opération n'est pas faite, l'advisor conserve une erreur de sécurité réelle.
+
+
+### Récupération manuelle des remboursements Wave bloqués — 6 novembre 2026
+
+- Une requête réseau Wave interrompue ou une confirmation fournisseur reçue alors que la finalisation SQL échoue peut laisser le remboursement en `PROCESSING`. Le statut n'est volontairement pas réessayable automatiquement, pour éviter de renvoyer un remboursement potentiellement déjà exécuté.
+- Une fonction `admin_reconcile_wave_refund` est maintenant disponible pour un administrateur actif après vérification manuelle dans Wave. Elle exige une référence de remboursement fournisseur et une note de confirmation, ne traite que les remboursements Wave en `PROCESSING`, appelle uniquement la finalisation comptable interne et inscrit une trace dans `admin_change_log`. Elle ne contacte jamais Wave.
+- Migration distante appliquée : `20261105194405_add_admin_recovery_for_confirmed_wave_refunds`. Les privilèges et les gardes administrateur/fournisseur/statut ont été vérifiés.
+- Une assertion pgTAP est ajoutée (plan total 40), sans exécution ni remboursement réel.
