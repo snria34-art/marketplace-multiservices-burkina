@@ -272,3 +272,12 @@ Aucune modification de la base de production n'a été nécessaire pour ces poin
 - Une fonction `admin_reconcile_wave_refund` est maintenant disponible pour un administrateur actif après vérification manuelle dans Wave. Elle exige une référence de remboursement fournisseur et une note de confirmation, ne traite que les remboursements Wave en `PROCESSING`, appelle uniquement la finalisation comptable interne et inscrit une trace dans `admin_change_log`. Elle ne contacte jamais Wave.
 - Migration distante appliquée : `20261105194405_add_admin_recovery_for_confirmed_wave_refunds`. Les privilèges et les gardes administrateur/fournisseur/statut ont été vérifiés.
 - Une assertion pgTAP est ajoutée (plan total 40), sans exécution ni remboursement réel.
+
+
+### Informations de tournée dans l'espace livreur — 6 novembre 2026
+
+- L'écran livreur n'affichait que l'identifiant du colis et son statut : il ne fournissait ni adresse de retrait, ni adresse de destination, ni coordonnées GPS utilisables.
+- Une RPC dédiée `get_courier_assignments` retourne maintenant uniquement les affectations actives du livreur connecté, avec le nom/adresse de la boutique et les champs nécessaires à l'itinéraire de livraison. Elle exige un compte actif et le rôle `COURIER`; les numéros de téléphone et le nom du destinataire ne sont révélés qu'après acceptation de l'affectation.
+- Le dépôt Flutter utilise cette RPC et affiche les adresses, les contacts autorisés et les liens d'itinéraire Google Maps (coordonnées GPS lorsqu'elles existent, adresse sinon).
+- Migration distante appliquée : `20261105194532_add_secure_courier_assignment_details`. La fonction et ses privilèges ont été vérifiés. Les fichiers Flutter ont été relus sur GitHub ; les tests Flutter ne sont pas exécutés.
+- Une assertion pgTAP supplémentaire est ajoutée (plan total 41), sans exécution.
