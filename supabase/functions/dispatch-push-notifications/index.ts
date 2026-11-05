@@ -89,6 +89,25 @@ function preferenceEnabled(type: string, prefs: Json): boolean {
   return true;
 }
 
+async function mapWithConcurrency<T, R>(
+  items: T[],
+  limit: number,
+  worker: (item: T, index: number) => Promise<R>,
+): Promise<R[]> {
+  if (items.length === 0) return [];
+  const results = new Array<R>(items.length);
+  let nextIndex = 0;
+  const workerCount = Math.min(items.length, Math.max(1, Math.floor(limit)));
+  await Promise.all(Array.from({ length: workerCount }, async () => {
+    while (true) {
+      const index = nextIndex++;
+      if (index >= items.length) return;
+      results[index] = await worker(items[index], index);
+    }
+  }));
+  return results;
+}
+
 function fcmData(data: unknown): Record<string, string> {
   if (!data || typeof data !== "object") return {};
   const record = data as Record<string, unknown>;
@@ -219,11 +238,11 @@ async function processNotification(
     data.notification_id = notificationId;
     data.type = String(notification.type ?? "general");
 
-    const results = await Promise.all(
-      devices.map(async (device) => {
-        const token = String(device.push_token ?? "").trim();
-        if (!token) return { token, ok: false, status: 0, body: null };
+    const results = await mapWithConcurrency(devices, 5, async (device) => {
+      const token = String(device.push_token ?? "").trim();
+      if (!token) return { token, ok: false, status: 0, body: null };
 
+      try {
         const result = await sendToToken(
           accessToken,
           projectId,
@@ -251,8 +270,15 @@ async function processNotification(
         }
 
         return { token, ...result };
-      }),
-    );
+      } catch (_) {
+        return {
+          token,
+          ok: false,
+          status: 0,
+          body: { error: { message: "FCM_NETWORK_ERROR" } },
+        };
+      }
+    });
 
     const sent = results.filter((item) => item.ok).length;
     const errors = results
@@ -327,8 +353,12 @@ Deno.serve(async (req: Request) => {
   try { payload = await req.json(); } catch (_) { payload = {}; }
 
   if (payload.notification_id) {
-    const result = await processNotification(adminClient, accessToken, projectId, payload.notification_id);
-    return json(result);
+    try {
+      const result = await processNotification(adminClient, accessToken, projectId, payload.notification_id);
+      return json(result);
+    } catch (_) {
+      return json({ id: payload.notification_id, error: "PUSH_PROCESSING_FAILED" }, 500);
+    }
   }
 
   const pending = await adminClient
@@ -342,6 +372,12 @@ Deno.serve(async (req: Request) => {
   if (pending.error) return json({ error: pending.error.message }, 500);
 
   const ids = ((pending.data ?? []) as Json[]).map((row) => String(row.id));
-  const results = await Promise.all(ids.map((id) => processNotification(adminClient, accessToken, projectId, id)));
+  const results = await mapWithConcurrency(ids, 5, async (id) => {
+    try {
+      return await processNotification(adminClient, accessToken, projectId, id);
+    } catch (_) {
+      return { id, error: "PUSH_PROCESSING_FAILED" };
+    }
+  });
   return json({ processed: results.length, results });
 });
