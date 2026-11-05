@@ -419,3 +419,6 @@ Relecture en lecture seule des définitions SQL actuellement déployées (`compl
 
 
 - Correctif complémentaire : `SellerModerationPage._respond` conserve désormais le chemin Storage et le client d'upload hors du bloc `try`. Si l'appel `seller_respond_to_catalog_finding` échoue après l'envoi d'une photo/vidéo, le client tente de supprimer le média non associé dans `order-feedback-media`, sans masquer l'erreur initiale. Commit : `6980921e7d6a9272f3bc0d8698cb11b71d9517e2`. Nettoyage best-effort, non testé en environnement réel.
+
+
+- Correctif complémentaire : `CourierRepository.uploadEvidence` supprime maintenant de façon best-effort le fichier de preuve envoyé si le RPC `attach_delivery_evidence` échoue. Cela évite de conserver une photo/vidéo de livraison privée sans ligne de métadonnées associée. Commit : `05d22ee95a03995f9255fa06db01ec98d633fad1`. Aucun média réel n'a été envoyé ou supprimé ; comportement non testé.
