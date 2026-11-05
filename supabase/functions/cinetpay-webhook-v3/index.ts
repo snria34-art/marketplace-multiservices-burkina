@@ -1,10 +1,12 @@
+// deno-lint-ignore no-import-prefix no-unversioned-import
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
-const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), {
-  status,
-  headers: { "content-type": "application/json" },
-});
+const json = (body: unknown, status = 200) =>
+  new Response(JSON.stringify(body), {
+    status,
+    headers: { "content-type": "application/json" },
+  });
 
 async function hmacHex(message: string, secret: string): Promise<string> {
   const key = await crypto.subtle.importKey(
@@ -37,16 +39,14 @@ function secretKey(): string {
     try {
       const parsed = JSON.parse(raw);
       if (parsed.default) return parsed.default;
-    } catch (_) {}
+    } catch (_) {
+      // Ignore malformed optional key configuration and use the fallback.
+    }
   }
   return Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 }
 
 Deno.serve(async (req: Request) => {
-  // Provider health/handshake requests do not require payment credentials.
-  if (req.method === "GET") return new Response("ok", { status: 200 });
-  if (req.method !== "POST") return json({ error: "method_not_allowed" }, 405);
-
   const url = Deno.env.get("SUPABASE_URL") ?? "";
   const adminKey = secretKey();
   const apiKey = Deno.env.get("CINETPAY_API_KEY") ?? "";
@@ -55,6 +55,9 @@ Deno.serve(async (req: Request) => {
   if (!url || !adminKey || !apiKey || !siteId || !secret) {
     return json({ error: "cinetpay_not_configured" }, 503);
   }
+
+  if (req.method === "GET") return new Response("ok", { status: 200 });
+  if (req.method !== "POST") return json({ error: "method_not_allowed" }, 405);
 
   const raw = await req.text();
   const form = new URLSearchParams(raw);
@@ -99,26 +102,33 @@ Deno.serve(async (req: Request) => {
     .limit(1)
     .maybeSingle();
 
-  if (lookup.error || !lookup.data) return json({ error: "payment_not_found" }, 404);
+  if (lookup.error || !lookup.data) {
+    return json({ error: "payment_not_found" }, 404);
+  }
   const payment = lookup.data as Record<string, unknown>;
   if (String(payment.provider) !== "CINETPAY") {
     return json({ error: "provider_invalid" }, 409);
   }
 
-  const verify = await fetch("https://api-checkout.cinetpay.com/v2/payment/check", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "User-Agent": "Marketplace-Multiservices-Burkina/1.0",
+  const verify = await fetch(
+    "https://api-checkout.cinetpay.com/v2/payment/check",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "User-Agent": "Marketplace-Multiservices-Burkina/1.0",
+      },
+      body: JSON.stringify({
+        apikey: apiKey,
+        site_id: siteId,
+        transaction_id: transactionId,
+      }),
     },
-    body: JSON.stringify({
-      apikey: apiKey,
-      site_id: siteId,
-      transaction_id: transactionId,
-    }),
-  });
+  );
   const checked = await verify.json().catch(() => null);
-  if (!verify.ok || !checked) return json({ error: "cinetpay_verification_failed" }, 502);
+  if (!verify.ok || !checked) {
+    return json({ error: "cinetpay_verification_failed" }, 502);
+  }
 
   const data = (checked.data ?? {}) as Record<string, unknown>;
   const providerAmount = Number(data.amount);
@@ -157,7 +167,7 @@ Deno.serve(async (req: Request) => {
     p_amount: providerAmount,
     p_payload: data,
   });
-  if (error) return json({ error: error.message }, 409);
+  if (error) return json({ error: "payment_event_processing_failed" }, 409);
 
   return json({ ok: true, status: internalStatus }, 200);
 });
