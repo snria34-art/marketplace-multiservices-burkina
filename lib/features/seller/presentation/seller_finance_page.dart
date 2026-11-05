@@ -35,20 +35,22 @@ class _SellerFinancePageState extends ConsumerState<SellerFinancePage> {
       throw StateError('Compte vendeur introuvable.');
     }
 
-    final balance = await repo.balance(sellerId);
-    final payouts = await repo.payouts(sellerId);
-    final ledger = await repo.client
-        .from('seller_ledger')
-        .select('entry_type,amount,currency,reference_id,created_at')
-        .eq('seller_id', sellerId)
-        .order('created_at', ascending: false)
-        .limit(100);
+    final results = await Future.wait<dynamic>([
+      repo.balance(sellerId),
+      repo.payouts(sellerId),
+      repo.client
+          .from('seller_ledger')
+          .select('entry_type,amount,currency,reference_id,created_at')
+          .eq('seller_id', sellerId)
+          .order('created_at', ascending: false)
+          .limit(100),
+    ]);
+    final ledger = results[2] as List;
 
     return _FinanceSnapshot(
-      sellerId: sellerId,
-      balance: balance,
-      payouts: payouts,
-      ledger: (ledger as List)
+      balance: results[0] as num,
+      payouts: results[1] as List<Map<String, dynamic>>,
+      ledger: ledger
           .map((row) => Map<String, dynamic>.from(row as Map))
           .toList(),
     );
@@ -76,9 +78,20 @@ class _SellerFinancePageState extends ConsumerState<SellerFinancePage> {
             return Center(
               child: Padding(
                 padding: const EdgeInsets.all(24),
-                child: Text(
-                  'Chargement impossible : ' + snapshot.error.toString(),
-                  textAlign: TextAlign.center,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      'Impossible de charger les informations financières. Réessayez.',
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 12),
+                    FilledButton.icon(
+                      onPressed: () => setState(() => _future = _load()),
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('Réessayer'),
+                    ),
+                  ],
                 ),
               ),
             );
@@ -94,7 +107,6 @@ class _SellerFinancePageState extends ConsumerState<SellerFinancePage> {
                 child: ListTile(
                   leading: const Icon(Icons.account_balance_wallet_outlined),
                   title: const Text('Solde'),
-                  subtitle: Text(data.sellerId),
                   trailing: Text(
                     data.balance.toString() + ' XOF',
                     style: Theme.of(context).textTheme.titleMedium,
@@ -155,13 +167,11 @@ class _SellerFinancePageState extends ConsumerState<SellerFinancePage> {
 
 class _FinanceSnapshot {
   const _FinanceSnapshot({
-    required this.sellerId,
     required this.balance,
     required this.payouts,
     required this.ledger,
   });
 
-  final String sellerId;
   final num balance;
   final List<Map<String, dynamic>> payouts;
   final List<Map<String, dynamic>> ledger;
