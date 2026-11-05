@@ -36,9 +36,6 @@ void main() {
       '/promotions',
     );
   });
-}
-
-
   test('ignores arbitrary route supplied by notification payload', () {
     expect(
       notificationRoute({'route': '/admin/refunds', 'type': 'unknown'}),
@@ -63,3 +60,5 @@ void main() {
       '/orders/abc123',
     );
   });
+
+}
