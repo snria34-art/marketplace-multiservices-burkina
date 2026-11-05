@@ -1,5 +1,5 @@
 begin;
-select plan(40);
+select plan(41);
 
 select ok(
   not has_table_privilege('anon','private.catalog_moderation_findings','SELECT')
@@ -324,6 +324,16 @@ select ok(
   and position('v_payment.provider<>''WAVE''' in pg_get_functiondef('public.admin_reconcile_wave_refund(uuid,text,text)'::regprocedure)) > 0
   and position('RECONCILE_WAVE_REFUND' in pg_get_functiondef('public.admin_reconcile_wave_refund(uuid,text,text)'::regprocedure)) > 0,
   'Wave refund recovery requires admin confirmation and writes an audit record'
+);
+
+select ok(
+  has_function_privilege('authenticated','public.get_courier_assignments()','EXECUTE')
+  and not has_function_privilege('anon','public.get_courier_assignments()','EXECUTE')
+  and position('private.require_active_account()' in pg_get_functiondef('public.get_courier_assignments()'::regprocedure)) > 0
+  and position('private.has_role(''COURIER''::public.user_role)' in pg_get_functiondef('public.get_courier_assignments()'::regprocedure)) > 0
+  and position('da.courier_id=v_user' in pg_get_functiondef('public.get_courier_assignments()'::regprocedure)) > 0
+  and position('when da.status in (''ACCEPTED'',''PICKED_UP'',''IN_TRANSIT'') then o.delivery_address->>''phone''' in pg_get_functiondef('public.get_courier_assignments()'::regprocedure)) > 0,
+  'courier assignment details expose contact only after acceptance and only to the assigned courier'
 );
 
 select * from finish();
