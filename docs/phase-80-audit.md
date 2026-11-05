@@ -316,3 +316,35 @@ Relecture en lecture seule des définitions SQL actuellement déployées (`compl
 - Aucun paiement, remboursement, retour, retrait ou colis réel n'a été modifié.
 - Aucun test pgTAP/Flutter ni workflow GitHub Actions n'a été lancé.
 - Le prochain correctif doit commencer par le schéma d'allocation de remboursement et une fonction transactionnelle idempotente ; ensuite seulement, la logique d'annulation globale et le recalcul parent pourront être unifiés sans risquer de déséquilibrer le registre.
+
+
+### Audit complémentaire — Storage, RPC SECURITY DEFINER et compatibilité Supabase CLI — 6 novembre 2026
+
+#### Stockage des médias et documents
+- Buckets constatés : `avatars` (public), `documents`, `order-feedback-media`, `product-media`, `shop-media` (privés).
+- Les quatre buckets privés disposent de politiques de lecture ciblées ; les documents ne sont pas rendus publics. Les politiques d'insertion vérifient les chemins d'objets et l'appartenance au vendeur/utilisateur ; une politique restrictive commune exige un compte actif pour les opérations authentifiées.
+- Les médias de produits ne sont lisibles publiquement que si le produit est actif, la boutique active et vérifiée, et le produit non expiré. Les médias de boutique sont publiquement lisibles uniquement pour les boutiques actives et vérifiées. Les médias d'avis/livraison ont des contrôles dédiés (propriétaire, commande/livraison, avis publié, admin).
+- `avatars` est volontairement public pour les images de profil. Les opérations d'écriture restent contrôlées par RLS. Deux générations de politiques de lecture authentifiée des avatars se recouvrent ; c'est un nettoyage possible, mais aucune suppression n'a été faite pour ne pas toucher à la compatibilité cliente.
+- Limite d'upload configurée : avatars 5 MiB, documents 10 MiB, feedback 20 MiB, product-media 5 MiB, shop-media 50 MiB. Les types MIME sont restreints par bucket.
+- **Observation importante** : les cinq buckets affichent actuellement zéro objet dans `storage.objects`. Les règles sont en place, mais l'audit ne peut pas encore confirmer le parcours réel d'upload/téléchargement avec des fichiers de production.
+- Les buckets privés doivent être téléchargés via session autorisée ou URL signée courte ; ne jamais convertir les documents ou preuves privées en bucket public.
+
+#### Fonctions privilégiées et RPC
+- Inventaire SQL des fonctions `SECURITY DEFINER` de `public` : aucune fonction applicative listée n'est exécutable par `anon`. Les 3 avertissements anon de l'advisor sont les surcharges natives PostGIS `st_estimatedextent`.
+- Les fonctions applicatives accessibles à `authenticated` sont des RPC de l'application ; l'avertissement advisor de 80 fonctions ne prouve pas à lui seul une vulnérabilité. Elles doivent néanmoins conserver leurs contrôles d'identité, rôle, propriété, statut de compte et limites d'entrée.
+- Les fonctions dont le `search_path` est vide utilisent des références explicitement qualifiées (`public.*`, `private.*`, `auth.*`) dans les définitions relues. Les schémas `public`, `private`, `extensions` et `vault` ne donnent pas le privilège CREATE à `anon`, `authenticated` ou `PUBLIC`.
+- Les vues exposées identifiées dans `public` sont les vues PostGIS `geography_columns` et `geometry_columns`, détenues par `supabase_admin` ; aucune vue métier applicative supplémentaire n'a été détectée dans `pg_views`.
+
+#### Advisor sécurité et blocage propriétaire
+- L'advisor confirme encore : 17 tables RLS sans policy (dont tables privées/audit et deux tables publiques fermées volontairement), 1 erreur RLS désactivé sur `public.spatial_ref_sys`, 5 avertissements extensions en `public`, 3 avertissements anon PostGIS et 80 avertissements SECURITY DEFINER accessibles aux utilisateurs authentifiés.
+- Ne pas ouvrir les 17 tables sans policy : leur absence de policy constitue ici un refus d'accès par défaut, pas une raison d'ajouter une policy permissive.
+- La correction de `spatial_ref_sys` reste bloquée par son propriétaire `supabase_admin`. Ne pas contourner ce contrôle ni modifier les catalogues système.
+
+#### Compatibilité CLI
+- Le workflow DB du dépôt épingle `supabase/setup-cli@v1` à la version `2.122.1`, ce qui évite la migration implicite vers Supabase CLI v3 annoncée le 2 novembre 2026.
+- CLI v3 change le ciblage par défaut des commandes DB/Storage vers le local et exige `--remote` pour les opérations hébergées. Toute future migration de CLI doit mettre à jour explicitement les commandes, sans déclencher le workflow maintenant.
+- GitHub Actions n'a pas été exécuté ; aucun test ni déploiement n'a été lancé.
+
+#### Conclusion
+- Les règles Storage sont cohérentes avec les catégories de données et la séparation public/privé voulue. La prochaine validation fonctionnelle devra utiliser un compte de test et des fichiers non sensibles, mais uniquement après autorisation explicite de lancer les tests.
+- Aucun changement de bucket, de policy, de fonction, de statut utilisateur ou de fichier utilisateur n'a été appliqué pendant cet audit.
