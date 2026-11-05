@@ -407,3 +407,12 @@ Relecture en lecture seule des définitions SQL actuellement déployées (`compl
 - Recherche ciblée dans le dépôt de `SUPABASE_SERVICE_ROLE_KEY` : les références retrouvées sont dans les Edge Functions Deno côté serveur ; aucune référence à cette variable n'a été trouvée dans le code Flutter inspecté.
 - Conclusion limitée à cette vérification : la configuration Flutter examinée sépare correctement la clé publique client de la clé de service serveur. Cette recherche ne remplace pas un scan exhaustif d'historique Git, des secrets CI et de tous les fichiers binaires.
 - Aucun secret n'a été affiché, demandé ou modifié. Aucun déploiement ni test n'a été exécuté.
+
+
+### Upload des images produit — validation MIME et nettoyage des objets orphelins — 6 novembre 2026
+
+- Relecture de `SellerProductsRepository.uploadProductImage`.
+- Avant correction, l'extension était reprise directement du nom du fichier et le type MIME pouvait être fourni sans liste blanche côté client. Si l'enregistrement des métadonnées échouait après l'upload, l'objet Storage pouvait rester orphelin.
+- Correctif enregistré dans `lib/features/seller/data/seller_products_repository.dart` : seuls JPEG, PNG et WebP sont acceptés ; le suffixe du chemin Storage est généré depuis le type MIME autorisé, et non repris arbitrairement du nom d'origine ; si le RPC `add_seller_product_image` échoue, le client tente de supprimer l'objet qui vient d'être envoyé puis conserve l'erreur initiale.
+- La détection MIME utilise le type fourni par le sélecteur et, s'il est absent, une correspondance stricte avec les extensions JPEG/PNG/WebP. Cela améliore la validation cliente mais ne prouve pas le contenu binaire réel du fichier : la politique MIME et la limite 5 MiB du bucket restent le contrôle serveur. Une validation de signature binaire côté serveur serait un durcissement supplémentaire.
+- Les objets Storage et les métadonnées n'ont pas été testés en environnement réel. Aucun fichier n'a été envoyé, aucune donnée existante n'a été supprimée. Aucun test Flutter, workflow Actions ou déploiement n'a été lancé.
