@@ -1,10 +1,12 @@
+// deno-lint-ignore no-import-prefix no-unversioned-import
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
-const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), {
-  status,
-  headers: { "content-type": "application/json" },
-});
+const json = (body: unknown, status = 200) =>
+  new Response(JSON.stringify(body), {
+    status,
+    headers: { "content-type": "application/json" },
+  });
 
 function publishableKey(): string {
   const raw = Deno.env.get("SUPABASE_PUBLISHABLE_KEYS");
@@ -12,7 +14,9 @@ function publishableKey(): string {
     try {
       const parsed = JSON.parse(raw);
       if (parsed.default) return parsed.default;
-    } catch (_) {}
+    } catch (_) {
+      // Ignore malformed optional configuration and use the fallback environment variable.
+    }
   }
   return Deno.env.get("SUPABASE_ANON_KEY") ?? "";
 }
@@ -82,7 +86,9 @@ Deno.serve(async (req: Request) => {
   const auth = req.headers.get("Authorization");
   const url = Deno.env.get("SUPABASE_URL");
   const key = publishableKey();
-  if (!auth || !url || !key) return json({ error: "supabase_not_configured" }, 503);
+  if (!auth || !url || !key) {
+    return json({ error: "supabase_not_configured" }, 503);
+  }
 
   const apiKey = Deno.env.get("WAVE_API_KEY");
   const signingSecret = Deno.env.get("WAVE_SIGNING_SECRET") ?? "";
@@ -102,11 +108,10 @@ Deno.serve(async (req: Request) => {
   if (!orderId) return json({ error: "order_required" }, 400);
 
   const defaultReturn = url + "/functions/v1/payment-return";
-  const encodedOrderId = encodeURIComponent(orderId);
   const successUrl = Deno.env.get("WAVE_SUCCESS_URL") ||
-    defaultReturn + "?status=success&order_id=" + encodedOrderId;
+    defaultReturn + "?status=success&order_id=" + encodeURIComponent(orderId);
   const errorUrl = Deno.env.get("WAVE_ERROR_URL") ||
-    defaultReturn + "?status=error&order_id=" + encodedOrderId;
+    defaultReturn + "?status=error&order_id=" + encodeURIComponent(orderId);
 
   const supabase = createClient(url, key, {
     global: { headers: { Authorization: auth } },
@@ -118,7 +123,7 @@ Deno.serve(async (req: Request) => {
       p_order_id: orderId,
       p_provider: "WAVE",
     });
-    if (error) return json({ error: error.message }, 409);
+    if (error) return json({ error: "payment_operation_failed" }, 409);
     paymentId = String(data);
   }
 
@@ -132,7 +137,7 @@ Deno.serve(async (req: Request) => {
     paymentRows.length === 0
   ) {
     return json(
-      { error: paymentError?.message ?? "payment_not_found" },
+      { error: "payment_not_found" },
       404,
     );
   }
@@ -162,8 +167,7 @@ Deno.serve(async (req: Request) => {
         payment_id: paymentId,
         provider: "WAVE",
         checkout_url: existingJson.wave_launch_url,
-        provider_reference:
-          existingJson.id ?? payment.provider_reference,
+        provider_reference: existingJson.id ?? payment.provider_reference,
         checkout_status: existingJson.checkout_status ?? null,
         payment_status: existingJson.payment_status ?? null,
         expires_at: existingJson.when_expires ?? null,
@@ -191,10 +195,7 @@ Deno.serve(async (req: Request) => {
     return json({
       error: "wave_api_error",
       provider_status: response.status,
-      message:
-        wave?.message ??
-        wave?.error ??
-        "Wave rejected the checkout session",
+      message: "Wave rejected the checkout session", 
     }, 502);
   }
 
@@ -220,7 +221,7 @@ Deno.serve(async (req: Request) => {
       },
     },
   );
-  if (prepareError) return json({ error: prepareError.message }, 409);
+  if (prepareError) return json({ error: "payment_processing_failed" }, 409);
 
   return json({
     payment_id: paymentId,
