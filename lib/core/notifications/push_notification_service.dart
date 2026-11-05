@@ -73,12 +73,18 @@ class PushNotificationService {
     _openedSubscription = FirebaseMessaging.onMessageOpenedApp.listen(
       (message) => openNotificationRoute(message.data),
     );
-    _tokenSubscription = _messaging.onTokenRefresh.listen(
-      (token) => _registerToken(token),
-    );
+    _tokenSubscription = _messaging.onTokenRefresh.listen((token) async {
+      try {
+        await _registerToken(token);
+      } catch (error, stackTrace) {
+        debugPrint('Push token refresh registration failed: $error');
+        debugPrintStack(stackTrace: stackTrace);
+      }
+    });
 
     _authSubscription = client.auth.onAuthStateChange.listen((state) async {
-      switch (state.event) {
+      try {
+        switch (state.event) {
         case AuthChangeEvent.initialSession:
         case AuthChangeEvent.signedIn:
         case AuthChangeEvent.tokenRefreshed:
@@ -102,6 +108,10 @@ class PushNotificationService {
             );
           }
           _currentToken = null;
+        }
+      } catch (error, stackTrace) {
+        debugPrint('Push auth-state synchronization failed: $error');
+        debugPrintStack(stackTrace: stackTrace);
       }
     });
 
@@ -191,9 +201,14 @@ class PushNotificationService {
   Future<void> _registerCurrentToken() async {
     if (!_initialized || _client?.auth.currentUser == null) return;
 
-    final token = await _messaging.getToken();
-    if (token == null || token.isEmpty) return;
-    await _registerToken(token);
+    try {
+      final token = await _messaging.getToken();
+      if (token == null || token.isEmpty) return;
+      await _registerToken(token);
+    } catch (error, stackTrace) {
+      debugPrint('Push token registration unavailable: $error');
+      debugPrintStack(stackTrace: stackTrace);
+    }
   }
 
   Future<void> _registerToken(String token) async {
