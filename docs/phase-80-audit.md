@@ -210,3 +210,11 @@ Aucune modification de la base de production n'a été nécessaire pour ces poin
 - `admin_begin_refund` vérifie désormais l'existence du paiement, le montant positif, la devise XOF, le prestataire autorisé et la référence fournisseur non vide avant toute transition vers `PROCESSING`. Les tentatives déjà en cours restent exclues pour éviter les doubles appels.
 - Migration distante appliquée : `20261105193703_validate_refund_provider_data_before_processing`. Contrôle du corps SQL et des conditions de transition effectué.
 - Une assertion pgTAP supplémentaire est ajoutée (plan total 35), sans exécution des tests ni appel au fournisseur.
+
+
+### Raccordement du webhook CinetPay V3 — 6 novembre 2026
+
+- La fonction déployée `create-cinetpay-payment-session-v3` envoyait `notify_url` vers `/functions/v1/cinetpay-webhook`, un ancien endpoint retiré qui répond HTTP 410.
+- Le callback a été corrigé vers `/functions/v1/cinetpay-webhook-v3`, dont la signature, la vérification côté CinetPay, le montant et la devise XOF sont contrôlés avant traitement.
+- Déploiement ciblé effectué : `create-cinetpay-payment-session-v3` version 6, avec `verify_jwt=true) conservé. Aucun paiement réel n'a été lancé.
+- La source GitHub a été synchronisée avec le code déployé corrigé.
