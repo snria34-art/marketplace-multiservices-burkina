@@ -97,7 +97,7 @@ Deno.serve(async (req: Request) => {
   const data = (event.data ?? {}) as Record<string, unknown>;
   if (!eventType) return json({ error: "invalid_event" }, 400);
 
-  let status: "SUCCEEDED" | "FAILED" | null = null;
+  let status: "SUCCEEDED" | "FAILED" | "PROCESSING" | null = null;
   if (eventType === "checkout.session.completed") status = "SUCCEEDED";
   if (eventType === "checkout.session.payment_failed") status = "PROCESSING";
   if (!status) return json({ ok: true, ignored: true, event_type: eventType });
