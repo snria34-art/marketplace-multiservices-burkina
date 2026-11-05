@@ -1,5 +1,5 @@
 begin;
-select plan(35);
+select plan(36);
 
 select ok(
   not has_table_privilege('anon','private.catalog_moderation_findings','SELECT')
@@ -244,6 +244,18 @@ select ok(
   and position('nullif(trim(p.provider_reference),'''') is not null' in pg_get_functiondef('public.admin_begin_refund(uuid)'::regprocedure)) > 0
   and position('r.status in (''REQUESTED'',''APPROVED'',''FAILED'')' in pg_get_functiondef('public.admin_begin_refund(uuid)'::regprocedure)) > 0,
   'provider data is validated before refund processing starts'
+);
+
+select ok(
+  to_regclass('private.idx_platform_repair_backups_restored_by_fk') is not null
+  and to_regclass('private.idx_review_moderation_audit_actor_id_fk') is not null
+  and to_regclass('private.idx_seller_access_audit_actor_user_id_fk') is not null
+  and to_regclass('private.idx_seller_access_requests_conversation_id_fk') is not null
+  and to_regclass('private.idx_seller_access_requests_initial_message_id_fk') is not null
+  and to_regclass('private.idx_seller_access_requests_owner_shop_id_fk') is not null
+  and to_regclass('private.idx_seller_access_requests_reviewed_by_fk') is not null
+  and to_regclass('private.idx_seller_access_requests_revoked_by_fk') is not null,
+  'all previously uncovered private foreign keys now have covering indexes'
 );
 
 select * from finish();
