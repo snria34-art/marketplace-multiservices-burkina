@@ -1,5 +1,5 @@
 begin;
-select plan(10);
+select plan(13);
 
 select is(
   (select count(*)::integer from auth.users where email like 'demo.%@marketplace.test'),
@@ -84,6 +84,36 @@ select ok(
     where u.email='demo.transport@marketplace.test'
   ),
   'the demo transport company is seeded'
+);
+
+
+select is(
+  (select count(*)::integer from public.user_roles ur
+   join auth.users u on u.id=ur.user_id
+   where u.email like 'demo.%@marketplace.test'),
+  9,
+  'every demo account has its intended application role'
+);
+
+select ok(
+  exists (
+    select 1 from public.restaurant_menus rm
+    join public.restaurant_profiles rp on rp.id=rm.restaurant_id
+    join public.shops sh on sh.id=rp.shop_id
+    where sh.normalized_name='restaurant-demo'
+      and rm.name='Menu de démonstration'
+  ),
+  'the demo restaurant has a local sample menu'
+);
+
+select ok(
+  exists (
+    select 1 from public.service_providers sp
+    join auth.users u on u.id=sp.user_id
+    where u.email='demo.mechanic@marketplace.test'
+      and sp.provider_type='MECHANIC'
+  ),
+  'the demo mechanic is registered in the service provider directory'
 );
 
 select * from finish();
