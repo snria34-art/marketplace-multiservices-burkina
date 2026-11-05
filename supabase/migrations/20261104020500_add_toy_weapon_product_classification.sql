@@ -47,4 +47,4 @@ from cron.job
 where jobname='toy-weapon-classifier';
 
 select cron.schedule('toy-weapon-classifier','*/10 * * * *',
-  $select private.scan_toy_weapon_products();$);
+  $toy_job$select private.scan_toy_weapon_products();$toy_job$);
