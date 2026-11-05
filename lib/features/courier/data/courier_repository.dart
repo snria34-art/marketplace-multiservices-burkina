@@ -7,19 +7,12 @@ class CourierRepository {
   final SupabaseClient client;
 
   Future<List<Map<String, dynamic>>> assignments() async {
-    final user = client.auth.currentUser;
-    if (user == null) return const [];
+    if (client.auth.currentUser == null) return const [];
 
-    final rows = await client
-        .from('delivery_assignments')
-        .select(
-          'id,package_id,courier_id,status,assigned_at,accepted_at,completed_at',
-        )
-        .eq('courier_id', user.id)
-        .order('assigned_at', ascending: false)
-        .limit(100);
+    final rows = await client.rpc('get_courier_assignments');
+    if (rows is! List) return const [];
 
-    return (rows as List)
+    return rows
         .map((row) => Map<String, dynamic>.from(row as Map))
         .toList();
   }
