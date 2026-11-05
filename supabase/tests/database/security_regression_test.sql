@@ -1,5 +1,5 @@
 begin;
-select plan(12);
+select plan(18);
 
 select ok(
   not has_table_privilege('anon','private.catalog_moderation_findings','SELECT')
@@ -71,6 +71,44 @@ select ok(
   and not has_function_privilege('authenticated','public.verify_push_dispatch_secret(text)','EXECUTE')
   and has_function_privilege('service_role','public.verify_push_dispatch_secret(text)','EXECUTE'),
   'push dispatch secret verification is service-role only'
+);
+
+
+select ok(
+  has_function_privilege('authenticated','public.checkout_cart(uuid,jsonb,numeric,text,text)','EXECUTE')
+  and not has_function_privilege('anon','public.checkout_cart(uuid,jsonb,numeric,text,text)','EXECUTE'),
+  'checkout is available to signed-in customers but not anonymous clients'
+);
+
+select ok(
+  has_function_privilege('authenticated','public.create_transport_booking_secure(uuid,integer,jsonb)','EXECUTE')
+  and not has_function_privilege('anon','public.create_transport_booking_secure(uuid,integer,jsonb)','EXECUTE'),
+  'transport booking is signed-in only'
+);
+
+select ok(
+  has_function_privilege('authenticated','public.accept_mechanic_quote(uuid)','EXECUTE')
+  and not has_function_privilege('anon','public.accept_mechanic_quote(uuid)','EXECUTE'),
+  'mechanic quote acceptance is signed-in only'
+);
+
+select ok(
+  has_function_privilege('authenticated','public.set_cart_item_quantity(uuid,integer)','EXECUTE')
+  and not has_function_privilege('anon','public.set_cart_item_quantity(uuid,integer)','EXECUTE'),
+  'cart quantity mutation is signed-in only'
+);
+
+select ok(
+  has_function_privilege('authenticated','private.has_active_seller_access(uuid,text)','EXECUTE')
+  and not has_function_privilege('anon','private.has_active_seller_access(uuid,text)','EXECUTE'),
+  'seller shared-access helper is available only to authenticated policy evaluation'
+);
+
+select ok(
+  not has_function_privilege('anon','public.create_order_message(uuid,text,text)','EXECUTE')
+  and not has_function_privilege('authenticated','public.create_order_message(uuid,text,text)','EXECUTE')
+  and has_function_privilege('service_role','public.create_order_message(uuid,text,text)','EXECUTE'),
+  'server-only order messaging RPC cannot be called directly by clients'
 );
 
 select * from finish();
