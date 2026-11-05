@@ -1,5 +1,5 @@
 begin;
-select plan(29);
+select plan(30);
 
 select ok(
   not has_table_privilege('anon','private.catalog_moderation_findings','SELECT')
@@ -201,6 +201,11 @@ select ok(
   and position('private.is_admin()' in pg_get_functiondef('public.revoke_seller_access_request(uuid,text)'::regprocedure)) > 0
   and position('case when private.is_admin() then r.admin_confirmation_notes else null end' in pg_get_functiondef('public.get_seller_access_requests()')) > 0,
   'seller access approvals and internal admin notes require an active explicitly registered admin'
+);
+
+select ok(
+  position('da.package_id=p_package_id' in replace(pg_get_functiondef('public.confirm_package_delivery(uuid,text)'::regprocedure),' ','')) > 0,
+  'delivery evidence assignment must belong to the exact package being confirmed'
 );
 
 select * from finish();
