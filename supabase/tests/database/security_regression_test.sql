@@ -1,5 +1,5 @@
 begin;
-select plan(18);
+select plan(21);
 
 select ok(
   not has_table_privilege('anon','private.catalog_moderation_findings','SELECT')
@@ -109,6 +109,31 @@ select ok(
   and not has_function_privilege('authenticated','public.create_order_message(uuid,text,text)','EXECUTE')
   and has_function_privilege('service_role','public.create_order_message(uuid,text,text)','EXECUTE'),
   'server-only order messaging RPC cannot be called directly by clients'
+);
+
+select ok(
+  position('financial_read' in pg_get_functiondef('public.submit_seller_access_request(uuid,uuid,text[],text,text)'::regprocedure)) = 0,
+  'seller access request RPC no longer accepts financial_read'
+);
+
+select ok(
+  not exists (
+    select 1 from pg_policies
+    where schemaname='public'
+      and policyname in (
+        'commissions_shared_access_read',
+        'seller_ledger_shared_access_read',
+        'seller_payouts_shared_access_read'
+      )
+  ),
+  'shared financial read policies are absent'
+);
+
+select ok(
+  exists (select 1 from pg_policies where schemaname='public' and tablename='commissions' and policyname='commissions_seller_read')
+  and exists (select 1 from pg_policies where schemaname='public' and tablename='seller_ledger' and policyname='seller_ledger_seller_read')
+  and exists (select 1 from pg_policies where schemaname='public' and tablename='seller_payouts' and policyname='seller_payouts_owner_or_admin_read'),
+  'seller owners and administrators retain their financial read policies'
 );
 
 select * from finish();
