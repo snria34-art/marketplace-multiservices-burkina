@@ -437,10 +437,19 @@ class _OrderDetailsPageState extends ConsumerState<OrderDetailsPage> {
 
     Uint8List? mediaBytes;
     if (form.media != null) {
-      mediaBytes = await form.media!.readAsBytes();
       final maxBytes = form.mediaType == 'VIDEO'
           ? 20 * 1024 * 1024
           : 5 * 1024 * 1024;
+      final fileSize = await form.media!.length();
+      if (fileSize <= 0 || fileSize > maxBytes) {
+        _showReviewMessage(
+          form.mediaType == 'VIDEO'
+              ? 'La vidéo doit faire au maximum 20 Mo.'
+              : 'La photo doit faire au maximum 5 Mo.',
+        );
+        return;
+      }
+      mediaBytes = await form.media!.readAsBytes();
       if (mediaBytes.isEmpty || mediaBytes.length > maxBytes) {
         _showReviewMessage(
           form.mediaType == 'VIDEO'
