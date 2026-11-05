@@ -135,11 +135,13 @@ class _SellerModerationPageState extends ConsumerState<SellerModerationPage> {
     controller.dispose();
     if (result != true) return;
 
+    String? mediaPath;
+    SupabaseClient? uploadClient;
     try {
       final client = ref.read(supabaseProvider);
+      uploadClient = client;
       final user = client?.auth.currentUser;
       if (client == null || user == null) throw StateError('Session indisponible.');
-      String? mediaPath;
       if (media != null) {
         final bytes = await media!.readAsBytes();
         final maxBytes = mediaType == 'VIDEO' ? 20 * 1024 * 1024 : 5 * 1024 * 1024;
@@ -174,6 +176,15 @@ class _SellerModerationPageState extends ConsumerState<SellerModerationPage> {
       );
       setState(() => _future = _load());
     } catch (error) {
+      if (mediaPath != null && uploadClient != null) {
+        try {
+          await uploadClient.storage
+              .from('order-feedback-media')
+              .remove([mediaPath]);
+        } catch (_) {
+          // Best-effort cleanup; preserve the original submission error.
+        }
+      }
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Envoi impossible : $error')),
