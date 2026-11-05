@@ -126,3 +126,12 @@ Les tests de charge, les tests de restauration de sauvegarde et les essais de pa
 - Effet attendu : un collaborateur ne peut plus obtenir les données financières via le partage de boutique. Le propriétaire vendeur et les administrateurs conservent leurs politiques de lecture existantes.
 - Limite restante : le scope `financial_read` est encore accepté par la fonction de demande, mais ne donne plus de visibilité financière via ces politiques. Il faudra retirer ce scope de la RPC et de l'interface après inspection de ses dépendances.
 - Aucun solde, paiement, remboursement ou écriture du registre n'a été modifié. Aucun test avec de vrais fonds n'a été effectué.
+
+
+### Retrait du scope financier des nouvelles demandes — 6 novembre 2026
+
+- Migration distante `20261105184743_remove_financial_read_from_seller_access_requests` appliquée au projet Supabase actif.
+- La RPC `submit_seller_access_request` n'accepte plus que `shop_profile`, `products`, `inventory_read` et `orders_read`. Une nouvelle demande contenant `financial_read` est rejetée.
+- Le fichier SQL est versionné dans `supabase/migrations/20261105184743_remove_financial_read_from_seller_access_requests.sql`.
+- Les demandes historiques peuvent encore contenir la valeur ancienne, mais les politiques de lecture financière partagée ont déjà été supprimées : ces anciennes autorisations ne donnent plus accès aux tables financières.
+- Les migrations ont été appliquées et les fichiers SQL enregistrés. Les tests d'intégration automatisés n'ont pas encore pu être exécutés, car les runners GitHub Actions du dépôt ne s'attribuent pas (`runner_id=0`).
