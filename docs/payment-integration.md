@@ -8,8 +8,8 @@
 - Wave utilise son Checkout API et un webhook signé HMAC.
 - Orange Money et Moov Money au Burkina sont proposés via CinetPay Collect.
 - CinetPay reçoit une notification x-www-form-urlencoded signée par x-token, puis le serveur vérifie toujours la transaction via l'API de vérification.
-- Une notification WAITING_FOR_CUSTOMER reste en PROCESSING.
-- Une tentative Wave checkout.session.payment_failed reste PROCESSING afin de permettre plusieurs tentatives sur la même session.
+- Une notification CinetPay WAITING_FOR_CUSTOMER reste en PROCESSING.
+- Un événement Wave `checkout.session.payment_failed` passe en FAILED ; une nouvelle tentative doit suivre le flux de création/reprise de paiement prévu par le fournisseur.
 - Les événements de paiement sont traités par un RPC idempotent qui valide le montant et la devise avant de modifier la commande.
 
 ## Fonctions Edge actives
@@ -96,4 +96,4 @@ Statut : code corrigé et commité ; validation Deno et tests de webhook en atte
 - Les fonctions `wave-payment-webhook-v3`, `cinetpay-webhook-v3` et `payment-return` ont `verify_jwt = false` dans `supabase/config.toml`, car les fournisseurs et navigateurs ne disposent pas d'un JWT Supabase.
 - Les webhooks vérifient leurs propres signatures/secrets dans le code avant toute mutation. La désactivation du contrôle JWT à la passerelle n'enlève donc pas le contrôle d'authenticité métier ; les callbacks non signés sont rejetés.
 - Les événements Wave `checkout.session.payment_failed` sont maintenant transmis comme `FAILED` et non `PROCESSING`, afin de suivre la machine d'état SQL.
-- Le contrôle Deno des fonctions Edge a réussi sur le commit `1c58ab469a`. Le contrôle sur le commit qui inclut également la configuration de callback doit encore terminer.
+- Le contrôle Deno des fonctions Edge a réussi dans la CI du commit `7c3739f1d3`. Les tests SQL Supabase et les tests Flutter ont également réussi sur ce commit ; les builds Android/iOS sont encore en cours.
