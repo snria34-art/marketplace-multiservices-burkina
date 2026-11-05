@@ -3,21 +3,25 @@ import 'package:go_router/go_router.dart';
 
 final GlobalKey<NavigatorState> appNavigatorKey = GlobalKey<NavigatorState>();
 
-String notificationRoute(Map<String, dynamic> data) {
-  final explicit = data['route']?.toString().trim();
-  if (explicit != null && explicit.isNotEmpty && explicit.startsWith('/')) {
-    return explicit;
-  }
+String? _safeNotificationId(dynamic value) {
+  if (value == null) return null;
+  final id = value.toString().trim();
+  if (!RegExp(r'^[A-Za-z0-9_-]{1,128}$').hasMatch(id)) return null;
+  return id;
+}
 
-  final orderId = data['order_id']?.toString().trim();
-  final deliveryOrderId = data['delivery_order_id']?.toString().trim();
+String notificationRoute(Map<String, dynamic> data) {
+  // Notification payloads are untrusted input. Never navigate to a route
+  // supplied by the payload: only construct destinations from known routes.
+  final orderId = _safeNotificationId(data['order_id']);
+  final deliveryOrderId = _safeNotificationId(data['delivery_order_id']);
   final type = (data['type'] ?? '').toString().toLowerCase();
 
-  if (deliveryOrderId != null && deliveryOrderId.isNotEmpty) {
+  if (deliveryOrderId != null) {
     return '/delivery/' + deliveryOrderId;
   }
 
-  if (orderId != null && orderId.isNotEmpty) {
+  if (orderId != null) {
     return '/orders/' + orderId;
   }
 
