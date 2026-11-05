@@ -156,3 +156,13 @@ Aucune modification de la base de production n'a été nécessaire pour ces poin
 - Vérifier la cohérence complète entre les événements de paiement, les remboursements partiels et les écritures vendeur.
 - Vérifier les chemins de stockage et les tailles/MIME côté application, en complément des restrictions de buckets et policies SQL.
 - Aucun paiement, remboursement ou retrait réel n'a été déclenché. Aucun workflow GitHub Actions n'a été lancé.
+
+
+### Audit des rôles administratifs — 6 novembre 2026
+
+- L'audit des RPC a trouvé que `public.is_admin_actor()` inclut les rôles `ADMIN`, `SUPER_ADMIN` et `MODERATOR`. Cette fonction reste adaptée aux actions de modération (par exemple les décisions sur les produits), mais elle était aussi utilisée pour des mutations financières et de gestion de comptes.
+- Risque identifié : un compte modérateur actif pouvait satisfaire le contrôle de certaines RPC de paiement vendeur, de blocage/réactivation de comptes et d'approbation/révocation des accès collaborateurs de boutique.
+- Correction appliquée au projet Supabase actif par la migration `20261105192629_restrict_sensitive_admin_actions_to_active_admin_users` : les actions sensibles s'appuient désormais sur `private.is_admin()`, qui exige une entrée active dans `public.admin_users` et un profil actif.
+- RPC corrigées : `admin_mark_seller_payout_paid`, `admin_mark_seller_payout_failed`, `admin_set_account_status`, les deux variantes de `admin_review_seller_access_request`, `expire_seller_access_requests` et la révocation administrative de demande d'accès.
+- La lecture de la file des demandes peut rester accessible aux modérateurs pour le suivi, mais les notes internes de confirmation téléphonique sont désormais réservées aux administrateurs explicitement enregistrés.
+- Le contrôle générique `is_admin_actor()` n'a pas été élargi ni supprimé : il reste utilisé pour les opérations de modération prévues. Les tests pgTAP ont reçu deux assertions ciblées ; ils ne sont pas exécutés afin de ne pas déclencher GitHub Actions ni consommer le quota de facturation.
