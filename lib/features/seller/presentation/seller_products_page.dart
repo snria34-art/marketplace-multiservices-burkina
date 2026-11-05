@@ -135,7 +135,7 @@ class _SellerProductsPageState
       setState(() => _future = _loadProducts());
       _show(submissionMessage);
     } catch (error) {
-      _show('Création impossible : ' + error.toString());
+      _show('Création impossible. Vérifiez les informations et réessayez.');
     }
   }
 
@@ -194,7 +194,7 @@ class _SellerProductsPageState
       if (!mounted) return;
       setState(() => _future = _loadProducts());
     } catch (error) {
-      _show('Stock non modifié : ' + error.toString());
+      _show('Stock non modifié. Vérifiez la quantité et réessayez.');
     }
   }
 
@@ -258,7 +258,7 @@ class _SellerProductsPageState
       setState(() => _future = _loadProducts());
       _show(message);
     } catch (error) {
-      _show('Ajout des photos impossible : $error');
+      _show('Ajout des photos impossible. Vérifiez le format et la taille des images, puis réessayez.');
     }
   }
 
@@ -296,8 +296,23 @@ class _SellerProductsPageState
 
           if (snapshot.hasError) {
             return Center(
-              child: Text(
-                'Erreur produits : ' + snapshot.error.toString(),
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      'Impossible de charger vos produits. Réessayez.',
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 12),
+                    FilledButton.icon(
+                      onPressed: () => setState(() => _future = _loadProducts()),
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('Réessayer'),
+                    ),
+                  ],
+                ),
               ),
             );
           }
