@@ -1,5 +1,5 @@
 begin;
-select plan(39);
+select plan(40);
 
 select ok(
   not has_table_privilege('anon','private.catalog_moderation_findings','SELECT')
@@ -314,6 +314,16 @@ select ok(
   and position('private.has_role(''COURIER''::public.user_role)' in pg_get_functiondef('public.start_package_delivery(uuid)'::regprocedure)) > 0
   and position('da.courier_id=v_user' in pg_get_functiondef('public.start_package_delivery(uuid)'::regprocedure)) > 0,
   'courier can start only their own picked-up package with an active courier account'
+);
+
+select ok(
+  has_function_privilege('authenticated','public.admin_reconcile_wave_refund(uuid,text,text)','EXECUTE')
+  and not has_function_privilege('anon','public.admin_reconcile_wave_refund(uuid,text,text)','EXECUTE')
+  and position('private.is_admin()' in pg_get_functiondef('public.admin_reconcile_wave_refund(uuid,text,text)'::regprocedure)) > 0
+  and position('v_refund.status<>''PROCESSING''' in pg_get_functiondef('public.admin_reconcile_wave_refund(uuid,text,text)'::regprocedure)) > 0
+  and position('v_payment.provider<>''WAVE''' in pg_get_functiondef('public.admin_reconcile_wave_refund(uuid,text,text)'::regprocedure)) > 0
+  and position('RECONCILE_WAVE_REFUND' in pg_get_functiondef('public.admin_reconcile_wave_refund(uuid,text,text)'::regprocedure)) > 0,
+  'Wave refund recovery requires admin confirmation and writes an audit record'
 );
 
 select * from finish();
