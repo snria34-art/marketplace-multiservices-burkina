@@ -202,3 +202,11 @@ Aucune modification de la base de production n'a été nécessaire pour ces poin
 - Migration distante appliquée : `20261105193607_queue_refund_for_payment_settled_after_order_cancellation`. Vérification SQL effectuée : branche d'annulation, demande traçable, anti-duplication et privilèges service_role confirmés.
 - Le webhook Wave V3 déployé classait déjà `checkout.session.payment_failed` comme `FAILED`; le fichier GitHub était en retard et a été synchronisé avec la version active (commit `b2f8e98`). Les anciens webhooks V1/V2 sont bien retirés avec HTTP 410.
 - Une assertion pgTAP supplémentaire est ajoutée (plan total 34). Les tests ne sont pas exécutés ; aucun remboursement réel ni appel de prestataire n'a été effectué.
+
+
+### Validation préalable des données de remboursement — 6 novembre 2026
+
+- Le point d'entrée d'exécution passait le remboursement à `PROCESSING` avant de vérifier la référence du prestataire et le montant. Une référence absente pouvait donc bloquer la demande sans appel externe possible.
+- `admin_begin_refund` vérifie désormais l'existence du paiement, le montant positif, la devise XOF, le prestataire autorisé et la référence fournisseur non vide avant toute transition vers `PROCESSING`. Les tentatives déjà en cours restent exclues pour éviter les doubles appels.
+- Migration distante appliquée : `20261105193703_validate_refund_provider_data_before_processing`. Contrôle du corps SQL et des conditions de transition effectué.
+- Une assertion pgTAP supplémentaire est ajoutée (plan total 35), sans exécution des tests ni appel au fournisseur.
