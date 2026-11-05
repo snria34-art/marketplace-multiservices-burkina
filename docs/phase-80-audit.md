@@ -377,3 +377,13 @@ Relecture en lecture seule des définitions SQL actuellement déployées (`compl
 - Le code de dispatch est conçu pour refuser l'envoi quand le service account FCM est absent ; ce comportement est préférable à une fausse confirmation de livraison.
 - **Action nécessaire avant activation** : renseigner côté Supabase Edge Function les secrets Firebase requis (`FCM_SERVICE_ACCOUNT_JSON`, ou les champs de projet complémentaires prévus par le code), puis effectuer un test contrôlé avec un appareil de test et confirmer la réception. Ne jamais enregistrer le JSON du compte de service dans GitHub ni dans le code mobile.
 - La version du dépôt contenant la limite de concurrence n'est pas encore déployée ; le runtime continue donc d'exécuter la version 7. Aucun appel manuel de l'endpoint n'a été effectué durant cet audit.
+
+
+### Correction Android — signature de production obligatoire — 6 novembre 2026
+
+- Le fichier `android/app/build.gradle.kts` ne retombe plus sur la signature `debug` lorsque `android/key.properties` est absent.
+- Une compilation `release` échoue désormais explicitement si le fichier de signature est absent, si l'une des propriétés `keyAlias`, `keyPassword`, `storeFile`, `storePassword` manque, ou si le keystore indiqué n'existe pas.
+- Les compilations `debug` restent configurables sans keystore de production.
+- Le fichier `.gitignore` ignore déjà `android/key.properties` et `android/app/upload-keystore.jks`; ces éléments sensibles ne doivent jamais être commités.
+- Relecture GitHub effectuée : absence du fallback debug confirmée, contrôles de présence/complétude du keystore confirmés, exclusions Git confirmées.
+- Aucun APK/AAB n'a été construit et aucun keystore n'a été lu, créé ou modifié.
