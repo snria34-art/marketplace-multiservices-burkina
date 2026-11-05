@@ -8,8 +8,8 @@
 - Wave utilise son Checkout API et un webhook signé HMAC.
 - Orange Money et Moov Money au Burkina sont proposés via CinetPay Collect.
 - CinetPay reçoit une notification x-www-form-urlencoded signée par x-token, puis le serveur vérifie toujours la transaction via l'API de vérification.
-- Une notification CinetPay WAITING_FOR_CUSTOMER reste en PROCESSING.
-- Un événement Wave `checkout.session.payment_failed` passe en FAILED ; une nouvelle tentative doit suivre le flux de création/reprise de paiement prévu par le fournisseur.
+- Une notification CinetPay `WAITING_FOR_CUSTOMER` reste en `PROCESSING`.
+- Un événement Wave `checkout.session.payment_failed` reste en `PROCESSING` : Wave précise qu'une même session peut recevoir plusieurs échecs avant une réussite. Cela évite d'annuler prématurément la commande et de libérer son stock entre deux tentatives.
 - Les événements de paiement sont traités par un RPC idempotent qui valide le montant et la devise avant de modifier la commande.
 
 ## Fonctions Edge actives
