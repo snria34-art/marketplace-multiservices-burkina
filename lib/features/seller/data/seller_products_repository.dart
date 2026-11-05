@@ -108,8 +108,13 @@ class SellerProductsRepository {
   }) async {
     final user = client.auth.currentUser;
     if (user == null) throw StateError('Authentification requise.');
+    const maxBytes = 5 * 1024 * 1024;
+    final fileSize = await file.length();
+    if (fileSize <= 0 || fileSize > maxBytes) {
+      throw StateError('Chaque image doit faire au maximum 5 Mo.');
+    }
     final bytes = await file.readAsBytes();
-    if (bytes.isEmpty || bytes.length > 5 * 1024 * 1024) {
+    if (bytes.isEmpty || bytes.length > maxBytes) {
       throw StateError('Chaque image doit faire au maximum 5 Mo.');
     }
     const allowedImageTypes = {
