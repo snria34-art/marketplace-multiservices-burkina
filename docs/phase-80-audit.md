@@ -192,3 +192,13 @@ Aucune modification de la base de production n'a été nécessaire pour ces poin
 - La fonction n'accepte maintenant que `REQUESTED`, `APPROVED` ou `FAILED` pour passer à `PROCESSING`. Un remboursement déjà en cours est refusé jusqu'à ce que son état soit réconcilié. Le contrôle `private.is_admin()` et l'accès authentifié existant sont conservés.
 - Migration distante appliquée : `20261105193436_prevent_duplicate_refund_processing_attempts`. Le code SQL et la condition de transition ont été vérifiés après application.
 - Une assertion pgTAP est ajoutée (plan total 33), sans exécution des tests ni appel au prestataire de paiement.
+
+
+### Paiement confirmé après annulation — 6 novembre 2026
+
+- Le traitement des webhooks acceptait une confirmation tardive après l'annulation de la commande, enregistrait le paiement comme réussi et laissait la commande annulée sans créer de suivi de remboursement.
+- La fonction verrouille déjà le paiement et la commande. Elle crée désormais une demande de remboursement pour le montant restant dû lorsque le prestataire confirme un paiement sur une commande annulée. Les demandes déjà ouvertes ou échouées ne sont pas dupliquées ; un remboursement partiel déjà terminé ne provoque qu'une demande pour le solde restant.
+- La base ne déclenche aucun appel de remboursement au prestataire : elle inscrit seulement la demande `REQUESTED` pour traitement administratif. Les rôles `anon` et `authenticated` ne peuvent toujours pas exécuter directement le processeur d'événements.
+- Migration distante appliquée : `20261105193607_queue_refund_for_payment_settled_after_order_cancellation`. Vérification SQL effectuée : branche d'annulation, demande traçable, anti-duplication et privilèges service_role confirmés.
+- Le webhook Wave V3 déployé classait déjà `checkout.session.payment_failed` comme `FAILED`; le fichier GitHub était en retard et a été synchronisé avec la version active (commit `b2f8e98`). Les anciens webhooks V1/V2 sont bien retirés avec HTTP 410.
+- Une assertion pgTAP supplémentaire est ajoutée (plan total 34). Les tests ne sont pas exécutés ; aucun remboursement réel ni appel de prestataire n'a été effectué.
