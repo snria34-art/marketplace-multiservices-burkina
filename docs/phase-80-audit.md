@@ -184,3 +184,11 @@ Aucune modification de la base de production n'a été nécessaire pour ces poin
 - Avant annulation, elle refuse tout groupe dont un colis est déjà ramassé/en transit/livré ou dont la consommation de stock est déjà enregistrée. Sinon, elle libère les quantités réservées, annule les affectations pré-dispatch et les colis concernés, journalise l'événement et met la commande principale à `CANCELLED` ou `PARTIALLY_FULFILLED` selon les autres groupes.
 - Migration distante appliquée : `20261105193330_release_stock_and_cancel_package_on_seller_group_cancellation`. Vérification SQL effectuée : contrôles d'accès, libération de stock, journalisation et privilèges serveur confirmés.
 - Deux assertions pgTAP supplémentaires (plan total 32) sont ajoutées, mais non exécutées. Aucun paiement, remboursement ou colis réel n'a été touché.
+
+
+### Prévention des doubles demandes de remboursement — 6 novembre 2026
+
+- L'audit a révélé que `admin_begin_refund` acceptait aussi le statut `PROCESSING`. Un second appel pendant qu'une demande était déjà en traitement pouvait donc relancer la même opération chez le prestataire et créer un risque de double remboursement.
+- La fonction n'accepte maintenant que `REQUESTED`, `APPROVED` ou `FAILED` pour passer à `PROCESSING`. Un remboursement déjà en cours est refusé jusqu'à ce que son état soit réconcilié. Le contrôle `private.is_admin()` et l'accès authentifié existant sont conservés.
+- Migration distante appliquée : `20261105193436_prevent_duplicate_refund_processing_attempts`. Le code SQL et la condition de transition ont été vérifiés après application.
+- Une assertion pgTAP est ajoutée (plan total 33), sans exécution des tests ni appel au prestataire de paiement.
