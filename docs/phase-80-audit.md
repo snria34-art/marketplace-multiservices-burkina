@@ -368,3 +368,12 @@ Relecture en lecture seule des définitions SQL actuellement déployées (`compl
 - `claim_notification_for_push` verrouille la notification, refuse les éléments déjà envoyés et les traitements récents (fenêtre de 5 minutes), puis marque le traitement en cours. Cela réduit le risque de double traitement concurrent.
 - Limite connue à traiter avant un fort volume multi-appareils : le modèle stocke le résultat d'envoi au niveau notification, pas au niveau de chaque appareil. Lorsqu'une notification réussit sur au moins un appareil mais échoue sur un autre, l'état actuel évite un renvoi global qui dupliquerait les notifications déjà reçues, mais ne permet pas de retenter uniquement l'appareil en échec. Une table d'état par couple notification/appareil serait nécessaire pour une reprise précise.
 - La fonction Edge `dispatch-push-notifications` est actuellement déployée en version 7 ; le code du dépôt contient maintenant le worker à concurrence limitée. **Le code modifié n'a pas été déployé**. Aucun appel de dispatch n'a été fait, aucun push réel n'a été envoyé.
+
+
+### Incident observé — dispatch push en 503 — 6 novembre 2026
+
+- L'advisor Health signale que `dispatch-push-notifications` a renvoyé 5 erreurs sur 5 requêtes (100 %) sur deux fenêtres consécutives.
+- Les journaux confirment des réponses HTTP 503 répétées sur la version déployée 7, déclenchées par `pg_net/0.20.4`. Le contexte de configuration déjà constaté est `fcm_not_configured` : le compte de service Firebase/FCM n'est pas configuré dans les secrets de la fonction.
+- Le code de dispatch est conçu pour refuser l'envoi quand le service account FCM est absent ; ce comportement est préférable à une fausse confirmation de livraison.
+- **Action nécessaire avant activation** : renseigner côté Supabase Edge Function les secrets Firebase requis (`FCM_SERVICE_ACCOUNT_JSON`, ou les champs de projet complémentaires prévus par le code), puis effectuer un test contrôlé avec un appareil de test et confirmer la réception. Ne jamais enregistrer le JSON du compte de service dans GitHub ni dans le code mobile.
+- La version du dépôt contenant la limite de concurrence n'est pas encore déployée ; le runtime continue donc d'exécuter la version 7. Aucun appel manuel de l'endpoint n'a été effectué durant cet audit.
