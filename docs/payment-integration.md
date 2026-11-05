@@ -83,3 +83,11 @@ Tous les montants envoyés à CinetPay sont en XOF. Le montant est un entier pos
 Le code d'intégration est en place, mais les comptes marchands/KYC, clés API, secrets de signature et URLs webhook doivent être fournis par les comptes fournisseur avant tout paiement réel.
 
 Aucun secret réel ne doit être commit dans le dépôt.
+
+## Revue de code — 5 novembre 2026
+
+Les fonctions de création de session v3 ont été corrigées : les URL de retour Wave et CinetPay sont maintenant construites après validation de l'identifiant de commande. Le webhook déclaré lors de la création de session CinetPay pointe vers `cinetpay-webhook-v3`, et non vers l'ancienne version. Une branche GET dupliquée a été supprimée dans le webhook v3.
+
+La CI Supabase vérifie maintenant aussi le typage des fonctions Edge avec `deno check`. Ce contrôle doit réussir avant de considérer les correctifs de paiement comme validés. Les webhooks doivent ensuite être testés avec des notifications simulées signées et des réponses fournisseur simulées. Aucun paiement réel ne doit être utilisé pour ces tests.
+
+Statut : code corrigé et commité ; validation Deno et tests de webhook en attente de la CI. Les secrets et comptes marchands réels ne sont pas configurés ici.
