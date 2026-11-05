@@ -22,7 +22,9 @@ class _HomePageState extends ConsumerState<HomePage> {
   String? _selectedCategoryId;
   int _page = 0;
   bool _loadingProducts = false;
-  bool _hasMore = true;\n  int _productRequestId = 0;\n  String? _productsError;
+  bool _hasMore = true;
+  int _productRequestId = 0;
+  String? _productsError;
 
   @override
   void initState() {
