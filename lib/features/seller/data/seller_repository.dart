@@ -30,16 +30,41 @@ class SellerRepository {
   }
 
   Future<num> balance(String sellerId) async {
-    final rows = await client
-        .from('seller_ledger')
-        .select('amount')
-        .eq('seller_id', sellerId);
+    const pageSize = 500;
+    var lastId = 0;
+    var total = 0.0;
 
-    return (rows as List).fold<num>(
-      0,
-      (sum, row) =>
-          sum + (num.tryParse((row as Map)['amount']?.toString() ?? '') ?? 0),
-    );
+    while (true) {
+      final rows = await client
+          .from('seller_ledger')
+          .select('id,amount')
+          .eq('seller_id', sellerId)
+          .gt('id', lastId)
+          .order('id', ascending: true)
+          .limit(pageSize);
+
+      if (rows.isEmpty) break;
+
+      for (final row in rows) {
+        final entry = row as Map;
+        final id = entry['id'];
+        if (id is! num) {
+          throw const FormatException('Identifiant de registre financier invalide.');
+        }
+
+        final amount = num.tryParse(entry['amount']?.toString() ?? '');
+        if (amount == null) {
+          throw const FormatException('Montant du registre financier invalide.');
+        }
+
+        total += amount;
+        lastId = id.toInt();
+      }
+
+      if (rows.length < pageSize) break;
+    }
+
+    return total;
   }
 
   Future<String> requestPayout({
