@@ -387,3 +387,15 @@ Relecture en lecture seule des définitions SQL actuellement déployées (`compl
 - Le fichier `.gitignore` ignore déjà `android/key.properties` et `android/app/upload-keystore.jks`; ces éléments sensibles ne doivent jamais être commités.
 - Relecture GitHub effectuée : absence du fallback debug confirmée, contrôles de présence/complétude du keystore confirmés, exclusions Git confirmées.
 - Aucun APK/AAB n'a été construit et aucun keystore n'a été lu, créé ou modifié.
+
+
+### Suivi GPS du livreur — correction de robustesse et limite arrière-plan — 6 novembre 2026
+
+- Relecture de `CourierPage`, `DeviceLocationService`, du manifeste Android et de `Info.plist`.
+- Le suivi existant est un envoi au premier plan : première position immédiate, puis timer de 15 secondes tant que l'écran livreur reste actif. Ce n'est pas un service de localisation en arrière-plan.
+- Le code précédent lançait les appels périodiques sans attendre leur fin et ne capturait pas les exceptions du timer. Des requêtes pouvaient se chevaucher si le réseau ou le GPS était lent, et une erreur asynchrone pouvait rester non gérée.
+- Correctif enregistré dans `lib/features/courier/presentation/courier_page.dart`, commit `4d6a71ca26d132f337301a27aa69c4d1336a2a76` : verrou « single-flight » pour empêcher les envois concurrents ; capture des erreurs périodiques ; arrêt du partage avec message visible lorsque l'envoi échoue.
+- Documentation mise à jour dans `docs/mobile-location-permissions.md`, commit `65be668ced3a61d07ee1ae866dab5535cb4bd23f`.
+- Limite native confirmée : Android déclare les permissions de localisation au premier plan, sans `ACCESS_BACKGROUND_LOCATION` ni service de premier plan de localisation. iOS a les descriptions d'usage « When In Use » et « Always », mais ses modes d'arrière-plan ne contiennent pas `location`. Le suivi en arrière-plan n'est donc pas certifié et ne doit pas être promis.
+- Prochaine étape : concevoir le service arrière-plan Android/iOS avec consentement, indicateur visible, arrêt à la fin de mission, reprise contrôlée et tests sur appareils réels. Ne pas ajouter de permissions arrière-plan avant l'implémentation correspondante.
+- Aucun test Flutter, build natif, workflow GitHub Actions, déploiement Supabase ou opération de paiement n'a été exécuté.
