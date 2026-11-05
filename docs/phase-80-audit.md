@@ -241,3 +241,11 @@ Aucune modification de la base de production n'a été nécessaire pour ces poin
 - Les prédicats propriétaire, accès vendeur délégué, visibilité publique, client et administrateur ont été fusionnés sans élargir les conditions d'accès. Pour `products` et `shops`, les politiques publiques restent séparées des politiques authentifiées afin de ne pas appeler les contrôles d'accès délégué pour `anon`.
 - Migration distante appliquée : `20261105194019_merge_overlapping_authenticated_read_policies`. L'advisor ne signale plus les six doublons ; les avertissements de clés étrangères non indexées sont également à zéro après la migration précédente.
 - Une assertion pgTAP vérifie la consolidation et la présence d'une politique SELECT authentifiée sur les tables concernées (plan total 37). Aucun test n'a été exécuté.
+
+
+### Protection de la localisation des livreurs — 6 novembre 2026
+
+- La politique de lecture permettait à un client de voir la dernière position d'un livreur dès qu'une affectation non livrée existait, y compris si l'affectation ou le colis avait été annulé.
+- La lecture client est désormais limitée aux affectations `ASSIGNED`, `ACCEPTED`, `PICKED_UP` ou `IN_TRANSIT`, aux colis en préparation de ramassage/en transit et aux commandes non annulées/non remboursées. Le livreur conserve l'accès à ses propres positions.
+- Migration distante appliquée : `20261105194137_restrict_courier_location_to_active_assignments`. La définition de la politique a été relue et les statuts actifs/inactifs vérifiés.
+- Une assertion pgTAP est ajoutée (plan total 38), sans exécution.
