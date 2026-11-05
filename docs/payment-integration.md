@@ -91,3 +91,9 @@ Les fonctions de création de session v3 ont été corrigées : les URL de retou
 La CI Supabase vérifie maintenant aussi le typage des fonctions Edge avec `deno check`. Ce contrôle doit réussir avant de considérer les correctifs de paiement comme validés. Les webhooks doivent ensuite être testés avec des notifications simulées signées et des réponses fournisseur simulées. Aucun paiement réel ne doit être utilisé pour ces tests.
 
 Statut : code corrigé et commité ; validation Deno et tests de webhook en attente de la CI. Les secrets et comptes marchands réels ne sont pas configurés ici.
+### Sécurité des callbacks et état des échecs — correction complémentaire
+
+- Les fonctions `wave-payment-webhook-v3`, `cinetpay-webhook-v3` et `payment-return` ont `verify_jwt = false` dans `supabase/config.toml`, car les fournisseurs et navigateurs ne disposent pas d'un JWT Supabase.
+- Les webhooks vérifient leurs propres signatures/secrets dans le code avant toute mutation. La désactivation du contrôle JWT à la passerelle n'enlève donc pas le contrôle d'authenticité métier ; les callbacks non signés sont rejetés.
+- Les événements Wave `checkout.session.payment_failed` sont maintenant transmis comme `FAILED` et non `PROCESSING`, afin de suivre la machine d'état SQL.
+- Le contrôle Deno des fonctions Edge a réussi sur le commit `1c58ab469a`. Le contrôle sur le commit qui inclut également la configuration de callback doit encore terminer.
