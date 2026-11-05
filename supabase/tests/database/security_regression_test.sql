@@ -1,5 +1,5 @@
 begin;
-select plan(21);
+select plan(26);
 
 select ok(
   not has_table_privilege('anon','private.catalog_moderation_findings','SELECT')
@@ -134,6 +134,49 @@ select ok(
   and exists (select 1 from pg_policies where schemaname='public' and tablename='seller_ledger' and policyname='seller_ledger_seller_read')
   and exists (select 1 from pg_policies where schemaname='public' and tablename='seller_payouts' and policyname='seller_payouts_owner_or_admin_read'),
   'seller owners and administrators retain their financial read policies'
+);
+
+
+select ok(
+  not has_function_privilege('anon','public.complete_refund(uuid,text)','EXECUTE')
+  and not has_function_privilege('authenticated','public.complete_refund(uuid,text)','EXECUTE')
+  and has_function_privilege('service_role','public.complete_refund(uuid,text)','EXECUTE'),
+  'refund completion is restricted to the trusted service role'
+);
+
+select ok(
+  not has_function_privilege('anon','public.process_payment_event(uuid,text,payment_status,text,numeric,jsonb)','EXECUTE')
+  and not has_function_privilege('authenticated','public.process_payment_event(uuid,text,payment_status,text,numeric,jsonb)','EXECUTE')
+  and has_function_privilege('service_role','public.process_payment_event(uuid,text,payment_status,text,numeric,jsonb)','EXECUTE'),
+  'payment event processing is restricted to the trusted service role'
+);
+
+select ok(
+  not has_function_privilege('anon','public.admin_mark_seller_payout_paid(uuid,text)','EXECUTE')
+  and has_function_privilege('authenticated','public.admin_mark_seller_payout_paid(uuid,text)','EXECUTE')
+  and not has_function_privilege('anon','public.admin_mark_seller_payout_failed(uuid,text)','EXECUTE')
+  and has_function_privilege('authenticated','public.admin_mark_seller_payout_failed(uuid,text)','EXECUTE'),
+  'seller payout admin RPCs require authentication and perform internal admin checks'
+);
+
+select ok(
+  not has_function_privilege('anon','public.admin_begin_refund(uuid)','EXECUTE')
+  and has_function_privilege('authenticated','public.admin_begin_refund(uuid)','EXECUTE')
+  and not has_function_privilege('anon','public.admin_complete_manual_refund(uuid,text)','EXECUTE')
+  and has_function_privilege('authenticated','public.admin_complete_manual_refund(uuid,text)','EXECUTE'),
+  'refund administration RPCs require authentication and perform internal admin checks'
+);
+
+select ok(
+  has_function_privilege('authenticated','public.request_seller_payout_secure(uuid,numeric,text)','EXECUTE')
+  and not has_function_privilege('anon','public.request_seller_payout_secure(uuid,numeric,text)','EXECUTE'),
+  'seller payout requests are signed-in only'
+);
+
+select ok(
+  not (select public from storage.buckets where id='documents')
+  and not has_function_privilege('anon','public.complete_refund(uuid,text)','EXECUTE'),
+  'seller documents bucket remains private'
 );
 
 select * from finish();
