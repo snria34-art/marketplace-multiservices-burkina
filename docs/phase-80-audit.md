@@ -233,3 +233,11 @@ Aucune modification de la base de production n'a été nécessaire pour ces poin
 - Huit index ciblés ont été ajoutés sur `restored_by`, `actor_id`, `actor_user_id`, `conversation_id`, `initial_message_id`, `owner_shop_id`, `reviewed_by` et `revoked_by`. Aucun index existant n'a été supprimé.
 - Migration distante appliquée : `20261105193940_index_uncovered_private_foreign_keys`. Après application, l'advisor ne signale plus de clé étrangère non indexée (0 au lieu de 8). Les avertissements de politiques permissives et les index inutilisés sont conservés pour analyse séparée ; aucun nettoyage massif n'a été fait.
 - Une assertion pgTAP vérifiant les huit index est ajoutée (plan total 36), sans exécution.
+
+
+### Consolidation des politiques SELECT redondantes — 6 novembre 2026
+
+- L'advisor signalait six ensembles de politiques permissives SELECT en double sur `inventory`, `inventory_movements`, `order_groups`, `order_items`, `products` et `shops`.
+- Les prédicats propriétaire, accès vendeur délégué, visibilité publique, client et administrateur ont été fusionnés sans élargir les conditions d'accès. Pour `products` et `shops`, les politiques publiques restent séparées des politiques authentifiées afin de ne pas appeler les contrôles d'accès délégué pour `anon`.
+- Migration distante appliquée : `20261105194019_merge_overlapping_authenticated_read_policies`. L'advisor ne signale plus les six doublons ; les avertissements de clés étrangères non indexées sont également à zéro après la migration précédente.
+- Une assertion pgTAP vérifie la consolidation et la présence d'une politique SELECT authentifiée sur les tables concernées (plan total 37). Aucun test n'a été exécuté.
