@@ -4,6 +4,7 @@ class CatalogRepository {
   const CatalogRepository(this.client);
 
   final SupabaseClient client;
+  final Map<String, Future<String?>> _imageUrlCache = {};
 
   Future<List<Map<String, dynamic>>> categoryTypes() async {
     final rows = await client
@@ -60,19 +61,22 @@ class CatalogRepository {
     return _maps(rows);
   }
 
-  Future<String?> productImageUrl(String storagePath) async {
+  Future<String?> productImageUrl(String storagePath) {
     final path = storagePath.trim();
-    if (path.isEmpty || path.startsWith('http://') || path.startsWith('https://')) {
-      return path.isEmpty ? null : path;
+    if (path.isEmpty) return Future.value(null);
+    if (path.startsWith('http://') || path.startsWith('https://')) {
+      return Future.value(path);
     }
 
-    try {
-      return await client.storage
-          .from('product-media')
-          .createSignedUrl(path, 60 * 60);
-    } on StorageException {
-      return null;
-    }
+    return _imageUrlCache.putIfAbsent(path, () async {
+      try {
+        return await client.storage
+            .from('product-media')
+            .createSignedUrl(path, 60 * 60);
+      } on StorageException {
+        return null;
+      }
+    });
   }
 
   List<Map<String, dynamic>> _maps(dynamic rows) {
