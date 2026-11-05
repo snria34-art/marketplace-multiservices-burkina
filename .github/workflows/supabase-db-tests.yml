@@ -23,7 +23,7 @@ jobs:
       - name: Set up Supabase CLI
         uses: supabase/setup-cli@v1
         with:
-          version: latest
+          version: 2.197.0
 
       - name: Start local Supabase
         run: supabase start
@@ -36,4 +36,4 @@ jobs:
 
       - name: Stop local Supabase
         if: always()
-        run: supabase stop
+        run: if command -v supabase >/dev/null 2>&1; then supabase stop; else echo 'Supabase CLI was not installed; nothing to stop.'; fi
