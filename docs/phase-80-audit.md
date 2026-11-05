@@ -166,3 +166,12 @@ Aucune modification de la base de production n'a été nécessaire pour ces poin
 - RPC corrigées : `admin_mark_seller_payout_paid`, `admin_mark_seller_payout_failed`, `admin_set_account_status`, les deux variantes de `admin_review_seller_access_request`, `expire_seller_access_requests` et la révocation administrative de demande d'accès.
 - La lecture de la file des demandes peut rester accessible aux modérateurs pour le suivi, mais les notes internes de confirmation téléphonique sont désormais réservées aux administrateurs explicitement enregistrés.
 - Le contrôle générique `is_admin_actor()` n'a pas été élargi ni supprimé : il reste utilisé pour les opérations de modération prévues. Les tests pgTAP ont reçu deux assertions ciblées ; ils ne sont pas exécutés afin de ne pas déclencher GitHub Actions ni consommer le quota de facturation.
+
+
+### Correctif de liaison des preuves de livraison — 6 novembre 2026
+
+- L'audit de `confirm_package_delivery` a trouvé que la preuve photo était jointe à une affectation par `assignment_id`, mais que la requête ne vérifiait pas explicitement que cette affectation appartenait au colis en cours de confirmation.
+- Défense en profondeur ajoutée : la preuve doit maintenant être associée à une affectation du même livreur, du même colis et au statut `IN_TRANSIT`. Le code de livraison et l'affectation active du colis restent également vérifiés avant le changement d'état.
+- Migration distante appliquée : `20261105193040_bind_delivery_evidence_to_package_assignment`. La définition SQL a été relue après application et contient le contrôle supplémentaire.
+- Le test de régression pgTAP est ajouté au plan (30 assertions), mais n'a pas été exécuté conformément à la consigne de ne pas lancer de tests payants/Actions.
+- Aucun colis réel, paiement ou remboursement n'a été modifié.
