@@ -92,8 +92,25 @@ class _SellerOrdersPageState extends ConsumerState<SellerOrdersPage> {
 
           if (snapshot.hasError) {
             return Center(
-              child: Text(
-                'Erreur des commandes : ' + snapshot.error.toString(),
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.cloud_off_outlined, size: 40),
+                    const SizedBox(height: 12),
+                    const Text(
+                      'Impossible de charger les commandes. Vérifiez votre connexion puis réessayez.',
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 12),
+                    FilledButton.icon(
+                      onPressed: () => setState(() => _future = _load()),
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('Réessayer'),
+                    ),
+                  ],
+                ),
               ),
             );
           }
