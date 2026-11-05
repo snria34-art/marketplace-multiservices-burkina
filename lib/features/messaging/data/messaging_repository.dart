@@ -44,12 +44,13 @@ class MessagingRepository {
         .from('messages')
         .select('id,conversation_id,sender_id,body,status,created_at')
         .eq('conversation_id', conversationId)
-        .order('created_at')
+        .order('created_at', ascending: false)
         .limit(200);
 
-    return (rows as List)
+    final result = (rows as List)
         .map((row) => Map<String, dynamic>.from(row as Map))
         .toList();
+    return result.reversed.toList(growable: false);
   }
 
   Future<void> send(
