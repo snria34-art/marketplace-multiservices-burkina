@@ -54,15 +54,25 @@ class CourierRepository {
       bytes,
       fileOptions: FileOptions(contentType: mime, upsert: false),
     );
-    await client.rpc('attach_delivery_evidence', params: {
-      'p_package_id': packageId,
-      'p_storage_path': path,
-      'p_media_type': mime.startsWith('video/') ? 'VIDEO' : 'IMAGE',
-      'p_evidence_type': evidenceType,
-      'p_duration_seconds': null,
-      'p_person_visible': personVisible,
-      'p_person_consent': personConsent,
-    });
+    try {
+      await client.rpc('attach_delivery_evidence', params: {
+        'p_package_id': packageId,
+        'p_storage_path': path,
+        'p_media_type': mime.startsWith('video/') ? 'VIDEO' : 'IMAGE',
+        'p_evidence_type': evidenceType,
+        'p_duration_seconds': null,
+        'p_person_visible': personVisible,
+        'p_person_consent': personConsent,
+      });
+    } catch (_) {
+      // Avoid retaining an uploaded delivery file without its database record.
+      try {
+        await client.storage.from('order-feedback-media').remove([path]);
+      } catch (_) {
+        // Preserve the original RPC error if cleanup is unavailable.
+      }
+      rethrow;
+    }
   }
 
   Future<void> confirmPickup({
