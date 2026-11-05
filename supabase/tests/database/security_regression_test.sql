@@ -1,5 +1,5 @@
 begin;
-select plan(26);
+select plan(27);
 
 select ok(
   not has_table_privilege('anon','private.catalog_moderation_findings','SELECT')
