@@ -92,7 +92,7 @@ function preferenceEnabled(type: string, prefs: Json): boolean {
 async function mapWithConcurrency<T, R>(
   items: T[],
   limit: number,
-  worker: (item: T, index: number) => Promise<R>,
+  worker: (item: T) => Promise<R>,
 ): Promise<R[]> {
   if (items.length === 0) return [];
   const results = new Array<R>(items.length);
@@ -102,7 +102,7 @@ async function mapWithConcurrency<T, R>(
     while (true) {
       const index = nextIndex++;
       if (index >= items.length) return;
-      results[index] = await worker(items[index], index);
+      results[index] = await worker(items[index]);
     }
   }));
   return results;
