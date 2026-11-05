@@ -70,7 +70,7 @@ class _MessagesPageState extends ConsumerState<MessagesPage> {
     _poll = Timer.periodic(
       const Duration(seconds: 8),
       (_) {
-        if (mounted) setState(() => _messagesFuture = _load());
+        if (mounted) setState(() => _messageRefreshToken++);
       },
     );
 
@@ -276,7 +276,7 @@ class _ConversationViewState
       await repo.send(widget.conversationId, body);
       _controller.clear();
 
-      if (mounted) setState(() {});
+      if (mounted) setState(() => _messagesFuture = _load());
     } catch (error) {
       if (!mounted) return;
 
