@@ -452,3 +452,13 @@ Relecture en lecture seule des définitions SQL actuellement déployées (`compl
 - Le changement ne modifie pas le flux d'inscription des jetons push, l'authentification, ni les appels RPC. Les erreurs restent gérées comme auparavant.
 - Commit : `fcb4cd9333b8cb459f7caff0413035d0503b14fe`.
 - Vérification effectuée : relecture du fichier sur `main`, présence du garde `kDebugMode` confirmée pour les trois blocs. Aucun build, test ou workflow n'a été lancé.
+
+
+### Navigation des notifications — destinations internes allowlistées — 6 novembre 2026
+
+- L'audit de `lib/core/navigation/app_navigation.dart` a révélé que le champ `route` fourni par le payload push était accepté dès lors qu'il commençait par `/`. Le payload pouvait donc choisir une destination interne arbitraire, y compris une route d'administration. Cela ne remplaçait pas les contrôles d'autorisation des écrans, mais élargissait inutilement la surface d'attaque.
+- Le routage direct depuis `data['route']` a été supprimé. Les notifications sont maintenant redirigées uniquement vers les destinations fixes déjà utilisées par le service : commandes, suivi livraison, messages, promotions, transport, services ou notifications.
+- Les identifiants de commande/livraison sont filtrés par une expression stricte `^[A-Za-z0-9_-]{1,128}$` avant insertion dans le chemin ; les slashs, fragments, paramètres et séquences de traversal sont rejetés.
+- Tests de régression ajoutés pour une route arbitraire vers l'administration, les identifiants contenant des séparateurs et un identifiant opaque valide.
+- Commits : `24c37e1a6ffaf9e8bcd2ba3a662d80b4cee102d5` (navigation), `970f0b5187217ee373787ed4e0181d40d145029b` (tests).
+- Relecture des routes dans `lib/core/routing/app_router.dart` effectuée : les chemins construits correspondent aux routes déclarées. Aucun test n'a été exécuté ; les tests sont seulement ajoutés.
