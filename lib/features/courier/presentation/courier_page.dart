@@ -324,11 +324,16 @@ class _CourierPageState extends ConsumerState<CourierPage> {
               final status = item['status']?.toString();
 
               final shopAddress = item['shop_address']?.toString() ?? '';
+              final shopPhone = item['shop_phone']?.toString() ?? '';
               final deliveryLine = item['delivery_address_line']?.toString() ?? '';
               final deliveryCity = item['delivery_city']?.toString() ?? '';
               final deliveryAddress = [deliveryLine, deliveryCity]
                   .where((part) => part.trim().isNotEmpty)
                   .join(', ');
+              final deliveryLatitude = item['delivery_latitude']?.toString() ?? '';
+              final deliveryLongitude = item['delivery_longitude']?.toString() ?? '';
+              final hasDeliveryDestination = deliveryAddress.isNotEmpty ||
+                  (deliveryLatitude.isNotEmpty && deliveryLongitude.isNotEmpty);
               final recipientName = item['recipient_name']?.toString() ?? '';
               final recipientPhone = item['recipient_phone']?.toString() ?? '';
 
@@ -350,7 +355,7 @@ class _CourierPageState extends ConsumerState<CourierPage> {
                         ),
                         trailing: _actions(item, status),
                       ),
-                      if (shopAddress.isNotEmpty || deliveryAddress.isNotEmpty)
+                      if (shopAddress.isNotEmpty || hasDeliveryDestination)
                         Padding(
                           padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
                           child: Column(
@@ -358,6 +363,8 @@ class _CourierPageState extends ConsumerState<CourierPage> {
                             children: [
                               if (shopAddress.isNotEmpty) ...[
                                 Text('Retrait : ' + shopAddress),
+                                if (shopPhone.isNotEmpty)
+                                  Text('Téléphone boutique : ' + shopPhone),
                                 Align(
                                   alignment: Alignment.centerLeft,
                                   child: TextButton.icon(
@@ -369,7 +376,8 @@ class _CourierPageState extends ConsumerState<CourierPage> {
                                   ),
                                 ),
                               ],
-                              if (deliveryAddress.isNotEmpty) ...[
+                              if (hasDeliveryDestination) ...[
+                                Text('Livraison : ' + (deliveryAddress.isEmpty ? 'Position GPS disponible' : deliveryAddress)),
                                 Text('Livraison : ' + deliveryAddress),
                                 if (recipientName.isNotEmpty)
                                   Text('Destinataire : ' + recipientName),
@@ -380,8 +388,8 @@ class _CourierPageState extends ConsumerState<CourierPage> {
                                   child: TextButton.icon(
                                     onPressed: () => _openDirections(
                                       address: deliveryAddress,
-                                      latitude: item['delivery_latitude']?.toString(),
-                                      longitude: item['delivery_longitude']?.toString(),
+                                      latitude: deliveryLatitude,
+                                      longitude: deliveryLongitude,
                                     ),
                                     icon: const Icon(Icons.directions_outlined),
                                     label: const Text('Itinéraire vers le client'),
