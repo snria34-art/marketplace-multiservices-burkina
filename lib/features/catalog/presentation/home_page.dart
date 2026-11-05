@@ -22,7 +22,7 @@ class _HomePageState extends ConsumerState<HomePage> {
   String? _selectedCategoryId;
   int _page = 0;
   bool _loadingProducts = false;
-  bool _hasMore = true;
+  bool _hasMore = true;\n  int _productRequestId = 0;\n  String? _productsError;
 
   @override
   void initState() {
@@ -67,7 +67,7 @@ class _HomePageState extends ConsumerState<HomePage> {
   }
 
   Future<void> _loadProducts({required bool reset}) async {
-    if (_loadingProducts || (!reset && !_hasMore)) return;
+    if ((!reset && _loadingProducts) || (!reset && !_hasMore)) return;
 
     final repo = ref.read(catalogRepositoryProvider);
     if (repo == null) return;
@@ -75,9 +75,11 @@ class _HomePageState extends ConsumerState<HomePage> {
     if (reset) {
       _page = 0;
       _hasMore = true;
+      _productsError = null;
     }
 
-    setState(() => _loadingProducts = true);
+    final requestId = ++_productRequestId;
+    if (mounted) setState(() => _loadingProducts = true);
 
     try {
       final rows = await repo.products(
@@ -86,7 +88,7 @@ class _HomePageState extends ConsumerState<HomePage> {
         limit: 24,
       );
 
-      if (!mounted) return;
+      if (!mounted || requestId != _productRequestId) return;
 
       setState(() {
         if (reset) {
@@ -97,9 +99,15 @@ class _HomePageState extends ConsumerState<HomePage> {
 
         _hasMore = rows.length == 24;
         if (_hasMore) _page++;
+        _productsError = null;
       });
+    } catch (error) {
+      if (!mounted || requestId != _productRequestId) return;
+      setState(() => _productsError = error.toString());
     } finally {
-      if (mounted) setState(() => _loadingProducts = false);
+      if (mounted && requestId == _productRequestId) {
+        setState(() => _loadingProducts = false);
+      }
     }
   }
 
@@ -226,7 +234,35 @@ class _HomePageState extends ConsumerState<HomePage> {
                 ),
               ),
               const ServiceModuleSliver(),
-              if (_products.isEmpty && !_loadingProducts)
+              if (_productsError != null && _products.isEmpty)
+                SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.wifi_off_outlined, size: 42),
+                          const SizedBox(height: 8),
+                          const Text('Le catalogue n’a pas pu être chargé.'),
+                          Text(
+                            _productsError!,
+                            maxLines: 3,
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 12),
+                          FilledButton(
+                            onPressed: () => _loadProducts(reset: true),
+                            child: const Text('Réessayer'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                )
+              else if (_products.isEmpty && !_loadingProducts)
                 const SliverFillRemaining(
                   hasScrollBody: false,
                   child: Center(
@@ -248,9 +284,23 @@ class _HomePageState extends ConsumerState<HomePage> {
                           );
                         }
 
+                        final product = _products[index];
+                        final rawImages = product['product_images'];
+                        final firstImage = rawImages is List &&
+                                rawImages.isNotEmpty &&
+                                rawImages.first is Map
+                            ? Map<String, dynamic>.from(rawImages.first as Map)
+                            : const <String, dynamic>{};
+                        final storagePath =
+                            firstImage['storage_path']?.toString();
+                        final catalog = ref.read(catalogRepositoryProvider);
+
                         return _ProductCard(
-                          product: _products[index],
-                          onAdd: () => _addToCart(_products[index]),
+                          product: product,
+                          imageUrl: storagePath == null || catalog == null
+                              ? Future.value(null)
+                              : catalog.productImageUrl(storagePath),
+                          onAdd: () => _addToCart(product),
                         );
                       },
                       childCount:
@@ -404,10 +454,12 @@ class _CatalogHeaderDelegate extends SliverPersistentHeaderDelegate {
 class _ProductCard extends StatelessWidget {
   const _ProductCard({
     required this.product,
+    required this.imageUrl,
     required this.onAdd,
   });
 
   final Map<String, dynamic> product;
+  final Future<String?> imageUrl;
   final VoidCallback onAdd;
 
   @override
@@ -417,30 +469,27 @@ class _ProductCard extends StatelessWidget {
         ? Map<String, dynamic>.from(rawShop)
         : const <String, dynamic>{};
 
-    final rawImages = product['product_images'];
-    final firstImage =
-        rawImages is List &&
-                rawImages.isNotEmpty &&
-                rawImages.first is Map
-            ? Map<String, dynamic>.from(rawImages.first as Map)
-            : const <String, dynamic>{};
-
-    final storagePath = firstImage['storage_path']?.toString();
-
     return Card(
       clipBehavior: Clip.antiAlias,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Expanded(
-            child: storagePath != null && storagePath.startsWith('https://')
-                ? Image.network(
-                    storagePath,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) =>
-                        const _ProductImagePlaceholder(),
-                  )
-                : const _ProductImagePlaceholder(),
+            child: FutureBuilder<String?>(
+              future: imageUrl,
+              builder: (context, snapshot) {
+                final url = snapshot.data;
+                if (url == null || url.isEmpty) {
+                  return const _ProductImagePlaceholder();
+                }
+                return Image.network(
+                  url,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) =>
+                      const _ProductImagePlaceholder(),
+                );
+              },
+            ),
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(10, 8, 10, 4),
