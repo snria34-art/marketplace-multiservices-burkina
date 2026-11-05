@@ -3,3 +3,15 @@ project_id = "marketplace-multiservices-burkina"
 [db.seed]
 enabled = true
 sql_paths = ["./seed.test.sql"]
+
+# Provider callbacks are unauthenticated at the gateway but authenticate each
+# notification inside the function using the provider signature/secret.
+[functions.wave-payment-webhook-v3]
+verify_jwt = false
+
+[functions.cinetpay-webhook-v3]
+verify_jwt = false
+
+# Payment providers redirect the customer back without a Supabase JWT.
+[functions.payment-return]
+verify_jwt = false
