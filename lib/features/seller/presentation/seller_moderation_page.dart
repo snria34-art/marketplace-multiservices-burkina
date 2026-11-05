@@ -150,17 +150,45 @@ class _SellerModerationPageState extends ConsumerState<SellerModerationPage> {
               ? 'La vidéo doit faire au maximum 20 Mo.'
               : 'La photo doit faire au maximum 5 Mo.');
         }
-        final extension = media!.name.contains('.')
+        final sourceExtension = media!.name.contains('.')
             ? media!.name.split('.').last.toLowerCase()
-            : (mediaType == 'VIDEO' ? 'mp4' : 'jpg');
+            : '';
+        const mimeByExtension = {
+          'jpg': 'image/jpeg',
+          'jpeg': 'image/jpeg',
+          'png': 'image/png',
+          'webp': 'image/webp',
+          'heic': 'image/heic',
+          'mp4': 'video/mp4',
+          'mov': 'video/quicktime',
+        };
+        const extensionByMime = {
+          'image/jpeg': 'jpg',
+          'image/png': 'png',
+          'image/webp': 'webp',
+          'image/heic': 'heic',
+          'video/mp4': 'mp4',
+          'video/quicktime': 'mov',
+        };
+        final mime =
+            media!.mimeType?.toLowerCase() ?? mimeByExtension[sourceExtension];
+        final allowedMimes = mediaType == 'VIDEO'
+            ? const {'video/mp4', 'video/quicktime'}
+            : const {
+                'image/jpeg',
+                'image/png',
+                'image/webp',
+                'image/heic',
+              };
+        if (mime == null || !allowedMimes.contains(mime)) {
+          throw StateError('Format du média non pris en charge.');
+        }
+        final extension = extensionByMime[mime]!;
         mediaPath = '${user.id}/moderation/${finding['finding_id']}_${DateTime.now().microsecondsSinceEpoch}.$extension';
         await client.storage.from('order-feedback-media').uploadBinary(
           mediaPath,
           bytes,
-          fileOptions: FileOptions(
-            contentType: media!.mimeType ?? (mediaType == 'VIDEO' ? 'video/mp4' : 'image/jpeg'),
-            upsert: false,
-          ),
+          fileOptions: FileOptions(contentType: mime, upsert: false),
         );
       }
       await client.rpc('seller_respond_to_catalog_finding', params: {
