@@ -465,3 +465,12 @@ Relecture en lecture seule des définitions SQL actuellement déployées (`compl
 
 
 - Correction de mise en forme du fichier de tests : les trois nouveaux cas ont été replacés à l'intérieur de `main()` (commit `5ae7b065a260043720d1cabbf4f085e9058b4cd1`). Relecture statique confirmée ; tests non exécutés.
+
+
+### Précontrôle de taille des médias avant lecture en mémoire — 6 novembre 2026
+
+- Les trois parcours de preuve livreur, réponse de modération et avis client lisaient les fichiers en mémoire avant de vérifier leur taille maximale. Un fichier très volumineux pouvait donc provoquer une consommation mémoire inutile ou une pression mémoire sur le mobile avant d'être rejeté.
+- Les parcours consultent maintenant `XFile.length()` et rejettent les fichiers vides ou trop volumineux avant `readAsBytes()`. La taille des octets effectivement lus est ensuite contrôlée une seconde fois avant l'upload.
+- Les plafonds applicatifs restent inchangés : 5 MiB pour preuve/photo et 20 MiB pour vidéo.
+- Commits : `8b0ee807916b97693e1303a1a6ed24418e7d7e34` (livreur), `6f0f3b8cd5763cc3f9d6ddcfbfecfb6944bf189f` (modération), `79794aa35ce016495cdf437f60f630f7c2a151df` (avis clients).
+- Relecture des trois fichiers effectuée. Aucun test Flutter, build, workflow Actions ou upload réel n'a été exécuté.
