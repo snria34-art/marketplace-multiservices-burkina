@@ -53,7 +53,6 @@ Deno.serve(async (req: Request) => {
   }
 
   if (req.method === "GET") return new Response("ok", { status: 200 });
-  if (req.method === "GET") return new Response("ok", { status: 200 });
   if (req.method !== "POST") return json({ error: "method_not_allowed" }, 405);
 
   const raw = await req.text();
