@@ -77,8 +77,10 @@ class PushNotificationService {
       try {
         await _registerToken(token);
       } catch (error, stackTrace) {
-        debugPrint('Push token refresh registration failed: $error');
-        debugPrintStack(stackTrace: stackTrace);
+        if (kDebugMode) {
+          debugPrint('Push token refresh registration failed: $error');
+          debugPrintStack(stackTrace: stackTrace);
+        }
       }
     });
 
@@ -110,8 +112,10 @@ class PushNotificationService {
           _currentToken = null;
         }
       } catch (error, stackTrace) {
-        debugPrint('Push auth-state synchronization failed: $error');
-        debugPrintStack(stackTrace: stackTrace);
+        if (kDebugMode) {
+          debugPrint('Push auth-state synchronization failed: $error');
+          debugPrintStack(stackTrace: stackTrace);
+        }
       }
     });
 
@@ -206,8 +210,10 @@ class PushNotificationService {
       if (token == null || token.isEmpty) return;
       await _registerToken(token);
     } catch (error, stackTrace) {
-      debugPrint('Push token registration unavailable: $error');
-      debugPrintStack(stackTrace: stackTrace);
+      if (kDebugMode) {
+        debugPrint('Push token registration unavailable: $error');
+        debugPrintStack(stackTrace: stackTrace);
+      }
     }
   }
 
