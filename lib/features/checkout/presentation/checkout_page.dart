@@ -26,6 +26,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
   String _paymentProvider = 'CINETPAY';
   final TextEditingController _couponController = TextEditingController();
   bool _loading = false;
+  int _quoteRequestId = 0;
 
   late final String _idempotencyKey;
 
@@ -76,18 +77,29 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
   }
 
   Future<void> _selectAddress(Map<String, dynamic> address) async {
+    final requestId = ++_quoteRequestId;
+    final addressId = address['id']?.toString();
+
     setState(() {
-      _selectedAddressId = address['id']?.toString();
+      _selectedAddressId = addressId;
       _selectedAddress = address;
       _quote = null;
     });
 
     try {
       final quote = await _calculateQuote(address);
-      if (!mounted) return;
+      if (!mounted ||
+          requestId != _quoteRequestId ||
+          _selectedAddressId != addressId) {
+        return;
+      }
       setState(() => _quote = quote);
     } catch (error) {
-      if (!mounted) return;
+      if (!mounted ||
+          requestId != _quoteRequestId ||
+          _selectedAddressId != addressId) {
+        return;
+      }
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
