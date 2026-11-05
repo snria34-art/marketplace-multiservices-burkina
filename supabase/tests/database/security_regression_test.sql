@@ -1,5 +1,5 @@
 begin;
-select plan(27);
+select plan(29);
 
 select ok(
   not has_table_privilege('anon','private.catalog_moderation_findings','SELECT')
@@ -182,6 +182,25 @@ select ok(
       and qual like '%documents%'
   ),
   'seller documents bucket remains private'
+);
+
+
+select ok(
+  position('private.is_admin()' in pg_get_functiondef('public.admin_mark_seller_payout_paid(uuid,text)'::regprocedure)) > 0
+  and position('public.is_admin_actor()' in pg_get_functiondef('public.admin_mark_seller_payout_paid(uuid,text)'::regprocedure)) = 0
+  and position('private.is_admin()' in pg_get_functiondef('public.admin_mark_seller_payout_failed(uuid,text)'::regprocedure)) > 0
+  and position('public.is_admin_actor()' in pg_get_functiondef('public.admin_mark_seller_payout_failed(uuid,text)'::regprocedure)) = 0
+  and position('private.is_admin()' in pg_get_functiondef('public.admin_set_account_status(uuid,public.account_status,text)'::regprocedure)) > 0
+  and position('public.is_admin_actor()' in pg_get_functiondef('public.admin_set_account_status(uuid,public.account_status,text)'::regprocedure)) = 0,
+  'payout and account suspension mutations require an active explicitly registered admin'
+);
+
+select ok(
+  position('private.is_admin()' in pg_get_functiondef('public.admin_review_seller_access_request(uuid,boolean,text,integer)'::regprocedure)) > 0
+  and position('private.is_admin()' in pg_get_functiondef('public.admin_review_seller_access_request_v2(uuid,boolean,text,text)'::regprocedure)) > 0
+  and position('private.is_admin()' in pg_get_functiondef('public.revoke_seller_access_request(uuid,text)'::regprocedure)) > 0
+  and position('case when private.is_admin() then r.admin_confirmation_notes else null end' in pg_get_functiondef('public.get_seller_access_requests()')) > 0,
+  'seller access approvals and internal admin notes require an active explicitly registered admin'
 );
 
 select * from finish();
