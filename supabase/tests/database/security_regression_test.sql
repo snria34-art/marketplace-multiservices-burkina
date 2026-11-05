@@ -1,5 +1,5 @@
 begin;
-select plan(32);
+select plan(33);
 
 select ok(
   not has_table_privilege('anon','private.catalog_moderation_findings','SELECT')
@@ -221,6 +221,13 @@ select ok(
   and not has_function_privilege('authenticated','public.transition_order_group_status(uuid,public.order_status,text)','EXECUTE')
   and has_function_privilege('service_role','public.transition_order_group_status(uuid,public.order_status,text)','EXECUTE'),
   'seller group transition remains restricted to its trusted server-side caller'
+);
+
+select ok(
+  position('r.status in (''REQUESTED'',''APPROVED'',''FAILED'')' in pg_get_functiondef('public.admin_begin_refund(uuid)'::regprocedure)) > 0
+  and position('''PROCESSING''' in pg_get_functiondef('public.admin_begin_refund(uuid)'::regprocedure)) = 0
+  and position('private.is_admin()' in pg_get_functiondef('public.admin_begin_refund(uuid)'::regprocedure)) > 0,
+  'refund processing cannot be started twice and remains restricted to active admins'
 );
 
 select * from finish();
