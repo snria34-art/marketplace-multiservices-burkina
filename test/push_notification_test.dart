@@ -37,3 +37,29 @@ void main() {
     );
   });
 }
+
+
+  test('ignores arbitrary route supplied by notification payload', () {
+    expect(
+      notificationRoute({'route': '/admin/refunds', 'type': 'unknown'}),
+      '/notifications',
+    );
+  });
+
+  test('rejects path separators and query fragments in notification IDs', () {
+    expect(
+      notificationRoute({'order_id': '../admin?tab=refunds'}),
+      '/notifications',
+    );
+    expect(
+      notificationRoute({'delivery_order_id': 'abc/../../admin'}),
+      '/notifications',
+    );
+  });
+
+  test('accepts ordinary opaque identifiers', () {
+    expect(
+      notificationRoute({'order_id': 'abc123'}),
+      '/orders/abc123',
+    );
+  });
