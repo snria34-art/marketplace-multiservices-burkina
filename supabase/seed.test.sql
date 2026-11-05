@@ -18,11 +18,11 @@ with demo_users(id,email,display_name,role_name) as (
     ('10000000-0000-4000-8000-000000000009'::uuid,'demo.admin@marketplace.test','Administrateur Démo','SUPER_ADMIN')
 )
 insert into auth.users (
-  id, aud, role, email, encrypted_password, email_confirmed_at, confirmed_at,
+  id, aud, role, email, encrypted_password, email_confirmed_at,
   raw_app_meta_data, raw_user_meta_data, created_at, updated_at, is_sso_user, is_anonymous
 )
 select id, 'authenticated', 'authenticated', email,
-  crypt('DemoOnly-2026!', gen_salt('bf')), now(), now(),
+  crypt('DemoOnly-2026!', gen_salt('bf')), now(),
   jsonb_build_object('provider','email','providers',jsonb_build_array('email'),'is_test_account',true,'environment','local'),
   jsonb_build_object('display_name',display_name,'test_account',true),
   now(), now(), false, false
