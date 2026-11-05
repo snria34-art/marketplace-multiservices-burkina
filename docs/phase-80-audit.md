@@ -225,3 +225,11 @@ Aucune modification de la base de production n'a été nécessaire pour ces poin
 - Les sources GitHub de `create-wave-payment-session-v3`, `create-cinetpay-payment-session-v3`, `wave-payment-webhook-v3`, `cinetpay-webhook-v3`, `execute-payment-refund` et `payment-return` ont été rapprochées des versions effectivement déployées pour supprimer les écarts de code constatés.
 - Les anciens webhooks Wave/CinetPay restent retirés (HTTP 410). Les fonctions de création de paiement conservent `verify_jwt=true`; les webhooks publics conservent leurs contrôles cryptographiques et leurs vérifications côté prestataire.
 - Seul le callback CinetPay a nécessité un nouveau déploiement ciblé. Les autres changements de ce groupe sont des synchronisations GitHub, pas des déploiements.
+
+
+### Indexation des clés étrangères privées — 6 novembre 2026
+
+- L'advisor de performance signalait huit clés étrangères sans index couvrant dans les tables privées de sauvegarde/réparation, d'audit de modération et de demandes d'accès vendeur.
+- Huit index ciblés ont été ajoutés sur `restored_by`, `actor_id`, `actor_user_id`, `conversation_id`, `initial_message_id`, `owner_shop_id`, `reviewed_by` et `revoked_by`. Aucun index existant n'a été supprimé.
+- Migration distante appliquée : `20261105193940_index_uncovered_private_foreign_keys`. Après application, l'advisor ne signale plus de clé étrangère non indexée (0 au lieu de 8). Les avertissements de politiques permissives et les index inutilisés sont conservés pour analyse séparée ; aucun nettoyage massif n'a été fait.
+- Une assertion pgTAP vérifiant les huit index est ajoutée (plan total 36), sans exécution.
