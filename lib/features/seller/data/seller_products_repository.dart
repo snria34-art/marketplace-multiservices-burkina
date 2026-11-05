@@ -112,12 +112,23 @@ class SellerProductsRepository {
     if (bytes.isEmpty || bytes.length > 5 * 1024 * 1024) {
       throw StateError('Chaque image doit faire au maximum 5 Mo.');
     }
-    final mime = (file.mimeType ?? '').toLowerCase().trim();
     const allowedImageTypes = {
       'image/jpeg': 'jpg',
       'image/png': 'png',
       'image/webp': 'webp',
     };
+    final reportedMime = (file.mimeType ?? '').toLowerCase().trim();
+    final reportedExtension = file.name.contains('.')
+        ? file.name.split('.').last.toLowerCase()
+        : '';
+    final mime = reportedMime.isNotEmpty
+        ? reportedMime
+        : switch (reportedExtension) {
+            'jpg' || 'jpeg' => 'image/jpeg',
+            'png' => 'image/png',
+            'webp' => 'image/webp',
+            _ => '',
+          };
     final extension = allowedImageTypes[mime];
     if (extension == null) {
       throw StateError(
