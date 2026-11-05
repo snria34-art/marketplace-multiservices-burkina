@@ -422,3 +422,13 @@ Relecture en lecture seule des définitions SQL actuellement déployées (`compl
 
 
 - Correctif complémentaire : `CourierRepository.uploadEvidence` supprime maintenant de façon best-effort le fichier de preuve envoyé si le RPC `attach_delivery_evidence` échoue. Cela évite de conserver une photo/vidéo de livraison privée sans ligne de métadonnées associée. Commit : `05d22ee95a03995f9255fa06db01ec98d633fad1`. Aucun média réel n'a été envoyé ou supprimé ; comportement non testé.
+
+
+### Audit complémentaire — parcours d'upload mobile — 6 novembre 2026
+
+- Relecture sur `main` des quatre parcours d'upload : `SellerProductsRepository.uploadProductImage`, `SellerModerationPage._respond`, `CourierRepository.uploadEvidence` et `OrderDetailsPage._review`.
+- Les quatre parcours effectuent désormais un nettoyage Storage best-effort si l'enregistrement RPC des métadonnées échoue après l'upload. Le nettoyage conserve l'erreur initiale et n'est pas présenté comme garanti si Storage est indisponible.
+- Le parcours images produit est le plus strict : liste blanche JPEG/PNG/WebP, extension de stockage dérivée du MIME accepté et suppression de l'objet si `add_seller_product_image` échoue.
+- Les parcours modération, preuve de livraison et avis utilisent encore, à des degrés divers, l'extension du nom de fichier et/ou un MIME fourni par le sélecteur avec fallback. Cela ne prouve pas le format binaire réel et ne remplace pas une validation serveur de signature de fichier.
+- Avant de normaliser ces trois parcours, il faut confirmer les formats effectivement acceptés par les sélecteurs mobiles et les limites MIME du bucket `order-feedback-media` (images et vidéos). Ne pas imposer une liste arbitraire qui bloquerait des formats légitimes ou créerait des incohérences avec la policy Storage.
+- Aucun fichier réel n'a été envoyé ou supprimé. Aucun test Flutter, build, workflow GitHub Actions ou déploiement n'a été lancé.
