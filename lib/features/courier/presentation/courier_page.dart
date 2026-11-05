@@ -26,6 +26,7 @@ class _CourierPageState extends ConsumerState<CourierPage> {
   late Future<List<Map<String, dynamic>>> _future;
   Timer? _locationTimer;
   bool _sharingLocation = false;
+  bool _locationInFlight = false;
 
   @override
   void initState() {
@@ -48,11 +49,28 @@ class _CourierPageState extends ConsumerState<CourierPage> {
 
     try {
       await _recordLocation();
+      setState(() => _sharingLocation = true);
       _locationTimer = Timer.periodic(
         const Duration(seconds: 15),
-        (_) => _recordLocation(),
+        (_) async {
+          if (!mounted || !_sharingLocation || _locationInFlight) return;
+
+          try {
+            await _recordLocation();
+          } catch (_) {
+            _locationTimer?.cancel();
+            if (!mounted) return;
+            setState(() => _sharingLocation = false);
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text(
+                  'Le partage de position a été interrompu. Réactivez-le pour reprendre le suivi.',
+                ),
+              ),
+            );
+          }
+        },
       );
-      setState(() => _sharingLocation = true);
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -66,16 +84,25 @@ class _CourierPageState extends ConsumerState<CourierPage> {
   }
 
   Future<void> _recordLocation() async {
+    if (_locationInFlight) return;
+
     final repo = ref.read(courierRepositoryProvider);
-    if (repo == null) return;
+    if (repo == null) {
+      throw StateError('Service de livraison indisponible.');
+    }
 
-    final Position position = await DeviceLocationService.current();
+    _locationInFlight = true;
+    try {
+      final Position position = await DeviceLocationService.current();
 
-    await repo.recordLocation(
-      latitude: position.latitude,
-      longitude: position.longitude,
-      accuracy: position.accuracy,
-    );
+      await repo.recordLocation(
+        latitude: position.latitude,
+        longitude: position.longitude,
+        accuracy: position.accuracy,
+      );
+    } finally {
+      _locationInFlight = false;
+    }
   }
 
   Future<bool> _confirmEvidenceCapture(String message) async {
