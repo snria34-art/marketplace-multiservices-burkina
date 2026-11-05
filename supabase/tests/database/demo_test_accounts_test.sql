@@ -51,7 +51,7 @@ select ok(
     select 1 from public.shops sh
     join public.sellers s on s.id=sh.seller_id
     join auth.users u on u.id=s.user_id
-    where u.email='demo.seller@marketplace.test' and sh.normalized_name='boutique-demo-locale'
+    where u.email='demo.seller@marketplace.test' and sh.normalized_name='boutique démo locale'
   ),
   'the demo seller has a local draft shop'
 );
@@ -62,7 +62,7 @@ select ok(
     join public.shops sh on sh.id=rp.shop_id
     join public.sellers s on s.id=sh.seller_id
     join auth.users u on u.id=s.user_id
-    where u.email='demo.restaurant@marketplace.test' and sh.normalized_name='restaurant-demo'
+    where u.email='demo.restaurant@marketplace.test' and sh.normalized_name='restaurant démo'
   ),
   'the demo restaurant has a restaurant profile and draft shop'
 );
@@ -88,11 +88,25 @@ select ok(
 
 
 select is(
-  (select count(*)::integer from public.user_roles ur
-   join auth.users u on u.id=ur.user_id
-   where u.email like 'demo.%@marketplace.test'),
+  (with expected(email, role) as (
+    values
+      ('demo.customer@marketplace.test','CUSTOMER'::public.user_role),
+      ('demo.seller@marketplace.test','SELLER'::public.user_role),
+      ('demo.courier@marketplace.test','COURIER'::public.user_role),
+      ('demo.restaurant@marketplace.test','RESTAURANT'::public.user_role),
+      ('demo.mechanic@marketplace.test','MECHANIC'::public.user_role),
+      ('demo.transport@marketplace.test','TRANSPORT_COMPANY'::public.user_role),
+      ('demo.support@marketplace.test','SUPPORT'::public.user_role),
+      ('demo.moderator@marketplace.test','MODERATOR'::public.user_role),
+      ('demo.admin@marketplace.test','SUPER_ADMIN'::public.user_role)
+  )
+  select count(*)::integer
+  from expected e
+  join auth.users u on u.email=e.email
+  join public.user_roles ur on ur.user_id=u.id and ur.role=e.role
+  ),
   9,
-  'every demo account has its intended application role'
+  'every demo account has its intended role; default CUSTOMER roles may coexist'
 );
 
 select ok(
@@ -100,7 +114,7 @@ select ok(
     select 1 from public.restaurant_menus rm
     join public.restaurant_profiles rp on rp.id=rm.restaurant_id
     join public.shops sh on sh.id=rp.shop_id
-    where sh.normalized_name='restaurant-demo'
+    where sh.normalized_name='restaurant démo'
       and rm.name='Menu de démonstration'
   ),
   'the demo restaurant has a local sample menu'
