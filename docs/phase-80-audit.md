@@ -36,3 +36,59 @@ Les plateformes natives Android/iOS doivent être générées/configurées pour 
 Les intégrations Orange Money, Wave et Moov Money nécessitent les comptes marchands, secrets et webhooks réels. L’application ne simule pas ces accès.
 
 PostGIS reste dans le schéma public car l’extension est non-relocatable. L’avertissement spatial_ref_sys et l’exposition des fonctions st_estimatedextent restent à traiter avec une migration d’extension contrôlée, sans casser la géolocalisation.
+
+## Audit complémentaire — 5 novembre 2026
+
+### Parcours principaux — étape 2
+
+Inspection du code Flutter et des fonctions SQL :
+- le panier utilise des RPC pour ajouter et modifier les quantités ;
+- le checkout utilise une clé d'idempotence, recalcule les prix depuis le catalogue, contrôle le propriétaire du panier et réserve le stock côté serveur ;
+- les réservations de transport verrouillent le trajet et contrôlent la capacité ;
+- l'acceptation d'un devis mécanicien verrouille la demande et rejette les autres devis en attente ;
+- les règles RLS des demandes de mécanicien et des billets transport limitent la lecture au client concerné.
+
+Limite : l'inspection du code et des migrations n'est pas un test de bout en bout. La suite actuelle contient encore trop peu de tests d'intégration pour certifier tous les parcours acheteur, vendeur, restaurant, coursier et prestataire.
+
+### SaaS multi-boutiques — architecture manquante identifiée
+
+Le modèle actuel autorise déjà plusieurs boutiques par profil vendeur (shops.seller_id n'est pas unique). Le partage d'accès par boutique existe également via private.seller_access_requests, des périmètres approuvés, des dates d'expiration, une conversation administrative et un journal d'audit.
+
+En revanche, aucun modèle complet d'abonnement et de quotas commerciaux n'a été trouvé dans le schéma inspecté. Les éléments suivants restent à construire :
+
+1. Catalogue de plans vendeurs, avec prix XOF, périodicité et fonctionnalités incluses.
+2. Abonnement au niveau du compte vendeur, avec statut, période, renouvellement, suspension et résiliation.
+3. Quota d'emplacements/boutiques achetés, et allocation explicite de chaque emplacement à une boutique.
+4. Contrôle serveur des limites avant création ou réactivation d'une boutique. Le client ne doit jamais pouvoir augmenter lui-même son quota.
+5. Historique immuable des événements d'abonnement et des paiements vérifiés.
+6. Invitations par e-mail, y compris pour une personne qui ne possède pas encore de compte.
+7. Membres par boutique avec permissions de lecture et d'action séparées, révocation immédiate et journal d'audit.
+
+Le flux actuel de partage est plus limité : le destinataire doit déjà posséder un compte actif et les périmètres autorisés sont actuellement principalement des droits de lecture. Il ne doit pas être présenté comme un système complet d'employés/permissions.
+
+#### Modèle cible proposé
+
+- seller_plans : catalogue des offres géré par la plateforme.
+- seller_subscriptions : abonnement du vendeur, période, état, quota acheté et référence de paiement.
+- shop_subscription_allocations : association unique entre une boutique et un emplacement payé.
+- shop_invitations : invitation ciblée par e-mail, rôle, permissions, expiration et état.
+- shop_memberships : utilisateur actif, boutique, rôle et permissions accordées.
+- subscription_events et shop_access_audit : historique serveur des changements.
+
+Les tables de facturation et d'audit doivent être protégées par RLS et ne pas être directement modifiables par les clients. Les opérations d'achat, activation, allocation, suspension et révocation doivent passer par des RPC transactionnelles qui vérifient le paiement et l'identité de l'acteur. Un abonnement expiré ne doit pas supprimer les données ni les commandes existantes ; il doit empêcher les nouvelles opérations dépassant les droits payés.
+
+Aucune table SaaS n'est ajoutée dans cette étape d'audit. Le schéma devra être créé par une migration versionnée, testée sur une base locale reconstruite avant toute application distante.
+
+### Paiements — correctifs de code identifiés
+
+- Les fonctions Wave et CinetPay v3 construisaient leurs URL de retour en utilisant orderId avant sa déclaration. Le code a été corrigé pour valider et lire la commande avant de construire les URL.
+- La création de session CinetPay v3 pointait vers l'ancien endpoint de webhook. Elle pointe maintenant vers cinetpay-webhook-v3, qui vérifie la notification et confirme la transaction auprès de CinetPay.
+- Une branche GET de santé du webhook CinetPay v3 dupliquée a été supprimée.
+
+Ces modifications sont enregistrées dans GitHub. Elles restent à valider par une compilation/typecheck Deno et par des tests de webhook simulés. Aucun paiement réel n'a été déclenché.
+
+### Validation native et sécurité
+
+Les compilations Android/iOS précédemment réussies ne prouvent pas que les notifications push fonctionnent sur des appareils réels. Firebase/APNs et le secret FCM restent nécessaires.
+
+Les tests de charge, les tests de restauration de sauvegarde et les essais de paiement réel restent hors du périmètre de la CI actuelle. Aucune capacité de 1 000 à 10 000 connexions simultanées n'est certifiée.
