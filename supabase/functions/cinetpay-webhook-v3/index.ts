@@ -43,6 +43,10 @@ function secretKey(): string {
 }
 
 Deno.serve(async (req: Request) => {
+  // Provider health/handshake requests do not require payment credentials.
+  if (req.method === "GET") return new Response("ok", { status: 200 });
+  if (req.method !== "POST") return json({ error: "method_not_allowed" }, 405);
+
   const url = Deno.env.get("SUPABASE_URL") ?? "";
   const adminKey = secretKey();
   const apiKey = Deno.env.get("CINETPAY_API_KEY") ?? "";
@@ -51,9 +55,6 @@ Deno.serve(async (req: Request) => {
   if (!url || !adminKey || !apiKey || !siteId || !secret) {
     return json({ error: "cinetpay_not_configured" }, 503);
   }
-
-  if (req.method === "GET") return new Response("ok", { status: 200 });
-  if (req.method !== "POST") return json({ error: "method_not_allowed" }, 405);
 
   const raw = await req.text();
   const form = new URLSearchParams(raw);
