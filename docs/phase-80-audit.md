@@ -443,3 +443,12 @@ Relecture en lecture seule des définitions SQL actuellement déployées (`compl
 - Commits : `fea7320a4620ed2ab3e77d8f931ffa0bd7c4c640` (preuves livreur), `3b234011746ac749878cd4eddb663136042c32f0` (réponses modération), `b16fa8d854176d38c2c4071bf24607ec464e9c84` (avis clients).
 - Limite restante : la validation MIME côté client et la policy Storage ne valident pas la signature binaire réelle. Une inspection du contenu côté serveur reste nécessaire si le niveau de garantie doit dépasser les contrôles MIME déclaratifs.
 - Vérification effectuée : relecture des trois fichiers après commit et comparaison des MIME avec la migration Storage et la limite du bucket. Aucun fichier réel, test, build, workflow Actions ou déploiement n'a été exécuté.
+
+
+### Journalisation mobile — diagnostics push limités au mode debug — 6 novembre 2026
+
+- La recherche ciblée des appels `debugPrint`/ `print(` a trouvé des traces d'erreurs et de stack traces dans le service de notifications push.
+- Les trois blocs de diagnostic concernés sont désormais protégés par `kDebugMode`. Les détails d'exception et les stack traces ne sont donc plus écrits par ces blocs dans les builds release.
+- Le changement ne modifie pas le flux d'inscription des jetons push, l'authentification, ni les appels RPC. Les erreurs restent gérées comme auparavant.
+- Commit : `fcb4cd9333b8cb459f7caff0413035d0503b14fe`.
+- Vérification effectuée : relecture du fichier sur `main`, présence du garde `kDebugMode` confirmée pour les trois blocs. Aucun build, test ou workflow n'a été lancé.
