@@ -257,3 +257,10 @@ Aucune modification de la base de production n'a été nécessaire pour ces poin
 - L'exécution est maintenant accordée à `authenticated` et `service_role`, jamais à `anon`. La fonction exige un compte actif, le rôle `COURIER`, un colis au statut `PICKED_UP` et une affectation `PICKED_UP` appartenant au même utilisateur. Les deux changements d'état restent atomiques dans la transaction.
 - Migration distante appliquée : `20261105194234_allow_guarded_courier_start_delivery`. Vérification des privilèges et des contrôles internes effectuée.
 - Une assertion pgTAP est ajoutée (plan total 39), sans exécution ni changement de colis réel.
+
+
+### Blocage restant — privilèges PostGIS spatial_ref_sys — 6 novembre 2026
+
+- L'advisor de sécurité signale toujours `public.spatial_ref_sys` avec RLS désactivé. L'inspection des privilèges confirme que `anon` et `authenticated` disposent actuellement de SELECT, INSERT, UPDATE et DELETE sur cette table de métadonnées PostGIS.
+- La table et l'extension PostGIS appartiennent à `supabase_admin`. Le rôle SQL utilisé par les migrations (`postgres`) n'est ni propriétaire, ni membre de `supabase_admin`, ni superutilisateur. La tentative de verrouillage a échoué sur le contrôle de propriété et a été annulée intégralement ; aucun changement partiel n'a été appliqué.
+- Ne pas contourner cette propriété ni modifier les catalogues système. Il faut exécuter la correction depuis un contexte propriétaire `supabase_admin` : retirer les droits DML à `anon` et `authenticated`, conserver SELECT public en lecture seule, activer RLS et ajouter une politique SELECT explicite. Tant que cette opération n'est pas faite, l'advisor conserve une erreur de sécurité réelle.
