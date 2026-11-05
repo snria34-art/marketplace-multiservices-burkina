@@ -27,7 +27,6 @@ Deno.serve(async (req: Request) => {
 
   const apiKey = Deno.env.get("CINETPAY_API_KEY") ?? "";
   const siteId = Deno.env.get("CINETPAY_SITE_ID") ?? "";
-  const returnUrl = Deno.env.get("CINETPAY_RETURN_URL") || url + "/functions/v1/payment-return?status=success&order_id=" + encodeURIComponent(orderId);
   if (!apiKey || !siteId) {
     return json({ error: "cinetpay_not_configured" }, 503);
   }
@@ -45,6 +44,10 @@ Deno.serve(async (req: Request) => {
   if (!orderId || !provider || provider !== "CINETPAY") {
     return json({ error: "provider_invalid" }, 400);
   }
+
+  const encodedOrderId = encodeURIComponent(orderId);
+  const returnUrl = Deno.env.get("CINETPAY_RETURN_URL") ||
+    url + "/functions/v1/payment-return?status=success&order_id=" + encodedOrderId;
 
   const supabase = createClient(url, key, {
     global: { headers: { Authorization: auth } },
@@ -113,7 +116,7 @@ Deno.serve(async (req: Request) => {
   }
 
   const transactionId = "CP" + paymentId.replaceAll("-", "");
-  const notifyUrl = url + "/functions/v1/cinetpay-webhook";
+  const notifyUrl = url + "/functions/v1/cinetpay-webhook-v3";
   const checkout = await fetch("https://api-checkout.cinetpay.com/v2/payment", {
     method: "POST",
     headers: {
