@@ -1,10 +1,12 @@
+// deno-lint-ignore no-import-prefix no-unversioned-import
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
-const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), {
-  status,
-  headers: { "content-type": "application/json" },
-});
+const json = (body: unknown, status = 200) =>
+  new Response(JSON.stringify(body), {
+    status,
+    headers: { "content-type": "application/json" },
+  });
 
 async function hmacHex(message: string, secret: string): Promise<string> {
   const key = await crypto.subtle.importKey(
@@ -37,7 +39,9 @@ function secretKey(): string {
     try {
       const parsed = JSON.parse(raw);
       if (parsed.default) return parsed.default;
-    } catch (_) {}
+    } catch (_) {
+      // Ignore malformed optional configuration and use the fallback environment variable.
+    }
   }
   return Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 }
@@ -81,7 +85,9 @@ Deno.serve(async (req: Request) => {
     }
   } else {
     const expected = await hmacHex(String(timestamp) + rawBody, webhookSecret);
-    if (!signatures.some((signature) => constantTimeEqual(expected, signature))) {
+    if (
+      !signatures.some((signature) => constantTimeEqual(expected, signature))
+    ) {
       return json({ error: "invalid_signature" }, 401);
     }
   }
@@ -97,9 +103,9 @@ Deno.serve(async (req: Request) => {
   const data = (event.data ?? {}) as Record<string, unknown>;
   if (!eventType) return json({ error: "invalid_event" }, 400);
 
-  let status: "SUCCEEDED" | "FAILED" | "PROCESSING" | null = null;
+  let status: "SUCCEEDED" | "FAILED" | null = null;
   if (eventType === "checkout.session.completed") status = "SUCCEEDED";
-  if (eventType === "checkout.session.payment_failed") status = "PROCESSING";
+  if (eventType === "checkout.session.payment_failed") status = "FAILED";
   if (!status) return json({ ok: true, ignored: true, event_type: eventType });
 
   const supabase = createClient(url, adminKey, {
@@ -146,7 +152,8 @@ Deno.serve(async (req: Request) => {
     return json({ error: "payment_amount_invalid" }, 422);
   }
 
-  const providerReference = sessionId || transactionId || clientReference || null;
+  const providerReference = sessionId || transactionId || clientReference ||
+    null;
   const { data: result, error } = await supabase.rpc("process_payment_event", {
     p_payment_id: paymentId,
     p_event_type: eventType,
