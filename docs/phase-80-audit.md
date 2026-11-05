@@ -399,3 +399,11 @@ Relecture en lecture seule des définitions SQL actuellement déployées (`compl
 - Limite native confirmée : Android déclare les permissions de localisation au premier plan, sans `ACCESS_BACKGROUND_LOCATION` ni service de premier plan de localisation. iOS a les descriptions d'usage « When In Use » et « Always », mais ses modes d'arrière-plan ne contiennent pas `location`. Le suivi en arrière-plan n'est donc pas certifié et ne doit pas être promis.
 - Prochaine étape : concevoir le service arrière-plan Android/iOS avec consentement, indicateur visible, arrêt à la fin de mission, reprise contrôlée et tests sur appareils réels. Ne pas ajouter de permissions arrière-plan avant l'implémentation correspondante.
 - Aucun test Flutter, build natif, workflow GitHub Actions, déploiement Supabase ou opération de paiement n'a été exécuté.
+
+
+### Séparation des clés Supabase client/serveur — 6 novembre 2026
+
+- Inspection de `lib/core/config/supabase_config.dart` : l'application Flutter ne lit que `SUPABASE_PUBLISHABLE_KEY`, avec compatibilité de repli sur l'ancienne variable publique `SUPABASE_ANON_KEY`. L'initialisation Supabase garde `debug: false`.
+- Recherche ciblée dans le dépôt de `SUPABASE_SERVICE_ROLE_KEY` : les références retrouvées sont dans les Edge Functions Deno côté serveur ; aucune référence à cette variable n'a été trouvée dans le code Flutter inspecté.
+- Conclusion limitée à cette vérification : la configuration Flutter examinée sépare correctement la clé publique client de la clé de service serveur. Cette recherche ne remplace pas un scan exhaustif d'historique Git, des secrets CI et de tous les fichiers binaires.
+- Aucun secret n'a été affiché, demandé ou modifié. Aucun déploiement ni test n'a été exécuté.
