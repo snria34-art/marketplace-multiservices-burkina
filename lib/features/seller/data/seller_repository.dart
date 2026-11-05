@@ -32,7 +32,7 @@ class SellerRepository {
   Future<num> balance(String sellerId) async {
     const pageSize = 500;
     var lastId = 0;
-    var total = 0.0;
+    num total = 0;
 
     while (true) {
       final rows = await client
