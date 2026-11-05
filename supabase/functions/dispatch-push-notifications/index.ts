@@ -143,8 +143,10 @@ async function sendToToken(
   };
 }
 
+type AdminClient = ReturnType<typeof createClient<any>>;
+
 async function processNotification(
-  adminClient: ReturnType<typeof createClient>,
+  adminClient: AdminClient,
   accessToken: string,
   projectId: string,
   notificationId: string,
@@ -306,7 +308,7 @@ Deno.serve(async (req: Request) => {
   const dispatchSecret = req.headers.get("x-push-dispatch-secret") ?? "";
   if (!url || !adminKey || !dispatchSecret) return json({ error: "not_configured" }, 503);
 
-  const adminClient = createClient(url, adminKey, { auth: { persistSession: false, autoRefreshToken: false } });
+  const adminClient = createClient<any>(url, adminKey, { auth: { persistSession: false, autoRefreshToken: false } });
   const check = await adminClient.rpc("verify_push_dispatch_secret", { p_candidate: dispatchSecret });
   if (check.error || check.data !== true) return json({ error: "unauthorized" }, 401);
 
