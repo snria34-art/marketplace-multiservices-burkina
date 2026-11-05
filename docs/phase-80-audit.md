@@ -216,5 +216,12 @@ Aucune modification de la base de production n'a été nécessaire pour ces poin
 
 - La fonction déployée `create-cinetpay-payment-session-v3` envoyait `notify_url` vers `/functions/v1/cinetpay-webhook`, un ancien endpoint retiré qui répond HTTP 410.
 - Le callback a été corrigé vers `/functions/v1/cinetpay-webhook-v3`, dont la signature, la vérification côté CinetPay, le montant et la devise XOF sont contrôlés avant traitement.
-- Déploiement ciblé effectué : `create-cinetpay-payment-session-v3` version 6, avec `verify_jwt=true) conservé. Aucun paiement réel n'a été lancé.
+- Déploiement ciblé effectué : `create-cinetpay-payment-session-v3` version 6, avec `verify_jwt=true` conservé. Aucun paiement réel n'a été lancé.
 - La source GitHub a été synchronisée avec le code déployé corrigé.
+
+
+### Synchronisation des sources des fonctions de paiement — 6 novembre 2026
+
+- Les sources GitHub de `create-wave-payment-session-v3`, `create-cinetpay-payment-session-v3`, `wave-payment-webhook-v3`, `cinetpay-webhook-v3`, `execute-payment-refund` et `payment-return` ont été rapprochées des versions effectivement déployées pour supprimer les écarts de code constatés.
+- Les anciens webhooks Wave/CinetPay restent retirés (HTTP 410). Les fonctions de création de paiement conservent `verify_jwt=true`; les webhooks publics conservent leurs contrôles cryptographiques et leurs vérifications côté prestataire.
+- Seul le callback CinetPay a nécessité un nouveau déploiement ciblé. Les autres changements de ce groupe sont des synchronisations GitHub, pas des déploiements.
