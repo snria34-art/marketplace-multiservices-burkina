@@ -90,8 +90,21 @@ class _DeliveryTrackingPageState
 
           if (snapshot.hasError) {
             return Center(
-              child: Text(
-                'Erreur du suivi : ' + snapshot.error.toString(),
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.location_off_outlined, size: 40),
+                    const SizedBox(height: 8),
+                    const Text('Le suivi de livraison est momentanément indisponible.'),
+                    const SizedBox(height: 12),
+                    FilledButton(
+                      onPressed: () => setState(() => _future = _load()),
+                      child: const Text('Réessayer'),
+                    ),
+                  ],
+                ),
               ),
             );
           }
@@ -149,10 +162,7 @@ class _DeliveryTrackingPageState
                       const SizedBox(height: 10),
                       if (assignment != null)
                         Text(
-                          'Livreur : ' +
-                              (assignment['courier_id']?.toString() ??
-                                  '-') +
-                              '\nAffectation : ' +
+                          'Affectation : ' +
                               (assignment['status']?.toString() ?? '-'),
                         ),
                       if (location != null) ...[
