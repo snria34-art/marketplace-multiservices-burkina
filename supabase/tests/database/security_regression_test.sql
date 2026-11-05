@@ -1,5 +1,5 @@
 begin;
-select plan(37);
+select plan(38);
 
 select ok(
   not has_table_privilege('anon','private.catalog_moderation_findings','SELECT')
@@ -292,6 +292,19 @@ select ok(
       and cmd='SELECT' and 'authenticated'=any(roles)
   )=1,
   'overlapping read policies are consolidated without removing authenticated access paths'
+);
+
+select ok(
+  (
+    select position('da.status = ANY' in qual)>0
+       and position('op.status = ANY' in qual)>0
+       and position('og.status <> ''CANCELLED''' in qual)>0
+       and position('o.status <> ALL' in qual)>0
+    from pg_policies
+    where schemaname='public' and tablename='courier_locations'
+      and policyname='courier_locations_read'
+  ),
+  'courier location is visible only for active delivery assignments and non-cancelled orders'
 );
 
 select * from finish();
