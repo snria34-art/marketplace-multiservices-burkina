@@ -44,11 +44,29 @@ class CourierRepository {
     if (bytes.isEmpty || bytes.length > 5 * 1024 * 1024) {
       throw StateError('La preuve doit faire au maximum 5 Mo.');
     }
-    final extension = file.name.contains('.')
+    final sourceExtension = file.name.contains('.')
         ? file.name.split('.').last.toLowerCase()
-        : 'jpg';
+        : '';
+    const mimeByExtension = {
+      'jpg': 'image/jpeg',
+      'jpeg': 'image/jpeg',
+      'png': 'image/png',
+      'webp': 'image/webp',
+      'heic': 'image/heic',
+    };
+    const extensionByMime = {
+      'image/jpeg': 'jpg',
+      'image/png': 'png',
+      'image/webp': 'webp',
+      'image/heic': 'heic',
+    };
+    final mime =
+        file.mimeType?.toLowerCase() ?? mimeByExtension[sourceExtension];
+    if (mime == null || !extensionByMime.containsKey(mime)) {
+      throw StateError('Format de preuve non pris en charge.');
+    }
+    final extension = extensionByMime[mime]!;
     final path = '${user.id}/delivery/$packageId/${DateTime.now().microsecondsSinceEpoch}.$extension';
-    final mime = file.mimeType ?? 'image/jpeg';
     await client.storage.from('order-feedback-media').uploadBinary(
       path,
       bytes,
