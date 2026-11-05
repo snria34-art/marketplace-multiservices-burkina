@@ -1,5 +1,5 @@
 begin;
-select plan(34);
+select plan(35);
 
 select ok(
   not has_table_privilege('anon','private.catalog_moderation_findings','SELECT')
@@ -237,6 +237,13 @@ select ok(
   and position('v_refund_inflight' in pg_get_functiondef('public.process_payment_event(uuid,text,public.payment_status,text,numeric,jsonb)'::regprocedure)) > 0
   and not has_function_privilege('authenticated','public.process_payment_event(uuid,text,public.payment_status,text,numeric,jsonb)','EXECUTE'),
   'late successful payment after cancellation queues one outstanding refund and stays server-only'
+);
+
+select ok(
+  position('refund_provider_data_invalid' in pg_get_functiondef('public.admin_begin_refund(uuid)'::regprocedure)) > 0
+  and position('nullif(trim(p.provider_reference),'''') is not null' in pg_get_functiondef('public.admin_begin_refund(uuid)'::regprocedure)) > 0
+  and position('r.status in (''REQUESTED'',''APPROVED'',''FAILED'')' in pg_get_functiondef('public.admin_begin_refund(uuid)'::regprocedure)) > 0,
+  'provider data is validated before refund processing starts'
 );
 
 select * from finish();
