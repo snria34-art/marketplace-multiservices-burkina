@@ -41,8 +41,8 @@ with demo_users(id,email) as (
     ('10000000-0000-4000-8000-000000000008'::uuid,'demo.moderator@marketplace.test'),
     ('10000000-0000-4000-8000-000000000009'::uuid,'demo.admin@marketplace.test')
 )
-insert into auth.identities(provider_id,user_id,identity_data,provider,email)
-select id::text,id,jsonb_build_object('sub',id::text,'email',email,'email_verified',true),'email',email
+insert into auth.identities(provider_id,user_id,identity_data,provider)
+select id::text,id,jsonb_build_object('sub',id::text,'email',email,'email_verified',true),'email'
 from demo_users
 where exists (select 1 from auth.users u where u.id=demo_users.id)
 and not exists (select 1 from auth.identities i where i.user_id=demo_users.id and i.provider='email');
