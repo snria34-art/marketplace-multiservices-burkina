@@ -175,3 +175,12 @@ Aucune modification de la base de production n'a été nécessaire pour ces poin
 - Migration distante appliquée : `20261105193040_bind_delivery_evidence_to_package_assignment`. La définition SQL a été relue après application et contient le contrôle supplémentaire.
 - Le test de régression pgTAP est ajouté au plan (30 assertions), mais n'a pas été exécuté conformément à la consigne de ne pas lancer de tests payants/Actions.
 - Aucun colis réel, paiement ou remboursement n'a été modifié.
+
+
+### Annulation sûre d'un groupe vendeur — 6 novembre 2026
+
+- L'audit a confirmé que l'annulation d'un groupe ne libérait pas le stock réservé et ne fermait pas les colis/affectations de livraison encore au stade pré-ramassage.
+- La fonction verrouille maintenant la commande principale avant le groupe, exige un compte actif, utilise `private.is_admin()` pour le contrôle administrateur et conserve l'accès d'exécution réservé au rôle serveur de confiance.
+- Avant annulation, elle refuse tout groupe dont un colis est déjà ramassé/en transit/livré ou dont la consommation de stock est déjà enregistrée. Sinon, elle libère les quantités réservées, annule les affectations pré-dispatch et les colis concernés, journalise l'événement et met la commande principale à `CANCELLED` ou `PARTIALLY_FULFILLED` selon les autres groupes.
+- Migration distante appliquée : `20261105193330_release_stock_and_cancel_package_on_seller_group_cancellation`. Vérification SQL effectuée : contrôles d'accès, libération de stock, journalisation et privilèges serveur confirmés.
+- Deux assertions pgTAP supplémentaires (plan total 32) sont ajoutées, mais non exécutées. Aucun paiement, remboursement ou colis réel n'a été touché.
