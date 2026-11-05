@@ -45,8 +45,15 @@ class _SellerProductsPageState
     final repo = ref.read(sellerProductsRepositoryProvider);
     if (repo == null) return;
 
-    final shops = await _shopsFuture;
-    final categories = await repo.categories();
+    late final List<Map<String, dynamic>> shops;
+    late final List<Map<String, dynamic>> categories;
+    try {
+      shops = await _shopsFuture;
+      categories = await repo.categories();
+    } catch (_) {
+      _show('Impossible de charger les boutiques et catégories. Réessayez.');
+      return;
+    }
 
     if (shops.isEmpty) {
       _show('Aucune boutique disponible pour ce compte.');
