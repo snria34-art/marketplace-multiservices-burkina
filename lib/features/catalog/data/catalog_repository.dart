@@ -60,6 +60,21 @@ class CatalogRepository {
     return _maps(rows);
   }
 
+  Future<String?> productImageUrl(String storagePath) async {
+    final path = storagePath.trim();
+    if (path.isEmpty || path.startsWith('http://') || path.startsWith('https://')) {
+      return path.isEmpty ? null : path;
+    }
+
+    try {
+      return await client.storage
+          .from('product-media')
+          .createSignedUrl(path, 60 * 60);
+    } on StorageException {
+      return null;
+    }
+  }
+
   List<Map<String, dynamic>> _maps(dynamic rows) {
     return (rows as List)
         .map((row) => Map<String, dynamic>.from(row as Map))
