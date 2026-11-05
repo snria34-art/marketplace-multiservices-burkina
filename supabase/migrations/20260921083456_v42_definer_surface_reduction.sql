@@ -9,7 +9,7 @@ begin
  return found;
 end $$;
 
-create or replace function public.register_notification_device(p_platform text,push_token text)
+create or replace function public.register_notification_device(p_platform text,p_push_token text)
 returns uuid language plpgsql security invoker
 set search_path=pg_catalog,public
 as $$
