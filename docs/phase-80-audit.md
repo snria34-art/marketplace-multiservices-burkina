@@ -92,3 +92,20 @@ Ces modifications sont enregistrées dans GitHub. Elles restent à valider par u
 Les compilations Android/iOS précédemment réussies ne prouvent pas que les notifications push fonctionnent sur des appareils réels. Firebase/APNs et le secret FCM restent nécessaires.
 
 Les tests de charge, les tests de restauration de sauvegarde et les essais de paiement réel restent hors du périmètre de la CI actuelle. Aucune capacité de 1 000 à 10 000 connexions simultanées n'est certifiée.
+
+### Correctif checkout — 5 novembre 2026
+
+- Le sélecteur d'adresse pouvait recevoir plusieurs demandes de devis de livraison en parallèle. Une réponse lente correspondant à l'ancienne adresse pouvait arriver après la réponse de la nouvelle adresse et remplacer son devis à l'écran.
+- Le checkout utilise maintenant un identifiant de requête croissant et ignore les réponses et erreurs qui ne correspondent plus à l'adresse sélectionnée.
+- Le calcul définitif du prix reste côté serveur dans `checkout_cart` ; ce correctif empêche surtout l'affichage d'un devis obsolète et une confusion de l'utilisateur.
+- Le correctif est enregistré dans le commit `df541451734c7b34456d508883bff6bf2db745a8`.
+- La compilation/analyse Flutter n'a pas pu démarrer dans GitHub Actions : le job s'arrête en environ trois secondes, avec `runner_id=0`, aucun runner attribué et aucune étape exécutée. Ce résultat ne permet pas de conclure sur la compilation du correctif.
+
+### Diagnostic GitHub Actions — 5 novembre 2026
+
+- Les workflows Flutter, Supabase DB et Android ont de nouveau échoué avant l'exécution de la première étape.
+- Les objets Job retournés par GitHub indiquent `runner_id=0`, `runner_name` vide et `steps=[]`. Les logs du job ne sont pas disponibles via l'API (404 BlobNotFound).
+- Le problème est donc actuellement situé au démarrage/à l'attribution du runner, et non dans une erreur de test démontrée. La cause administrative exacte (limites de facturation, disponibilité ou politique Actions) reste à confirmer dans les paramètres GitHub du dépôt/compte.
+- Le workflow Flutter a été réduit aux permissions `contents: read` et ne tente plus de pousser automatiquement un lockfile depuis la CI.
+- Aucun résultat de test n'est déclaré réussi sur les commits récents tant que les jobs n'ont pas réellement exécuté leurs étapes.
+
