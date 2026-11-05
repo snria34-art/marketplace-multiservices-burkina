@@ -1,5 +1,5 @@
 begin;
-select plan(38);
+select plan(39);
 
 select ok(
   not has_table_privilege('anon','private.catalog_moderation_findings','SELECT')
@@ -305,6 +305,15 @@ select ok(
       and policyname='courier_locations_read'
   ),
   'courier location is visible only for active delivery assignments and non-cancelled orders'
+);
+
+select ok(
+  has_function_privilege('authenticated','public.start_package_delivery(uuid)','EXECUTE')
+  and not has_function_privilege('anon','public.start_package_delivery(uuid)','EXECUTE')
+  and position('private.require_active_account()' in pg_get_functiondef('public.start_package_delivery(uuid)'::regprocedure)) > 0
+  and position('private.has_role(''COURIER''::public.user_role)' in pg_get_functiondef('public.start_package_delivery(uuid)'::regprocedure)) > 0
+  and position('da.courier_id=v_user' in pg_get_functiondef('public.start_package_delivery(uuid)'::regprocedure)) > 0,
+  'courier can start only their own picked-up package with an active courier account'
 );
 
 select * from finish();
