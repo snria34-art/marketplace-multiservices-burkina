@@ -1,5 +1,5 @@
 begin;
-select plan(30);
+select plan(32);
 
 select ok(
   not has_table_privilege('anon','private.catalog_moderation_findings','SELECT')
@@ -206,6 +206,21 @@ select ok(
 select ok(
   position('da.package_id=p_package_id' in replace(pg_get_functiondef('public.confirm_package_delivery(uuid,text)'::regprocedure),' ','')) > 0,
   'delivery evidence assignment must belong to the exact package being confirmed'
+);
+
+select ok(
+  position('private.require_active_account()' in pg_get_functiondef('public.transition_order_group_status(uuid,public.order_status,text)'::regprocedure)) > 0
+  and position('private.is_admin()' in pg_get_functiondef('public.transition_order_group_status(uuid,public.order_status,text)'::regprocedure)) > 0
+  and position('release_variant_inventory' in pg_get_functiondef('public.transition_order_group_status(uuid,public.order_status,text)'::regprocedure)) > 0
+  and position('CANCELLED_BY_SELLER' in pg_get_functiondef('public.transition_order_group_status(uuid,public.order_status,text)'::regprocedure)) > 0,
+  'seller group cancellation requires an active owner/admin, releases reserved stock, and records courier assignment cancellation'
+);
+
+select ok(
+  not has_function_privilege('anon','public.transition_order_group_status(uuid,public.order_status,text)','EXECUTE')
+  and not has_function_privilege('authenticated','public.transition_order_group_status(uuid,public.order_status,text)','EXECUTE')
+  and has_function_privilege('service_role','public.transition_order_group_status(uuid,public.order_status,text)','EXECUTE'),
+  'seller group transition remains restricted to its trusted server-side caller'
 );
 
 select * from finish();
