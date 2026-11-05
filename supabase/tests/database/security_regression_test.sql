@@ -1,5 +1,5 @@
 begin;
-select plan(33);
+select plan(34);
 
 select ok(
   not has_table_privilege('anon','private.catalog_moderation_findings','SELECT')
@@ -228,6 +228,15 @@ select ok(
   and position('''PROCESSING''' in pg_get_functiondef('public.admin_begin_refund(uuid)'::regprocedure)) = 0
   and position('private.is_admin()' in pg_get_functiondef('public.admin_begin_refund(uuid)'::regprocedure)) > 0,
   'refund processing cannot be started twice and remains restricted to active admins'
+);
+
+select ok(
+  position('if v_order.status = ''CANCELLED'' then' in pg_get_functiondef('public.process_payment_event(uuid,text,public.payment_status,text,numeric,jsonb)'::regprocedure)) > 0
+  and position('insert into public.refunds' in pg_get_functiondef('public.process_payment_event(uuid,text,public.payment_status,text,numeric,jsonb)'::regprocedure)) > 0
+  and position('Payment succeeded after order cancellation; refund required' in pg_get_functiondef('public.process_payment_event(uuid,text,public.payment_status,text,numeric,jsonb)'::regprocedure)) > 0
+  and position('v_refund_inflight' in pg_get_functiondef('public.process_payment_event(uuid,text,public.payment_status,text,numeric,jsonb)'::regprocedure)) > 0
+  and not has_function_privilege('authenticated','public.process_payment_event(uuid,text,public.payment_status,text,numeric,jsonb)','EXECUTE'),
+  'late successful payment after cancellation queues one outstanding refund and stays server-only'
 );
 
 select * from finish();
