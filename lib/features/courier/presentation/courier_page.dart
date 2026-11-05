@@ -377,8 +377,12 @@ class _CourierPageState extends ConsumerState<CourierPage> {
                                 ),
                               ],
                               if (hasDeliveryDestination) ...[
-                                Text('Livraison : ' + (deliveryAddress.isEmpty ? 'Position GPS disponible' : deliveryAddress)),
-                                Text('Livraison : ' + deliveryAddress),
+                                Text(
+                                  'Livraison : ' +
+                                      (deliveryAddress.isEmpty
+                                          ? 'Position GPS disponible'
+                                          : deliveryAddress),
+                                ),
                                 if (recipientName.isNotEmpty)
                                   Text('Destinataire : ' + recipientName),
                                 if (recipientPhone.isNotEmpty)
