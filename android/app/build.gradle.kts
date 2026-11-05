@@ -46,11 +46,37 @@ android {
 
     buildTypes {
         release {
-            signingConfig = if (keystorePropertiesFile.exists()) {
-                signingConfigs.getByName("release")
-            } else {
-                signingConfigs.getByName("debug")
+            if (!keystorePropertiesFile.isFile) {
+                throw GradleException(
+                    "Release signing is not configured. Create android/key.properties " +
+                        "and provide a protected upload keystore before building a release."
+                )
             }
+
+            val requiredSigningProperties = listOf(
+                "keyAlias",
+                "keyPassword",
+                "storeFile",
+                "storePassword",
+            )
+            val missingSigningProperties = requiredSigningProperties.filter {
+                keystoreProperties.getProperty(it).isNullOrBlank()
+            }
+            if (missingSigningProperties.isNotEmpty()) {
+                throw GradleException(
+                    "Missing Android release signing properties: " +
+                        missingSigningProperties.joinToString(", ")
+                )
+            }
+
+            val releaseKeystore = file(keystoreProperties.getProperty("storeFile"))
+            if (!releaseKeystore.isFile) {
+                throw GradleException(
+                    "Android release keystore does not exist at: ${releaseKeystore.path}"
+                )
+            }
+
+            signingConfig = signingConfigs.getByName("release")
         }
     }
 }
