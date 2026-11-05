@@ -112,26 +112,47 @@ class SellerProductsRepository {
     if (bytes.isEmpty || bytes.length > 5 * 1024 * 1024) {
       throw StateError('Chaque image doit faire au maximum 5 Mo.');
     }
-    final extension = file.name.contains('.')
-        ? file.name.split('.').last.toLowerCase()
-        : 'jpg';
-    final path = 'products/$productId/${DateTime.now().microsecondsSinceEpoch}.$extension';
-    final mime = file.mimeType ?? 'image/jpeg';
+    final mime = (file.mimeType ?? '').toLowerCase().trim();
+    const allowedImageTypes = {
+      'image/jpeg': 'jpg',
+      'image/png': 'png',
+      'image/webp': 'webp',
+    };
+    final extension = allowedImageTypes[mime];
+    if (extension == null) {
+      throw StateError(
+        'Format non pris en charge. Utilisez une image JPEG, PNG ou WebP.',
+      );
+    }
+
+    final path =
+        'products/$productId/${DateTime.now().microsecondsSinceEpoch}.$extension';
     await client.storage.from('product-media').uploadBinary(
       path,
       bytes,
       fileOptions: FileOptions(contentType: mime, upsert: false),
     );
-    await client.rpc('add_seller_product_image', params: {
-      'p_product_id': productId,
-      'p_storage_path': path,
-      'p_image_role': imageRole,
-      'p_alt_text': imageRole == 'PACKAGING'
-          ? 'Photo de l’emballage'
-          : imageRole == 'LABEL'
-              ? 'Photo de l’étiquette'
-              : 'Photo du produit',
-    });
+
+    try {
+      await client.rpc('add_seller_product_image', params: {
+        'p_product_id': productId,
+        'p_storage_path': path,
+        'p_image_role': imageRole,
+        'p_alt_text': imageRole == 'PACKAGING'
+            ? 'Photo de l’emballage'
+            : imageRole == 'LABEL'
+                ? 'Photo de l’étiquette'
+                : 'Photo du produit',
+      });
+    } catch (_) {
+      // Avoid leaving an unreferenced object when metadata registration fails.
+      try {
+        await client.storage.from('product-media').remove([path]);
+      } catch (_) {
+        // Storage cleanup is best-effort; the original error remains primary.
+      }
+      rethrow;
+    }
   }
 
   Future<void> submitForReview(String productId) async {
