@@ -54,9 +54,22 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
 
     if (rows.isNotEmpty && _selectedAddressId == null) {
       final first = rows.first;
-      _selectedAddressId = first['id']?.toString();
+      final addressId = first['id']?.toString();
+      final requestId = ++_quoteRequestId;
+      _selectedAddressId = addressId;
       _selectedAddress = first;
-      _quote = await _calculateQuote(first);
+
+      try {
+        final quote = await _calculateQuote(first);
+        if (mounted &&
+            requestId == _quoteRequestId &&
+            _selectedAddressId == addressId) {
+          _quote = quote;
+        }
+      } catch (_) {
+        // The screen remains usable; the user can select the address again
+        // to request a fresh quote. Never attach a stale quote to another address.
+      }
     }
 
     return rows;
