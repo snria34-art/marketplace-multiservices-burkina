@@ -281,3 +281,38 @@ Aucune modification de la base de production n'a été nécessaire pour ces poin
 - Le dépôt Flutter utilise cette RPC et affiche les adresses, les contacts autorisés et les liens d'itinéraire Google Maps (coordonnées GPS lorsqu'elles existent, adresse sinon).
 - Migration distante appliquée : `20261105194532_add_secure_courier_assignment_details`. La fonction et ses privilèges ont été vérifiés. Les fichiers Flutter ont été relus sur GitHub ; les tests Flutter ne sont pas exécutés.
 - Une assertion pgTAP supplémentaire est ajoutée (plan total 41), sans exécution.
+
+
+### Audit complémentaire — annulations globales, synchronisation des colis et allocation des remboursements — 6 novembre 2026
+
+Relecture en lecture seule des définitions SQL actuellement déployées (`complete_refund`, `request_refund`, `transition_order_status`, `transition_order_group_status`, `sync_order_after_package_change`, `open_return`) et des index de `seller_ledger`.
+
+#### Findings à corriger avant mise en production financière
+
+1. **Allocation des remboursements partiels trop large**
+   - `complete_refund` répartit chaque remboursement au prorata du `subtotal` de tous les groupes de la commande, sans référence à la boutique, au groupe ou à l'article à l'origine du remboursement.
+   - Cette règle peut débiter les vendeurs non concernés lorsqu'un seul groupe ou un seul article est remboursé. Elle répartit également tout montant remboursé (qui peut inclure des frais ou remises) sur les seuls sous-totaux produits.
+   - Le registre a une contrainte unique `(seller_id, entry_type, reference_id)`. Si un même vendeur possède plusieurs boutiques/groupes dans une commande, plusieurs insertions REFUND pour ce vendeur et ce remboursement peuvent entrer en conflit ; la fonction actuelle ne regroupe pas explicitement les montants par vendeur avant insertion.
+   - `request_refund(order_id, amount, reason)` ne recueille pas de cible d'allocation. Le modèle actuel ne permet donc pas de déterminer de façon fiable le ou les vendeurs qui doivent supporter le remboursement.
+   - **Correction requise** : définir une source d'allocation explicite et immuable (au minimum refund allocations par groupe, idéalement par article/quantité, avec traitement distinct des frais de livraison, remises, commissions et montants déjà versés). Agréger ensuite par vendeur avant d'écrire le registre, et rendre l'écriture idempotente. Ne pas remplacer le prorata par une autre formule arbitraire.
+
+2. **Annulation globale incohérente avec les protections d'annulation par boutique**
+   - `transition_order_status` autorise un administrateur à définir directement le statut parent sans matrice de transitions stricte. Lors d'une annulation, elle libère les quantités de tous les articles puis passe certains groupes à `CANCELLED`, mais ne ferme pas les colis et affectations pré-ramassage comme le fait `transition_order_group_status`.
+   - Le contrôle de la fonction globale ne bloque pas explicitement les colis déjà pris en charge/en transit avant de changer le statut parent. Il existe donc un risque de divergence entre commande, groupes, colis et affectations.
+   - **Correction requise** : centraliser l'annulation globale sur les mêmes contrôles que l'annulation de groupe, verrouiller dans un ordre cohérent, refuser les états déjà expédiés/livrés, libérer le stock une seule fois et fermer les colis/affectations encore pré-départ. La voie administrative doit avoir des transitions autorisées explicites et auditées.
+
+3. **Synchronisation parent incomplète après changement d'un colis**
+   - `sync_order_after_package_change` passe un groupe à `DELIVERED` seulement si tous ses colis sont livrés, et la commande parent à `DELIVERED` seulement si tous les groupes sont livrés. Elle passe le parent à `IN_TRANSIT` lorsqu'au moins un groupe est en transit.
+   - Elle ne calcule pas explicitement les états parent `CANCELLED` ou `PARTIALLY_FULFILLED` à partir de l'ensemble des groupes. Les annulations actuelles compensent parfois cela par une mise à jour manuelle, mais cette logique est dispersée et peut laisser un statut parent obsolète selon l'ordre des événements.
+   - **Correction requise** : une fonction unique de recalcul du statut parent à partir de tous les groupes et colis, appelée après chaque transition pertinente, avec une table de vérité documentée pour les mélanges livré/annulé/en transit/en attente.
+
+4. **Retours d'articles et remboursements ne sont pas reliés par le flux inspecté**
+   - `open_return` crée une demande de retour au niveau de l'article livré et vérifie le délai de retour, mais le flux inspecté ne montre pas de fonction de décision qui crée une allocation de remboursement rattachée à cet article.
+   - Il faut relier l'approbation du retour à une allocation comptable précise, sans rembourser automatiquement un article uniquement parce qu'une demande de retour a été ouverte.
+
+#### Décision de sûreté
+
+- Aucun changement comptable ou de statut n'a été appliqué pendant cet audit : il manque une règle métier confirmée pour déterminer la responsabilité du vendeur, la part des frais de livraison/remises et le traitement des commandes multi-boutiques avec plusieurs boutiques appartenant au même vendeur.
+- Aucun paiement, remboursement, retour, retrait ou colis réel n'a été modifié.
+- Aucun test pgTAP/Flutter ni workflow GitHub Actions n'a été lancé.
+- Le prochain correctif doit commencer par le schéma d'allocation de remboursement et une fonction transactionnelle idempotente ; ensuite seulement, la logique d'annulation globale et le recalcul parent pourront être unifiés sans risquer de déséquilibrer le registre.
