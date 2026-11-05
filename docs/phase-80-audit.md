@@ -462,3 +462,6 @@ Relecture en lecture seule des définitions SQL actuellement déployées (`compl
 - Tests de régression ajoutés pour une route arbitraire vers l'administration, les identifiants contenant des séparateurs et un identifiant opaque valide.
 - Commits : `24c37e1a6ffaf9e8bcd2ba3a662d80b4cee102d5` (navigation), `970f0b5187217ee373787ed4e0181d40d145029b` (tests).
 - Relecture des routes dans `lib/core/routing/app_router.dart` effectuée : les chemins construits correspondent aux routes déclarées. Aucun test n'a été exécuté ; les tests sont seulement ajoutés.
+
+
+- Correction de mise en forme du fichier de tests : les trois nouveaux cas ont été replacés à l'intérieur de `main()` (commit `5ae7b065a260043720d1cabbf4f085e9058b4cd1`). Relecture statique confirmée ; tests non exécutés.
