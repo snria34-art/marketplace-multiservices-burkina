@@ -474,3 +474,6 @@ Relecture en lecture seule des définitions SQL actuellement déployées (`compl
 - Les plafonds applicatifs restent inchangés : 5 MiB pour preuve/photo et 20 MiB pour vidéo.
 - Commits : `8b0ee807916b97693e1303a1a6ed24418e7d7e34` (livreur), `6f0f3b8cd5763cc3f9d6ddcfbfecfb6944bf189f` (modération), `79794aa35ce016495cdf437f60f630f7c2a151df` (avis clients).
 - Relecture des trois fichiers effectuée. Aucun test Flutter, build, workflow Actions ou upload réel n'a été exécuté.
+
+
+- Extension du précontrôle mémoire au parcours d'image produit : `SellerProductsRepository.uploadProductImage` vérifie maintenant `XFile.length()` avant la lecture en mémoire, puis contrôle à nouveau la taille des octets lus. Plafond inchangé : 5 MiB. Commit `1d93b3022a04945f819937d1c9347bd4c3715a45`.
