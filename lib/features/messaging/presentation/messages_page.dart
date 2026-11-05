@@ -25,6 +25,7 @@ class _MessagesPageState extends ConsumerState<MessagesPage> {
   String? _conversationId;
   RealtimeChannel? _channel;
   Timer? _poll;
+  int _messageRefreshToken = 0;
 
   @override
   void initState() {
@@ -60,7 +61,7 @@ class _MessagesPageState extends ConsumerState<MessagesPage> {
           ),
           callback: (_) {
             if (!mounted) return;
-            setState(() {});
+            setState(() => _messageRefreshToken++);
           },
         )
         .subscribe();
@@ -69,7 +70,7 @@ class _MessagesPageState extends ConsumerState<MessagesPage> {
     _poll = Timer.periodic(
       const Duration(seconds: 8),
       (_) {
-        if (mounted) setState(() {});
+        if (mounted) setState(() => _messagesFuture = _load());
       },
     );
 
@@ -149,7 +150,9 @@ class _MessagesPageState extends ConsumerState<MessagesPage> {
               onOpen: _openConversation,
             )
           : _ConversationView(
+              key: ValueKey(_conversationId),
               conversationId: _conversationId!,
+              refreshToken: _messageRefreshToken,
               onBack: () => setState(() => _conversationId = null),
             ),
     );
@@ -215,11 +218,14 @@ class _ConversationList extends StatelessWidget {
 
 class _ConversationView extends ConsumerStatefulWidget {
   const _ConversationView({
+    super.key,
     required this.conversationId,
+    required this.refreshToken,
     required this.onBack,
   });
 
   final String conversationId;
+  final int refreshToken;
   final VoidCallback onBack;
 
   @override
@@ -230,6 +236,21 @@ class _ConversationView extends ConsumerStatefulWidget {
 class _ConversationViewState
     extends ConsumerState<_ConversationView> {
   final _controller = TextEditingController();
+  late Future<List<Map<String, dynamic>>> _messagesFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _messagesFuture = _load();
+  }
+
+  @override
+  void didUpdateWidget(covariant _ConversationView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.refreshToken != widget.refreshToken) {
+      _messagesFuture = _load();
+    }
+  }
 
   @override
   void dispose() {
@@ -285,11 +306,26 @@ class _ConversationViewState
         ),
         Expanded(
           child: FutureBuilder<List<Map<String, dynamic>>>(
-            future: _load(),
+            future: _messagesFuture,
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Center(
                   child: CircularProgressIndicator(),
+                );
+              }
+              if (snapshot.hasError) {
+                return Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text('Impossible de charger les messages.'),
+                      const SizedBox(height: 8),
+                      FilledButton(
+                        onPressed: () => setState(() => _messagesFuture = _load()),
+                        child: const Text('Réessayer'),
+                      ),
+                    ],
+                  ),
                 );
               }
 
