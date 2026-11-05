@@ -466,14 +466,43 @@ class _OrderDetailsPageState extends ConsumerState<OrderDetailsPage> {
       );
 
       if (form.media != null && mediaBytes != null) {
-        final extension = form.media!.name.contains('.')
+        final sourceExtension = form.media!.name.contains('.')
             ? form.media!.name.split('.').last.toLowerCase()
-            : (form.mediaType == 'VIDEO' ? 'mp4' : 'jpg');
+            : '';
+        const mimeByExtension = {
+          'jpg': 'image/jpeg',
+          'jpeg': 'image/jpeg',
+          'png': 'image/png',
+          'webp': 'image/webp',
+          'heic': 'image/heic',
+          'mp4': 'video/mp4',
+          'mov': 'video/quicktime',
+        };
+        const extensionByMime = {
+          'image/jpeg': 'jpg',
+          'image/png': 'png',
+          'image/webp': 'webp',
+          'image/heic': 'heic',
+          'video/mp4': 'mp4',
+          'video/quicktime': 'mov',
+        };
+        final mime = form.media!.mimeType?.toLowerCase() ??
+            mimeByExtension[sourceExtension];
+        final allowedMimes = form.mediaType == 'VIDEO'
+            ? const {'video/mp4', 'video/quicktime'}
+            : const {
+                'image/jpeg',
+                'image/png',
+                'image/webp',
+                'image/heic',
+              };
+        if (mime == null || !allowedMimes.contains(mime)) {
+          throw StateError('Format du média non pris en charge.');
+        }
+        final extension = extensionByMime[mime]!;
         uploadedPath =
             user.id + '/reviews/' + createdReviewId.toString() + '_' +
             DateTime.now().microsecondsSinceEpoch.toString() + '.' + extension;
-        final mime = form.media!.mimeType ??
-            (form.mediaType == 'VIDEO' ? 'video/mp4' : 'image/jpeg');
         await client.storage.from('order-feedback-media').uploadBinary(
           uploadedPath,
           mediaBytes,
