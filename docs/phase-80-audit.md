@@ -348,3 +348,13 @@ Relecture en lecture seule des définitions SQL actuellement déployées (`compl
 #### Conclusion
 - Les règles Storage sont cohérentes avec les catégories de données et la séparation public/privé voulue. La prochaine validation fonctionnelle devra utiliser un compte de test et des fichiers non sensibles, mais uniquement après autorisation explicite de lancer les tests.
 - Aucun changement de bucket, de policy, de fonction, de statut utilisateur ou de fichier utilisateur n'a été appliqué pendant cet audit.
+
+
+### Correction technique — concurrence des notifications push — 6 novembre 2026
+
+- Le fan-out vers les appareils FCM est désormais limité à 5 envois simultanés par notification.
+- Le traitement du lot de notifications en attente est limité à 5 notifications simultanées au lieu de lancer tout le lot de 50 en parallèle.
+- Une erreur réseau sur un appareil est convertie en échec isolé `FCM_NETWORK_ERROR` afin que les autres appareils de la même notification continuent d'être traités.
+- Une erreur de traitement d'une notification n'interrompt plus le lot entier ; la réponse conserve un résultat par identifiant avec un code d'erreur générique, sans renvoyer de détails internes.
+- La limite réduit les pointes de concurrence, mais ne constitue pas un test de charge. Le déploiement de l'Edge Function et les tests restent à faire plus tard, après autorisation explicite.
+- Vérification effectuée : relecture du fichier sur la branche `main`, présence confirmée du worker limité à 5 pour les appareils et les notifications, et des chemins d'erreur isolés.
