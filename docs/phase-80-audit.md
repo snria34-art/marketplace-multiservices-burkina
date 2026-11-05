@@ -109,13 +109,20 @@ Les tests de charge, les tests de restauration de sauvegarde et les essais de pa
 - Le workflow Flutter a été réduit aux permissions `contents: read` et ne tente plus de pousser automatiquement un lockfile depuis la CI.
 - Aucun résultat de test n'est déclaré réussi sur les commits récents tant que les jobs n'ont pas réellement exécuté leurs étapes.
 
-
 ### Finding sécurité — portée du partage financier inter-boutiques — 6 novembre 2026
 
 - Relecture statique des migrations `20261103211236_enforce_approved_seller_access_scopes_in_rls.sql` et `20261103211258_limit_seller_access_requests_to_implemented_scopes.sql`.
-- Le flux de demande autorise actuellement le scope `financial_read`. Les politiques de lecture partagée de `commissions`, `seller_ledger` et `seller_payouts` recherchent une boutique du vendeur ayant accordé ce scope, puis filtrent les lignes par `seller_id` seulement.
-- Or un vendeur peut posséder plusieurs boutiques. Accorder `financial_read` sur une boutique peut donc rendre visibles au collaborateur des lignes financières du vendeur liées à ses autres boutiques ; pour `seller_payouts`, le modèle est également au niveau vendeur et non boutique.
-- **Risque : exposition inter-boutiques de données financières** à un collaborateur qui n'a reçu l'accès qu'à une seule boutique. Il s'agit d'un défaut de granularité de l'autorisation, pas d'une preuve d'accès à des données d'un autre vendeur.
-- Mesure corrective recommandée : retirer immédiatement `financial_read` de la liste des scopes acceptés et supprimer/désactiver les policies financières de partage tant que les données ne sont pas filtrables de manière fiable par boutique. Réintroduire cette permission uniquement après une modélisation financière par boutique et des tests RLS négatifs multi-boutiques.
-- Les tables `commissions`, `seller_ledger` et `seller_payouts` n'ont pas été modifiées pendant cet audit. Aucune migration n'a été appliquée à Supabase.
-- La correction doit être réalisée dans une nouvelle migration créée avec Supabase CLI, puis testée localement avec deux boutiques appartenant au même vendeur et deux comptes collaborateurs distincts. Ne pas modifier les migrations historiques déjà appliquées.
+- Le flux de demande autorisait le scope `financial_read`. Les politiques de lecture partagée de `commissions`, `seller_ledger` et `seller_payouts` recherchaient une boutique du vendeur ayant accordé ce scope, puis filtraient les lignes par `seller_id` seulement.
+- Or un vendeur peut posséder plusieurs boutiques. Accorder `financial_read` sur une boutique pouvait donc rendre visibles au collaborateur des lignes financières du vendeur liées à ses autres boutiques.
+- Risque : exposition inter-boutiques de données financières à un collaborateur qui n'a reçu l'accès qu'à une seule boutique. Il s'agit d'un défaut de granularité de l'autorisation, pas d'une preuve d'accès à des données d'un autre vendeur.
+- La correction est décrite ci-dessous et a depuis été appliquée en production.
+
+### Correction appliquée — isolation du partage financier — 6 novembre 2026
+
+- Migration distante `20261105184635_disable_unsafe_shared_financial_reads` appliquée au projet Supabase actif.
+- Suppression des trois politiques de partage dangereuses : `commissions_shared_access_read`, `seller_ledger_shared_access_read` et `seller_payouts_shared_access_read`.
+- Vérification après application : les trois politiques ont disparu. Les politiques de lecture du propriétaire vendeur restent présentes pour les commissions et le registre ; la politique propriétaire/administrateur reste présente pour les paiements vendeur. Les garde-fous `active_account_guard` sont conservés.
+- Le fichier SQL correspondant est versionné dans `supabase/migrations/20261105184635_disable_unsafe_shared_financial_reads.sql`.
+- Effet attendu : un collaborateur ne peut plus obtenir les données financières via le partage de boutique. Le propriétaire vendeur et les administrateurs conservent leurs politiques de lecture existantes.
+- Limite restante : le scope `financial_read` est encore accepté par la fonction de demande, mais ne donne plus de visibilité financière via ces politiques. Il faudra retirer ce scope de la RPC et de l'interface après inspection de ses dépendances.
+- Aucun solde, paiement, remboursement ou écriture du registre n'a été modifié. Aucun test avec de vrais fonds n'a été effectué.
