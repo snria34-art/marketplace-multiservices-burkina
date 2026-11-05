@@ -1,3 +1,39 @@
+-- These private workflow tables are required by the audit/response objects below.
+-- They are declared here because the original hosted schema had them created
+-- out-of-band; a clean local migration replay must be self-contained.
+create table if not exists private.catalog_moderation_findings (
+  id uuid primary key default gen_random_uuid(),
+  product_id uuid not null references public.products(id) on delete restrict,
+  rule_code text not null,
+  severity text not null check (severity in ('REVIEW','HIGH','CRITICAL')),
+  matched_terms text[] not null default '{}',
+  explanation text not null,
+  status text not null default 'OPEN' check (status in ('OPEN','UNDER_REVIEW','CLEARED','REJECTED')),
+  detected_at timestamptz not null default now(),
+  reviewed_by uuid,
+  reviewed_at timestamptz,
+  review_notes text,
+  unique(product_id,rule_code)
+);
+create index if not exists catalog_moderation_findings_status_idx
+  on private.catalog_moderation_findings(status,severity,detected_at desc);
+alter table private.catalog_moderation_findings enable row level security;
+revoke all on private.catalog_moderation_findings from public,anon,authenticated;
+
+create table if not exists private.platform_agent_runs (
+  id uuid primary key default gen_random_uuid(),
+  agent_code text not null,
+  started_at timestamptz not null default now(),
+  finished_at timestamptz,
+  status text not null check(status in ('OK','DEGRADED','ERROR')),
+  findings_count integer not null default 0,
+  details jsonb not null default '{}'::jsonb
+);
+create index if not exists platform_agent_runs_recent_idx
+  on private.platform_agent_runs(agent_code,started_at desc);
+alter table private.platform_agent_runs enable row level security;
+revoke all on private.platform_agent_runs from public,anon,authenticated;
+
 
 create table if not exists public.review_media (
   id uuid primary key default gen_random_uuid(),
