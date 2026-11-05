@@ -432,3 +432,14 @@ Relecture en lecture seule des définitions SQL actuellement déployées (`compl
 - Les parcours modération, preuve de livraison et avis utilisent encore, à des degrés divers, l'extension du nom de fichier et/ou un MIME fourni par le sélecteur avec fallback. Cela ne prouve pas le format binaire réel et ne remplace pas une validation serveur de signature de fichier.
 - Avant de normaliser ces trois parcours, il faut confirmer les formats effectivement acceptés par les sélecteurs mobiles et les limites MIME du bucket `order-feedback-media` (images et vidéos). Ne pas imposer une liste arbitraire qui bloquerait des formats légitimes ou créerait des incohérences avec la policy Storage.
 - Aucun fichier réel n'a été envoyé ou supprimé. Aucun test Flutter, build, workflow GitHub Actions ou déploiement n'a été lancé.
+
+
+### Durcissement des MIME pour les médias clients — 6 novembre 2026
+
+- Les trois parcours restants ont été harmonisés avec la liste MIME déjà définie dans la migration Storage `20261103220723_restrict_media_buckets_to_image_and_short_video_mime_types.sql` : images JPEG/PNG/WebP/HEIC et vidéos MP4/QuickTime.
+- `CourierRepository.uploadEvidence` n'accepte que les MIME image autorisés pour la preuve photo ; `SellerModerationPage._respond` et `OrderDetailsPage._review` appliquent une liste distincte selon IMAGE/VIDEO.
+- Le suffixe du chemin Storage est désormais canonisé à partir du MIME accepté (jpg/png/webp/heic/mp4/mov), au lieu de reprendre librement l'extension d'origine. Si le MIME est absent, seul un fallback via une extension explicitement reconnue est accepté.
+- Les formats acceptés correspondent aux MIME autorisés par le bucket `order-feedback-media`; sa limite Storage est de 20 MiB. Les limites applicatives plus strictes restent en place (5 MiB pour les images et preuves photo, 20 MiB pour les vidéos).
+- Commits : `fea7320a4620ed2ab3e77d8f931ffa0bd7c4c640` (preuves livreur), `3b234011746ac749878cd4eddb663136042c32f0` (réponses modération), `b16fa8d854176d38c2c4071bf24607ec464e9c84` (avis clients).
+- Limite restante : la validation MIME côté client et la policy Storage ne valident pas la signature binaire réelle. Une inspection du contenu côté serveur reste nécessaire si le niveau de garantie doit dépasser les contrôles MIME déclaratifs.
+- Vérification effectuée : relecture des trois fichiers après commit et comparaison des MIME avec la migration Storage et la limite du bucket. Aucun fichier réel, test, build, workflow Actions ou déploiement n'a été exécuté.
