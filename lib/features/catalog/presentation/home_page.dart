@@ -56,6 +56,10 @@ class _HomePageState extends ConsumerState<HomePage> {
     final types = results[0];
     final categories = results[1];
 
+    if (!mounted) {
+      return _CatalogMetadata(types: types, categories: categories);
+    }
+
     if (types.isNotEmpty && _selectedTypeId == null) {
       _selectedTypeId = types.first['id']?.toString();
     }
