@@ -182,14 +182,23 @@ Les modules immobilier, professionnels, agriculture, santé et créatifs n'appar
 
 **Correction :** définir pour chaque verticale son parcours métier, les contrôles de disponibilité/propriété, les RPC de création et les statuts, puis ajouter l'interface et les tests.
 
-#### AUD-11 — Les routes ne contrôlent pas la session ou le rôle avant d'afficher les pages protégées
-**État : confirmé au niveau du routeur.**
+#### AUD-11 — Les routes protégées ne contrôlaient pas la session ou le rôle
+**État : gardes Flutter ajoutés sur main ; tests unitaires écrits mais non exécutés ; droits backend toujours nécessaires.**
 
-`GoRouter` ne définit ni `redirect` ni `refreshListenable` lié à l'état d'authentification. Les routes `/admin/*`, `/seller/*`, `/courier`, `/orders` et plusieurs pages privées sont enregistrées sans garde UI.
+Le routeur précédent n'avait ni `redirect` ni `refreshListenable` lié aux changements d'authentification. Les routes privées étaient affichables sans vérification préalable.
 
-**Impact :** un utilisateur non connecté peut atteindre visuellement ces pages et obtenir des erreurs ou des écrans vides. Cela ne prouve pas à lui seul un contournement des RLS/RPC côté serveur ; les autorisations serveur restent la frontière de sécurité.
+**Corrections ajoutées :**
+- `GoRouter` écoute maintenant les événements d'authentification Supabase et réévalue les redirections. Le routeur et l'écouteur sont libérés ensemble à la destruction du provider.
+- Les routes panier, checkout, commandes, suivi livraison, favoris, achats groupés, messages, notifications, admin, vendeur et coursier exigent une session.
+- Les profils doivent avoir le statut `ACTIVE`. Les comptes `SUSPENDED` ou `BLOCKED` sont orientés vers une page d'accès restreint.
+- Les routes `/admin/*` exigent un enregistrement `admin_users.active=true`, cohérent avec `private.is_admin()`.
+- Les routes `/seller/*` exigent le rôle `SELLER` et un profil réel dans `public.sellers`. Les profils vendeur en attente peuvent encore accéder à leur espace pour suivre leur validation ; les mutations restent contrôlées par les RPC.
+- `/courier` exige le rôle `COURIER`, en accord avec les fonctions SQL de colis.
+- Les erreurs de lecture de rôle/status provoquent un refus par défaut. Les destinations de retour à la connexion sont filtrées pour ne permettre que les routes internes sûres.
 
-**Correction :** ajouter des gardes de route et une redirection selon session, statut de compte, rôle et permissions, tout en gardant les mêmes vérifications côté serveur.
+**Tests ajoutés :** 9 tests unitaires couvrent les groupes de routes, les familles admin/vendeur/coursier et les redirections internes. Aucun n'a encore été exécuté car GitHub Actions n'a pas attribué de runner dans les dernières exécutions ; aucune validation Flutter locale n'est disponible ici.
+
+**Frontière serveur :** les guards Flutter ne remplacent pas RLS/RPC. Les accès admin sont toujours décidés par `private.is_admin()`, et les RPC vendeur/coursier continuent à vérifier compte actif, rôle et propriété côté serveur.
 
 #### AUD-12 — Le modèle de rôles administrateur ne différencie pas encore les permissions
 **État : confirmé dans le schéma et les fonctions SQL inspectées.**
