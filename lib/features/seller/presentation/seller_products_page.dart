@@ -163,6 +163,21 @@ class _SellerProductsPageState
   }
 
   Future<void> _editStock(Map<String, dynamic> product) async {
+    final repo = ref.read(sellerProductsRepositoryProvider);
+    if (repo == null) return;
+
+    try {
+      final variants = await repo.variantInventory(product['id'].toString());
+      if (!mounted) return;
+      if (variants.isNotEmpty) {
+        await _showVariantInventoryDialog(variants);
+        return;
+      }
+    } catch (_) {
+      _show('Impossible de charger les variantes et leurs stocks. Réessayez.');
+      return;
+    }
+
     final rawInventory = product['inventory'];
     final inventory = rawInventory is Map
         ? Map<String, dynamic>.from(rawInventory)
@@ -205,9 +220,6 @@ class _SellerProductsPageState
 
     if (!mounted || value == null) return;
 
-    final repo = ref.read(sellerProductsRepositoryProvider);
-    if (repo == null) return;
-
     try {
       await repo.setStock(
         productId: product['id'].toString(),
@@ -218,6 +230,115 @@ class _SellerProductsPageState
       setState(() => _future = _loadProducts());
     } catch (error) {
       _show('Stock non modifié. Vérifiez la quantité et réessayez.');
+    }
+  }
+
+  Future<void> _showVariantInventoryDialog(
+    List<Map<String, dynamic>> variants,
+  ) async {
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Stocks par variante'),
+        content: SizedBox(
+          width: 420,
+          child: ListView.separated(
+            shrinkWrap: true,
+            itemCount: variants.length,
+            separatorBuilder: (_, __) => const Divider(),
+            itemBuilder: (_, index) {
+              final variant = variants[index];
+              final quantity = int.tryParse(
+                    variant['quantity']?.toString() ?? '',
+                  ) ??
+                  0;
+              final reserved = int.tryParse(
+                    variant['reserved_quantity']?.toString() ?? '',
+                  ) ??
+                  0;
+              final available = quantity - reserved;
+              return ListTile(
+                contentPadding: EdgeInsets.zero,
+                title: Text(variant['name']?.toString() ?? 'Variante'),
+                subtitle: Text(
+                  'Total : $quantity • Réservé : $reserved • Disponible : $available',
+                ),
+                trailing: IconButton(
+                  tooltip: 'Modifier ce stock',
+                  icon: const Icon(Icons.edit_outlined),
+                  onPressed: () => _setVariantStock(variant),
+                ),
+              );
+            },
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Fermer'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _setVariantStock(Map<String, dynamic> variant) async {
+    final controller = TextEditingController(
+      text: variant['quantity']?.toString() ?? '0',
+    );
+    final quantity = await showDialog<int>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(
+          'Stock : ${variant['name']?.toString() ?? 'variante'}',
+        ),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          keyboardType: TextInputType.number,
+          decoration: const InputDecoration(
+            labelText: 'Quantité totale',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Annuler'),
+          ),
+          FilledButton(
+            onPressed: () {
+              final parsed = int.tryParse(controller.text.trim());
+              if (parsed != null && parsed >= 0 && parsed <= 1000000) {
+                Navigator.pop(dialogContext, parsed);
+              }
+            },
+            child: const Text('Enregistrer'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+
+    if (!mounted || quantity == null) return;
+    final repo = ref.read(sellerProductsRepositoryProvider);
+    if (repo == null) return;
+
+    try {
+      await repo.setVariantStock(
+        variantId: variant['variant_id'].toString(),
+        quantity: quantity,
+      );
+      if (!mounted) return;
+      _show('Stock de la variante mis à jour.');
+      setState(() => _future = _loadProducts());
+    } catch (error) {
+      final message = error.toString().contains('stock_below_reserved')
+          ? 'Le stock ne peut pas être inférieur à la quantité réservée.'
+          : error.toString().contains('variant_not_owned') ||
+                  error.toString().contains('product_not_owned')
+              ? 'Vous ne pouvez pas modifier le stock de cette variante.'
+              : 'Stock non modifié. Vérifiez la quantité et réessayez.';
+      _show(message);
     }
   }
 
