@@ -1,5 +1,5 @@
 begin;
-select plan(45);
+select plan(47);
 
 select ok(
   not has_table_privilege('anon','private.catalog_moderation_findings','SELECT')
@@ -375,6 +375,25 @@ select ok(
   and position('private.require_active_account()' in pg_get_functiondef('public.get_seller_product_variant_inventory(uuid)'::regprocedure)) > 0
   and position('se.user_id = v_user' in pg_get_functiondef('public.get_seller_product_variant_inventory(uuid)'::regprocedure)) > 0,
   'seller variant inventory is read only through the owner-checked RPC, never by direct client table access'
+);
+
+
+select ok(
+  position('FCM' in pg_get_functiondef('private.record_platform_health_checks(jsonb)'::regprocedure)) > 0
+  and position('FCM' in (
+    select pg_get_constraintdef(oid)
+    from pg_constraint
+    where conrelid = 'private.platform_health_checks'::regclass
+      and conname = 'platform_health_checks_component_check'
+  )) > 0,
+  'platform health recorder and table constraint accept FCM readiness checks'
+);
+
+select ok(
+  has_function_privilege('service_role','private.record_platform_health_checks(jsonb)','EXECUTE')
+  and not has_function_privilege('authenticated','private.record_platform_health_checks(jsonb)','EXECUTE')
+  and not has_function_privilege('anon','private.record_platform_health_checks(jsonb)','EXECUTE'),
+  'platform health recorder remains executable only by service_role'
 );
 
 select * from finish();
