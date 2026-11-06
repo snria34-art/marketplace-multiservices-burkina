@@ -21,11 +21,11 @@ Les constats ci-dessous sont classés par gravité et par dépendance. « Confir
 | Fichiers Dart sous `lib/` | 72 |
 | Fichiers de tests Dart | 3 |
 | Tests SQL dans `supabase/tests/database` | 2 |
-| Assertions pgTAP prévues dans ces deux fichiers | 63 (50 + 13) |
+| Assertions pgTAP prévues dans ces deux fichiers | 64 (51 + 13) |
 | Tables Supabase `public` et `private` | 182 |
 | Tables publiques avec RLS | 166/167 |
 | Tables privées avec RLS | 15/15 |
-| Migrations SQL présentes dans GitHub | 330 |
+| Migrations SQL présentes dans GitHub | 331 |
 | Migrations consignées dans Supabase | 329 |
 | Fonctions Edge actives dans Supabase | 21 |
 | Dossiers sources Edge avec `index.ts` dans GitHub | 18 |
@@ -240,14 +240,27 @@ Avant correction, `PushNotificationService.signOutAndDeactivateCurrentDevice()` 
 
 **Limites :** aucun compte ou token réel n'existe encore sur le projet pour tester le cycle complet. La réception effective des push et l'absence de push après déconnexion doivent être testées sur un appareil Android/iOS avec Firebase configuré. Les tests Flutter/pgTAP n'ont pas été exécutés, GitHub Actions n'ayant pas encore démarré un runner.
 
-#### AUD-14 — Le suivi GPS ne fonctionne pas en arrière-plan
-**État : confirmé dans les manifests natifs et le code coursier.**
+#### AUD-14 — Le suivi GPS livreur en arrière-plan
+**État : flux continu Flutter et permissions natives ajoutés ; garde serveur sur affectation active ; test widget ajouté ; validation appareil/store et rétention encore requises.**
 
-Le coursier transmet sa position au premier plan, avec une fréquence de 15 secondes. Android n'a pas de permission/service de localisation arrière-plan dédié ; iOS n'a pas le mode background `location`. Les autorisations descriptives iOS sont présentes, mais elles ne remplacent pas l'implémentation du service.
+L'ancien code utilisait un `Timer.periodic(15s)` attaché à la page coursier : il n'offrait aucune garantie quand le système suspendait l'application.
 
-**Impact :** la position n'est pas garantie si l'application est suspendue ou fermée. Ne pas promettre un suivi continu en arrière-plan à ce stade.
+**Corrections ajoutées :**
+- `DeviceLocationService.positionStream()` utilise maintenant le flux continu `Geolocator.getPositionStream()`, pas de minuteur Flutter. Android vise 15 secondes et 25 m ; la précision et le rythme réel restent soumis au GPS, au système et à l'économie d'énergie.
+- Activation volontaire depuis l'espace livreur, après écran d'explication du partage en arrière-plan et vérification qu'une mission est affectée.
+- Android utilise `AndroidSettings` avec un service de premier plan et une notification persistante `Suivi de livraison actif`. Le manifeste déclare `ACCESS_FINE_LOCATION`, `ACCESS_COARSE_LOCATION`, `ACCESS_BACKGROUND_LOCATION`, `FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_LOCATION`.
+- iOS utilise `AppleSettings.allowBackgroundLocationUpdates=true`, sans pause automatique et avec indicateur système. `Info.plist` contient les descriptions WhenInUse/Always et le mode `UIBackgroundModes/location`.
+- Le livreur doit autoriser « Toujours / Autoriser tout le temps » pour que le flux puisse continuer en arrière-plan. La page permet d'arrêter explicitement le partage.
+- Le flux s'arrête quand toutes les missions sont terminées/annulées, lorsqu'il n'existe plus d'affectation, si le serveur refuse la position faute de mission active, à la demande du livreur ou à la destruction de la page/déconnexion.
+- Supabase migration `20261106205236_require_active_courier_assignment_for_location_updates.sql` : `record_courier_location` exige maintenant une affectation active associée à un colis/commande non terminés. Sans mission, aucun enregistrement GPS n'est permis ; les gardes COURIER/compte actif, validation des coordonnées, search_path PostGIS et ACL sont conservés.
+- Un test Flutter vérifie que l'application ne propose pas le partage GPS quand le livreur n'a aucune mission. Une assertion pgTAP supplémentaire couvre la garde serveur. Le fichier `security_regression_test.sql` comporte 51 assertions ; total prévu 64 avec l'autre fichier.
 
-**Correction :** mettre en place un service de localisation en arrière-plan conforme aux règles Android/iOS, consentement explicite, notification persistante, redémarrage/récupération et arrêt à la fin de mission ; tester sur appareils réels.
+**Limites importantes :**
+- Aucun build Android/iOS, test sur appareil physique ou test en arrière-plan n'a été exécuté ici ; les tests pgTAP/Flutter restent non exécutés faute de runner GitHub opérationnel.
+- Google Play / App Store peuvent exiger des explications/contrôles supplémentaires pour la localisation permanente ; les permissions natives ne garantissent pas l'approbation.
+- Aucune tâche de purge des anciennes positions n'a été trouvée. La durée de conservation n'a pas été fixée arbitrairement. Le suivi RIA-31 demande de définir la durée, les finalités et la purge serveur avant mise en production.
+
+Runbook : `docs/runbooks/aud-14-courier-background-location.md`. Suivi livraison/GPS : https://linear.app/faso/issue/RIA-11/07-livraison-et-gps. Conservation GPS : https://linear.app/faso/issue/RIA-31/confidentialite-definir-la-conservation-et-la-purge-des-positions-gps.
 
 #### AUD-15 — Trois fonctions Edge déployées n'ont pas de source correspondante dans GitHub
 **État : confirmé.**
