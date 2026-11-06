@@ -190,6 +190,22 @@ Cela ne prouve pas qu'aucun appel externe hors dépôt n'existe, mais l'intégra
 
 L'écran `OrderDetailsPage` permet au client de saisir uniquement un montant XOF et un motif ; il appelle `request_refund(order_id, amount, reason)`. Il ne propose pas de choisir une boutique, un article ou une quantité. La demande client actuelle est donc un montant global sur une commande, et toute possibilité de remboursement ciblé par article doit être conçue de bout en bout (écran, RPC, retour, allocations, validation admin et appel prestataire).
 
+### 3.9 Capture de paiement après annulation : débits vendeur sans vente créditée
+
+Le traitement de paiement et celui du remboursement créent un autre défaut de cohérence :
+
+1. `public.process_payment_event(...)` détecte que la commande est déjà `CANCELLED` au moment où le fournisseur confirme le paiement.
+2. Il crée une demande `refunds.status = 'REQUESTED'` pour le montant restant à restituer au client, sans réactiver la commande, les colis ou le stock.
+3. Ce chemin ne crédite aucun `SALE` et ne crée aucune commission vendeur : la commande avait été annulée avant la capture confirmée.
+4. Plus tard, `complete_refund` marque le remboursement terminé, mais ne vérifie pas que le groupe a reçu une écriture `SALE`. Il parcourt quand même tous les `order_groups` et écrit une ligne `REFUND` négative au vendeur.
+5. Quand le remboursement atteint le montant payé, `complete_refund` n'inclut pas l'état parent `CANCELLED` dans sa liste de statuts de commande à passer à `REFUNDED`, mais met à jour tous les groupes en `REFUNDED`. La commande peut donc rester `CANCELLED` avec des groupes `REFUNDED`.
+
+**Conséquence :** le client reçoit le remboursement, mais un ou plusieurs vendeurs peuvent être débités alors qu'aucune vente n'a jamais été créditée. Les groupes changent également de statut indépendamment de la commande annulée.
+
+**Règle attendue :** pour une capture fournisseur arrivée après annulation d'une commande impayée, le remboursement intégral du client doit être traité sans débit du ledger vendeur. Les groupes/commande restent cohérents avec l'annulation initiale ; le rapprochement du montant capturé et restitué appartient au compte de paiement/plateforme, sauf écriture vendeur d'origine explicitement démontrée. Ne pas déduire l'existence d'une créance vendeur de la simple présence d'un `order_group`.
+
+Cette règle doit être testée avec un paiement fournisseur simulé et une commande factice en staging avant modification de `complete_refund`.
+
 ### 3.6 Coupons, livraison et financement plateforme — décision métier requise
 
 Les règles suivantes doivent être écrites avant d'implémenter le calcul :
@@ -228,6 +244,9 @@ Le chemin de paiement réussi après annulation (`process_payment_event`) doit r
 - Remboursement des frais de livraison seul ; aucune boutique n'est débitée.
 - Arrondis XOF et allocation du résidu ; la somme finale égale exactement le montant externe.
 - Paiement capturé tardivement après annulation ; remboursement complet sans débit d'un seller ledger non crédité.
+- Même scénario, puis relecture des statuts : la commande et ses groupes ne doivent pas diverger (commande et groupes restent CANCELLED, sans mutation vers REFUNDED en l'absence d'une vente réglée).
+- Un vendeur possédant deux boutiques dans une commande ; un seul remboursement doit pouvoir produire des écritures ledger idempotentes sans violer uq_seller_ledger_ref_type.
+- Wave confirme le remboursement puis l'écriture ledger échoue ; le mécanisme de rapprochement doit reprendre la comptabilisation interne sans rappeler le endpoint refund de Wave.
 - Réponse prestataire répétée, webhook rejoué, fonction appelée à nouveau après `COMPLETED` ; une seule écriture par allocation.
 - Vendeur déjà payé : la règle de créance/recouvrement doit être testée, sans rendre son solde silencieusement négatif.
 
