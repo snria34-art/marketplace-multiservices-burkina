@@ -252,6 +252,8 @@ class _OrderDetailsPageState extends ConsumerState<OrderDetailsPage> {
         orderId: widget.orderId,
         provider: selected,
       );
+      if (!mounted) return;
+
       final url = session['checkout_url']?.toString().trim();
       if (url == null || url.isEmpty) {
         throw StateError('Lien de paiement indisponible.');
