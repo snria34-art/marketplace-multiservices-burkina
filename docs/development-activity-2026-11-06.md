@@ -459,3 +459,9 @@ Commits :
 - b274d10bbda9dc50dc11d990b763a9e85bc36a4a — canal du détail de commande.
 - 2e157e0346f9df875504ac936e4f82d014af3d5b — canal de messagerie et retour à la liste.
 - 03450f394a47b404fd8263de374b006059a19f71 — initialisation Realtime des notifications.
+
+### 31. Vérification RLS des variantes — alerte écartée après lecture des politiques
+
+Contrôle Supabase en lecture seule : `product_variants.active_account_guard` est bien une politique `RESTRICTIVE` pour `authenticated`, et non une politique permissive. Elle impose donc un compte actif en plus de la politique permissive `product_variants_public_read`, qui ne permet la lecture que des produits actifs, boutiques actives et vérifiées, et articles non expirés. Le droit SQL SELECT ne contourne pas ces conditions RLS.
+
+`product_variant_inventory` conserve RLS activé et aucun privilège SELECT/INSERT/UPDATE/DELETE direct pour `authenticated`; son accès de lecture vendeur passe par la RPC propriétaire dédiée, qui reste en attente du déploiement de sa migration. Aucun changement de politique RLS n'était nécessaire ; aucune modification de production n'a été effectuée.
