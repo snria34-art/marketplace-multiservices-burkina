@@ -381,3 +381,9 @@ Aucune action de congé, de modération, de remboursement ou de paiement n'a ét
 Le formulaire de réservation beauté vérifie maintenant que l'écran est toujours monté après le sélecteur de date/heure avant de poursuivre l'enregistrement. Cela aligne ce parcours avec les autres réservations des modules verticaux.
 
 Commit : 3e3d0834cfda979737241256593655ca7d65408d.
+
+### 22. Message d'erreur honnête pour le stock par variante avant déploiement
+
+L'écran vendeur ne présente plus le stock classique comme disponible sans réserve lorsque le chargement des variantes échoue. Le message précise désormais que le stock parent ne peut être utilisé que pour les produits sans stock par variante. Si la RPC serveur renvoie use_variant_stock_editor, l'interface indique clairement que la migration de lecture des variantes n'est pas déployée et qu'aucune quantité n'a été modifiée. Le cas stock_below_reserved dispose aussi d'un message explicite.
+
+Commit : 226cea1fbc0dcefa9b9dc30a2b01f5f971d27fbf.
