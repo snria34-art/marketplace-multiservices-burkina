@@ -5,7 +5,7 @@
 **Branche :** `main`  
 **Supabase :** `dzhhsoikzxibmngjzcch` — PostgreSQL 17.6 — `eu-west-1`  
 **Nature :** audit statique du dépôt + contrôles Supabase + examen des workflows et journaux.  
-**Mises à jour AUD-01/AUD-03/AUD-04/AUD-06/AUD-11/AUD-12/AUD-13/AUD-14/AUD-15/AUD-16/AUD-17/AUD-18/AUD-19/AUD-20/AUD-21 :** protections commandes, accès et GPS renforcées, parité Edge Functions restaurée, récupération email, tests de contrats et diagnostics capacité/index/RLS approfondis. Aucun paiement réel, test de charge ou restore production, compte propriétaire ou associé n'a été réalisé.
+**Mises à jour AUD-01/AUD-03/AUD-04/AUD-06/AUD-11/AUD-12/AUD-13/AUD-14/AUD-15/AUD-16/AUD-17/AUD-18/AUD-19/AUD-20/AUD-21/AUD-22 :** protections commandes, accès et GPS renforcées, sources Edge Functions synchronisées, récupération email, couverture pgTAP accrue, et revue des chemins SECURITY DEFINER. Aucun paiement réel, test de charge ou restore production, compte propriétaire ou associé n'a été réalisé.
 
 ## 1. Conclusion
 
@@ -21,12 +21,12 @@ Les constats ci-dessous sont classés par gravité et par dépendance. « Confir
 | Fichiers Dart sous `lib/` | 72 |
 | Fichiers de tests Dart | 7 |
 | Tests SQL dans `supabase/tests/database` | 3 |
-| Assertions pgTAP prévues dans ces trois fichiers | 79 (53 + 13 + 13) |
+| Assertions pgTAP prévues dans ces trois fichiers | 82 (56 + 13 + 13) |
 | Tables Supabase `public` et `private` | 182 |
 | Tables publiques avec RLS | 166/167 |
 | Tables privées avec RLS | 15/15 |
-| Migrations SQL présentes dans GitHub | 331 |
-| Migrations consignées dans Supabase | 330 |
+| Migrations SQL présentes dans GitHub | 333 |
+| Migrations consignées dans Supabase | 332 |
 | Fonctions Edge actives dans Supabase | 21 |
 | Dossiers sources Edge avec `index.ts` dans GitHub | 21 |
 | Buckets Storage | 5 |
@@ -392,10 +392,34 @@ Deux assertions pgTAP supplémentaires sont ajoutées à `security_regression_te
 
 Runbook : `docs/runbooks/aud-21-rls-no-policy-tables.md`.
 
-#### AUD-22 — Avertissements génériques SECURITY DEFINER et extensions PostGIS
-**État : à suivre, pas une preuve de 80 vulnérabilités.**
+#### AUD-22 — Revue des fonctions SECURITY DEFINER et de leurs search_path
+**État : 163 fonctions applicatives contrôlées ; 14 chemins renforcés ; trois fonctions natives PostGIS restent gérées par Supabase.**
 
-L'advisor rapporte 80 fonctions SECURITY DEFINER exécutables par `authenticated` et trois surcharges C PostGIS `st_estimatedextent` exécutables par `anon`. Le scan de définition n'a pas trouvé de fonction PL/pgSQL applicative accessible sans référence à une vérification d'identité/administrateur ; les trois fonctions sans search_path fixe sont les fonctions C PostGIS. Cela ne remplace pas une revue détaillée de chaque fonction, mais interdit de révoquer globalement les 80 sans analyse.
+Inventaire du catalogue PostgreSQL :
+- 166 fonctions SECURITY DEFINER dans `public` et `private` ;
+- 163 fonctions applicatives détenues par `postgres` et trois fonctions natives PostGIS C détenues par `supabase_admin` ;
+- 107 fonctions exécutables par `authenticated`, six par `anon` ;
+- les 163 fonctions applicatives ont désormais toutes un `search_path` explicite ; 48 utilisent le chemin vide (protection forte avec qualification des objets) ;
+- 14 fonctions applicatives ont explicitement `pg_temp` en dernier ;
+- les seules trois fonctions sans search_path restent les trois surcharges natives `public.st_estimatedextent`, gérées par `supabase_admin`.
+
+**Fonctions accessibles à anon :** deux helpers média ne retournent que les médias d'avis `PUBLISHED` ; `private.is_admin()` vérifie `auth.uid()`, `admin_users.active=true` et profil `ACTIVE` et renvoie faux en absence d'utilisateur ; les trois autres fonctions anon sont les fonctions C PostGIS. Aucune révocation globale n'est justifiée.
+
+**Corrections appliquées par migrations :**
+- `20261106220518_harden_security_definer_search_paths` a durci 12 RPC applicatives et `handle_new_user()` : `pg_catalog` en premier, schémas métiers nécessaires au centre, `pg_temp` en dernier.
+- `20261106220850_harden_payment_provider_event_search_path` a protégé la résolution du type `payment_status` dans `process_payment_provider_event()`, tout en conservant son exécution service-role-only.
+- Les fonctions restent détenues par `postgres` ; leur corps, propriétaire, droits EXECUTE et logique métier sont inchangés.
+
+**Contrôles post-migration :**
+- 13/13 signatures de la première migration présentes et avec le chemin exact ; aucun EXECUTE anon sur les 12 RPC ; `handle_new_user` reste réservé au serveur.
+- `process_payment_provider_event` conserve le chemin attendu, aucun EXECUTE anon/authenticated, EXECUTE service_role uniquement.
+- Aucun ancien chemin `public` ou `public, private` non protégé ne subsiste dans le lot examiné.
+- Un scan ciblé des fonctions applicatives restantes avec chemin non vide n'a trouvé aucune référence non qualifiée à une relation existante ; trois types personnalisés réellement non qualifiés ont été corrigés.
+- Les trois fonctions PostGIS C restent sans chemin et appartiennent à `supabase_admin` : ne pas les modifier avec le rôle du projet ; elles restent suivies dans AUD-01.
+
+Trois assertions pgTAP supplémentaires protègent les 14 chemins et ACL. `security_regression_test.sql` compte maintenant 56 assertions ; total des trois suites : 82 prévues. Les prédicats ont été évalués en lecture seule sur la base live et sont vrais, mais la suite pgTAP complète n'a pas été exécutée par CI.
+
+Runbook : `docs/runbooks/aud-22-security-definer-search-path-review.md`.
 
 ## 3. Contrôles qui ne justifient pas une correction immédiate
 
