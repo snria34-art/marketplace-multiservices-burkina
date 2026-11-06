@@ -500,3 +500,15 @@ L'annulation globale par `transition_order_status` reste le défaut SQL ouvert, 
 - Une assertion pgTAP a été ajoutée ; `security_regression_test.sql` comporte 45 assertions. Elles n'ont pas été exécutées. Le flux UI doit encore être testé avec un compte vendeur et des variantes de test.
 - Aucun stock réel n'a été modifié et aucun compte vendeur n'a été créé.
 
+
+
+### AUD-13 — intégration du parcours de déconnexion — 7 novembre 2026
+
+- Création de `lib/core/widgets/account_session_action_button.dart`, ajouté à l'accueil et aux tableaux de bord vendeur, administration et coursier.
+- La page d'accès restreint utilise également `signOutAndDeactivateCurrentDevice(client:)`.
+- Suppression de la dépendance des écrans à un appel direct `auth.signOut()`; le service commun désactive le token avant de supprimer la session.
+- Le service récupère le token FCM courant si Firebase est initialisé mais que le cache local est vide ; il exige ensuite le booléen de confirmation du serveur.
+- Un échec du RPC ou de la récupération du token annule la déconnexion et laisse un message de nouvelle tentative.
+- Le compte suspendu/bloqué doit pouvoir se déconnecter malgré le guard RLS actif. Migration Supabase appliquée : `20261106203915_secure_notification_device_deactivation_for_blocked_accounts`. La fonction SQL devient `SECURITY DEFINER`, vérifie `auth.uid()`, limite l'UPDATE au token de ce même utilisateur et renvoie un succès idempotent seulement si aucune entrée active correspondante ne reste. Anon n'a pas EXECUTE.
+- Tests ajoutés : un test d'interface sans Supabase configuré et une assertion pgTAP ; le fichier de régression SQL passe de 47 à 48 assertions. Tests encore non exécutés faute de runner GitHub opérationnel.
+- Aucun token, utilisateur réel ou push n'a été modifié/envoyé.
