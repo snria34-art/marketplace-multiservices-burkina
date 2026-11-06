@@ -223,3 +223,25 @@ Commit : `8dc8dd7a65b21cf55854daa37f4d52f54ca654a8`.
 ### Vérification des chemins de déconnexion
 
 La recherche du code Flutter ne retrouve pas de commande `auth.signOut()` appelée depuis une interface. La méthode `PushNotificationService.signOutAndDeactivateCurrentDevice()` existe, mais aucun écran de déconnexion n'a été identifié à brancher. RIA-26 reste donc ouvert : il faudra intégrer cette méthode au moment où les commandes de déconnexion seront ajoutées, puis tester les cas session expirée et réseau indisponible. Aucune déconnexion réelle n'a été exécutée.
+
+
+### 14. Suppression sécurisée des articles du panier
+
+Fichiers :
+- `lib/features/cart/data/cart_repository.dart`
+- `lib/features/cart/presentation/cart_page.dart`
+
+L'ancienne méthode de suppression exécutait un `DELETE` direct sur `cart_items`. La base dispose déjà d'une RPC `set_cart_item_quantity` qui vérifie la propriété du panier, refuse les articles ne relevant pas du client connecté et met à jour `carts.updated_at`. Cette RPC supprime l'article lorsque la quantité demandée vaut zéro.
+
+Correction :
+- `CartRepository.remove` passe désormais par la RPC existante avec quantité zéro ;
+- l'interface affiche une action explicite « Retirer du panier » ;
+- le chemin de suppression de l'interface utilise cette méthode sécurisée ;
+- le contrôle serveur de propriété, de compte actif et la mise à jour de la date du panier restent centralisés dans la fonction SQL existante.
+
+Commits :
+- `4553f9be92ce0566433ec9c013f1777a53473460`
+- `7687962fa64a9368f7cc6fd88fce96aad3225c40`
+- `a071ac53fc62e9e8404b3eb7857e23927eaea51e`
+
+La fonction SQL et son comportement ont été vérifiés en lecture seule sur Supabase. Les deux fichiers Flutter ont été relus depuis `main`. Aucun test Flutter, analyse statique ni build n'a été exécuté dans cette session.
