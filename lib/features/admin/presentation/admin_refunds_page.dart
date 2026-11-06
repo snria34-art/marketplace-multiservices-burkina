@@ -76,7 +76,7 @@ class _AdminRefundsPageState extends ConsumerState<AdminRefundsPage> {
       ),
     );
     controller.dispose();
-    if (reason == null) return;
+    if (!mounted || reason == null) return;
 
     await _runAction(
       () async {
@@ -120,7 +120,7 @@ class _AdminRefundsPageState extends ConsumerState<AdminRefundsPage> {
       ),
     );
     controller.dispose();
-    if (reference == null || reference.isEmpty) return;
+    if (!mounted || reference == null || reference.isEmpty) return;
 
     await _runAction(
       () async {
