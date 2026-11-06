@@ -575,3 +575,14 @@ L'annulation globale par `transition_order_status` reste le défaut SQL ouvert, 
 - Le compute/plan exact, la limite pooler et la présence/rétention des backups doivent être vérifiés dans Supabase Dashboard. Aucun coût compute ou option PITR engagés.
 - La restauration et la stratégie RPO/RTO restent non testées. Runbook `docs/runbooks/aud-18-capacity-backup-restore.md`, ticket Linear RIA-32.
 
+
+### AUD-19 — reset mot de passe par email — 7 novembre 2026
+
+- Ajout de ForgotPasswordPage et AuthRecoveryPage : demande mail, redirection vers marketplaceburkina://auth/recovery, validation du nouveau mot de passe deux fois et appel updateUser.
+- Ajout de AuthRecoveryState attaché dès que Supabase.initialize() se termine. Seul AuthChangeEvent.passwordRecovery autorise l'ouverture du formulaire ; le marqueur est effacé après signout ou après réussite.
+- Routes /auth/forgot-password, /auth/recovery et alias /recovery. Lien depuis la page sign-in.
+- Android intent filter pour host auth + path recovery ; iOS utilise le schéma existant.
+- Tests : 3 nouveaux tests unitaires de récupération ; route de récupération ajoutée à la liste des routes publiques. Total Flutter : 7 fichiers.
+- Action dashboard requise : Redirect URLs allow-list marketplaceburkina://auth/recovery, Reset Password email template et SMTP. La configuration Auth URL/SMTP n'est pas accessible par l'intégration Supabase MCP.
+- SMS OTP non configuré pour éviter d'activer un fournisseur facturé sans décision. Aucun email de test/compte réel n'a été créé.
+- Runbook docs/runbooks/aud-19-email-password-recovery.md, suivi RIA-8 en cours.
