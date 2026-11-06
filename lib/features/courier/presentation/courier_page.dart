@@ -125,7 +125,9 @@ class _CourierPageState extends ConsumerState<CourierPage> {
           content: Text('Localisation indisponible : $error'),
           action: SnackBarAction(
             label: 'Paramètres',
-            onPressed: () => unawaited(Geolocator.openAppSettings()),
+            onPressed: () async {
+              await Geolocator.openAppSettings();
+            },
           ),
         ),
       );
