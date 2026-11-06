@@ -8,6 +8,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/location/device_location_service.dart';
 import '../../../core/providers/repository_providers.dart';
+import '../../../core/widgets/account_session_action_button.dart';
 import '../data/courier_repository.dart';
 
 final courierRepositoryProvider = Provider<CourierRepository?>((ref) {
@@ -324,6 +325,7 @@ class _CourierPageState extends ConsumerState<CourierPage> {
                   : Icons.location_off_outlined,
             ),
           ),
+          const AccountSessionActionButton(),
         ],
       ),
       body: FutureBuilder<List<Map<String, dynamic>>>(
