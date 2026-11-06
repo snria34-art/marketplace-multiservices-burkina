@@ -98,6 +98,7 @@ class PushNotificationService {
         case AuthChangeEvent.tokenRefreshed:
         case AuthChangeEvent.userUpdated:
           await _registerCurrentToken();
+          break;
         case AuthChangeEvent.passwordRecovery:
           break;
         case AuthChangeEvent.userDeleted:
@@ -112,6 +113,7 @@ class PushNotificationService {
           // user-scoped RPC cannot be authorized from this event callback.
           // Deactivation must happen in signOutAndDeactivateCurrentDevice().
           _currentToken = null;
+          break;
         }
       } catch (error, stackTrace) {
         if (kDebugMode) {
