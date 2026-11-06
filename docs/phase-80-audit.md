@@ -590,3 +590,16 @@ Relecture en lecture seule des définitions SQL actuellement déployées (`compl
 - Les tests complets d'intégration des paiements/webhooks, remboursement multi-vendeurs, retours, transport, mécaniciens, réservations et parcours GPS réels restent absents. Ne pas les simuler avec des écritures en production.
 - Suivi Linear RIA-27 remis en cours ; critères de sortie production inchangés.
 
+
+
+### AUD-18 — premier relevé capacité / backups / restore — 7 novembre 2026
+
+- Snapshot de production en lecture seule : PostgreSQL 17.6.1, base environ 80 MB, `max_connections=60`, 3 slots réservés, 11 connexions clientes observées à l'instant du snapshot.
+- Sur les logs PgBouncer 24 h : aucune occurrence de limite de client, client-login-timeout ou épuisement de connexions ; 71 fermetures serveur étaient des expirations idle timeout.
+- Aucun deadlock, replication slot ni connexion de réplication actuellement observé. `pg_stat_archiver` a 33 222 fichiers archivés et 0 échec depuis le reset du 25 août, dernier archivage 6 novembre 21:25:50 UTC. Cet indicateur ne certifie pas un backup quotidien ou PITR restaurable.
+- Base métier presque vide (0 Auth users, 0 profils, 0 produits, 0 objets Storage). Pas de dataset représentatif pour mesurer une charge réelle.
+- Compute exact/plan/pooler max clients et pool size non retournés par le connecteur ; à confirmer dans Dashboard. Les limites officielles du pooler varient par compute (200 clients sur Nano/Micro jusqu'à 12 000 sur 16XL). Aucune montée de compute ni augmentation de pool n'a été faite.
+- Script k6 préparé : `tests/load/k6_readonly_supabase_categories.js`. Il est lecture seule, refuse le ref de production et exige `TARGET_ENV=staging`. Il prévoit les paliers 100, 1 000 et 10 000 VUs. Aucun test n'a été lancé, aucun trafic de charge généré.
+- Backups : le projet n'a pas exposé la liste des sauvegardes/restore points via les outils. Le plan reste à vérifier dans Billing. 17.6 est éligible à la sauvegarde physique Supabase, mais ne prouve pas le plan ni les backups actifs. Les objets Storage nécessitent une sauvegarde indépendante ; 0 objet actuellement.
+- Restauration réelle non testée. Runbook `docs/runbooks/aud-18-capacity-backup-restore.md`. Ticket RIA-32 en attente pour tester sur staging et documenter RPO/RTO. Aucun compute, plan, backup, objet ou donnée métier n'a été modifié.
+
