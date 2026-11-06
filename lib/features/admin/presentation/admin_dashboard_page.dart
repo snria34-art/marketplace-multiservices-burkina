@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/providers/repository_providers.dart';
+import '../../../core/widgets/account_session_action_button.dart';
 
 class AdminDashboardPage extends ConsumerStatefulWidget {
   const AdminDashboardPage({super.key});
@@ -303,9 +304,11 @@ class _AdminDashboardPageState
         title: const Text('Administration'),
         actions: [
           IconButton(
+            tooltip: 'Actualiser',
             onPressed: () => setState(() => _future = _load()),
             icon: const Icon(Icons.refresh),
           ),
+          const AccountSessionActionButton(),
         ],
       ),
       body: FutureBuilder<_AdminSnapshot>(
