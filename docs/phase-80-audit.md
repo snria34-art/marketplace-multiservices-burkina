@@ -508,3 +508,21 @@ Relecture en lecture seule des définitions SQL actuellement déployées (`compl
 - Ajout d'une assertion pgTAP ; le fichier `security_regression_test.sql` contient désormais 45 assertions. Les assertions restent à exécuter ; aucun test Flutter ou compte vendeur réel n'a pu être lancé ici.
 - Aucune quantité de stock n'a été changée. Le ticket RIA-28 reste ouvert jusqu'à un test UI sur un compte vendeur de validation.
 
+
+
+### AUD-05 / AUD-06 — contrôles paiements et FCM — 6 novembre 2026
+
+- Déclenchement manuel de la même requête que la tâche Cron du moniteur : HTTP 200. Aucun paiement ou push n'a été initié.
+- Wave reste `NOT_CONFIGURED` : `WAVE_API_KEY` absent. CinetPay reste `NOT_CONFIGURED` : `CINETPAY_API_KEY` et/ou `CINETPAY_SITE_ID` absent(s). Les fonctions checkout répondent 503 en l'absence de leurs clés.
+- Webhooks actifs Wave v4 et CinetPay v6 : vérification HMAC (Wave sur body brut + timestamp 5 minutes ; CinetPay sur `x-token` puis vérification auprès de l'API fournisseur) avant l'appel idempotent `process_payment_event`.
+- Les logs consultés dans la fenêtre par défaut comportaient 324 événements `fcm_service_account_missing`, `hasFcmProjectId=false`. Les clés Firebase serveur ne sont pas présentes.
+- Migrations appliquées : `20261106201627_allow_fcm_platform_health_component` et `20261106201705_allow_fcm_health_check_component`. La fonction privée d'enregistrement demeure autorisée seulement à `service_role`, la contrainte de composant accepte désormais `FCM`.
+- `platform-health-monitor` v6 avait été ajusté pour tester FCM ; il est ensuite passé en **v7** pour étendre aussi le probe Storage aux cinq buckets. Le contrôle réel HTTP 200 a enregistré les statuts Wave/CinetPay/FCM `NOT_CONFIGURED` et les autres composants testés `UP`.
+- Les tests pgTAP correspondants ont été ajoutés : le fichier `security_regression_test.sql` est à 47 assertions. Les tests n'ont pas encore été exécutés.
+- Les secrets marchands et Firebase restent à saisir directement dans Supabase Edge Function Secrets depuis les comptes officiels. Aucun secret n'a été lu, généré ou commité.
+
+### AUD-16 — probe Storage étendu — 6 novembre 2026
+
+- `platform-health-monitor` v7 teste maintenant les cinq buckets : avatars, documents, shop-media, order-feedback-media, product-media.
+- Un probe manuel a reçu HTTP 200 et les cinq buckets ont répondu HTTP 200.
+- Ce test n'est pas une preuve d'upload/download ou d'accès correct par rôle ; les tests avec objets factices et vérifications positives/négatives restent à faire.
