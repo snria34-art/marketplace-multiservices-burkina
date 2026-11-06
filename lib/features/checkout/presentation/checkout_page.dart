@@ -221,6 +221,13 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
       final fee =
           num.tryParse(_quote!['customer_fee']?.toString() ?? '') ?? 0;
 
+      // Do not create an order or reserve inventory until the chosen provider
+      // has all server-side credentials needed for payment and webhooks.
+      await repo.ensurePaymentProviderConfigured(
+        provider: _paymentProvider,
+      );
+      if (!mounted) return;
+
       final orderId = await repo.checkout(
         cartId: widget.cartId,
         addressId: addressId,
