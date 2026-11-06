@@ -552,3 +552,14 @@ L'annulation globale par `transition_order_status` reste le défaut SQL ouvert, 
 - Pas de suppression de fonction, aucun secret lu/commité, aucun paiement ou produit réel modifié.
 - Runbook publié : `docs/runbooks/aud-15-edge-function-source-parity.md`.
 
+
+
+### AUD-17 — ajout de tests de contrat checkout/commandes/livraison — 7 novembre 2026
+
+- Inventaire actualisé : 6 fichiers Flutter tests et 3 fichiers SQL, 77 assertions pgTAP planifiées au total.
+- Création de `supabase/tests/database/order_delivery_contract_test.sql` avec 13 assertions de contrats sur checkout, annulation impayée, transitions vendeur, stock/coupons, affectations livreur, preuves photo et codes, livraison et ACL/refund.
+- Contrôles en lecture seule exécutés sur les fonctions SQL de production pour évaluer les mêmes 13 prédicats : 13/13 vrais.
+- Le fichier ne crée aucune commande, aucun paiement, aucun refund ou mouvement de stock ; le contrôle de prédicats ne remplace pas l'exécution pgTAP locale.
+- Tests CI Flutter/pgTAP/Deno toujours non exécutés avec une étape lisible. Plus de tests d'intégration réels restent nécessaires avant de mesurer un score de qualité.
+- Ticket suivi : RIA-27.
+
