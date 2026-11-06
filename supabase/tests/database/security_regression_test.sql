@@ -1,5 +1,5 @@
 begin;
-select plan(55);
+select plan(56);
 
 select ok(
   not has_table_privilege('anon','private.catalog_moderation_findings','SELECT')
@@ -532,6 +532,24 @@ select ok(
   and not has_function_privilege('authenticated','public.handle_new_user()','EXECUTE')
   and has_function_privilege('service_role','public.handle_new_user()','EXECUTE'),
   'auth user creation trigger has a protected search path and remains server-trigger only'
+);
+
+
+select ok(
+  (select prosecdef from pg_proc
+   where oid='public.process_payment_provider_event(uuid,text,text,jsonb)'::regprocedure)
+  and (select pg_get_userbyid(proowner)='postgres' from pg_proc
+   where oid='public.process_payment_provider_event(uuid,text,text,jsonb)'::regprocedure)
+  and exists (
+    select 1
+    from pg_proc p, unnest(coalesce(p.proconfig,array[]::text[])) cfg
+    where p.oid='public.process_payment_provider_event(uuid,text,text,jsonb)'::regprocedure
+      and cfg='search_path="pg_catalog, public, pg_temp"'
+  )
+  and not has_function_privilege('anon','public.process_payment_provider_event(uuid,text,text,jsonb)','EXECUTE')
+  and not has_function_privilege('authenticated','public.process_payment_provider_event(uuid,text,text,jsonb)','EXECUTE')
+  and has_function_privilege('service_role','public.process_payment_provider_event(uuid,text,text,jsonb)','EXECUTE'),
+  'payment provider event processing resolves payment_status through a protected search path and remains service-role only'
 );
 
 select * from finish();
