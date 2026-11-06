@@ -984,44 +984,61 @@ class _ReviewDialogState extends State<_ReviewDialog> {
   }
 
   Future<void> _pickPhoto() async {
-    final picked = await ImagePicker().pickImage(
-      source: ImageSource.gallery,
-      imageQuality: 75,
-      maxWidth: 1600,
-    );
-    if (picked == null) return;
-    setState(() {
-      media = picked;
-      mediaType = 'IMAGE';
-      durationSeconds = null;
-    });
+    try {
+      final picked = await ImagePicker().pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 75,
+        maxWidth: 1600,
+      );
+      if (!mounted || picked == null) return;
+      setState(() {
+        media = picked;
+        mediaType = 'IMAGE';
+        durationSeconds = null;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Sélection de la photo impossible : $error')),
+      );
+    }
   }
 
   Future<void> _pickVideo() async {
-    final picked = await ImagePicker().pickVideo(
-      source: ImageSource.gallery,
-      maxDuration: const Duration(seconds: 10),
-    );
-    if (picked == null) return;
-    final controller = VideoPlayerController.file(File(picked.path));
     try {
-      await controller.initialize();
-      final seconds = controller.value.duration.inMilliseconds / 1000;
-      if (seconds <= 0 || seconds > 10) {
-        if (mounted) {
+      final picked = await ImagePicker().pickVideo(
+        source: ImageSource.gallery,
+        maxDuration: const Duration(seconds: 10),
+      );
+      if (!mounted || picked == null) return;
+
+      final videoController = VideoPlayerController.file(File(picked.path));
+      try {
+        await videoController.initialize();
+        if (!mounted) return;
+        final seconds =
+            videoController.value.duration.inMilliseconds / 1000;
+        if (seconds <= 0 || seconds > 10) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('La vidéo doit durer 10 secondes maximum.')),
+            const SnackBar(
+              content: Text('La vidéo doit durer 10 secondes maximum.'),
+            ),
           );
+          return;
         }
-        return;
+        setState(() {
+          media = picked;
+          mediaType = 'VIDEO';
+          durationSeconds = seconds;
+        });
+      } finally {
+        await videoController.dispose();
       }
-      setState(() {
-        media = picked;
-        mediaType = 'VIDEO';
-        durationSeconds = seconds;
-      });
-    } finally {
-      await controller.dispose();
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Sélection de la vidéo impossible : $error')),
+      );
     }
   }
 
