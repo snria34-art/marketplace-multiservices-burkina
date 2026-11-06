@@ -143,19 +143,19 @@ class _MechanicsPageState extends ConsumerState<MechanicsPage> {
           await client?.rpc(
             'schedule_mechanic_time_off',
             params: {
-            'p_starts_at': DateTime(
-              vacation.start.year,
-              vacation.start.month,
-              vacation.start.day,
-            ).toUtc().toIso8601String(),
-            'p_ends_at': DateTime(
-              vacation.end.year,
-              vacation.end.month,
-              vacation.end.day,
-              23,
-              59,
-              59,
-            ).toUtc().toIso8601String(),
+              'p_starts_at': DateTime(
+                vacation.start.year,
+                vacation.start.month,
+                vacation.start.day,
+              ).toUtc().toIso8601String(),
+              'p_ends_at': DateTime(
+                vacation.end.year,
+                vacation.end.month,
+                vacation.end.day,
+                23,
+                59,
+                59,
+              ).toUtc().toIso8601String(),
               'p_reason': reason,
             },
           );
