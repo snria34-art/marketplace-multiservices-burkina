@@ -198,12 +198,22 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
       );
 
       final checkoutUrl = paymentSession['checkout_url']?.toString();
-      if (checkoutUrl == null || checkoutUrl.isEmpty) {
+      if (checkoutUrl == null || checkoutUrl.trim().isEmpty) {
         throw StateError('Le guichet de paiement n’a pas été fourni.');
       }
 
+      final paymentUri = Uri.tryParse(checkoutUrl.trim());
+      if (paymentUri == null ||
+          paymentUri.scheme.toLowerCase() != 'https' ||
+          paymentUri.host.isEmpty ||
+          paymentUri.userInfo.isNotEmpty) {
+        throw StateError(
+          'Adresse de paiement invalide : une URL HTTPS sécurisée est requise.',
+        );
+      }
+
       final opened = await launchUrl(
-        Uri.parse(checkoutUrl),
+        paymentUri,
         mode: LaunchMode.externalApplication,
       );
       if (!opened) {
