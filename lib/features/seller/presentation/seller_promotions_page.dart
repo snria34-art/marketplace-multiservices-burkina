@@ -81,11 +81,13 @@ class _SellerPromotionsPageState
       return;
     }
 
+    if (!mounted) return;
+
     final form = await showDialog<_PromotionForm>(
       context: context,
       builder: (_) => const _PromotionDialog(),
     );
-    if (form == null) return;
+    if (!mounted || form == null) return;
 
     final client = ref.read(supabaseProvider);
     if (client == null) return;
