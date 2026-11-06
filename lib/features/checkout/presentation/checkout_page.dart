@@ -230,6 +230,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
             : _couponController.text.trim(),
         idempotencyKey: _idempotencyKey,
       );
+      if (!mounted) return;
 
       final paymentSession = await repo.createPaymentSession(
         orderId: orderId,
