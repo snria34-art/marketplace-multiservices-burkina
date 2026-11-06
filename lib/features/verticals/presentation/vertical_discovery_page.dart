@@ -150,12 +150,254 @@ class _VerticalDiscoveryPageState
         case VerticalModule.parcels:
           await _createParcel(repo);
           break;
+        case VerticalModule.creative:
+          final id = await repo.requestCreativeBooking(
+            serviceId: item['id'].toString(),
+          );
+          _success('Demande envoyée au prestataire : $id');
+          break;
         default:
           break;
       }
     } catch (error) {
       _info('Opération impossible : $error');
     }
+  }
+
+  Future<void> _showMyCreativeBookings() async {
+    final repo = ref.read(verticalRepositoryProvider);
+    if (repo == null || !await _ensureAuth() || !mounted) return;
+
+    try {
+      final bookings = await repo.myCreativeBookings();
+      if (!mounted) return;
+      if (bookings.isEmpty) {
+        _info('Vous n’avez aucune demande créative pour le moment.');
+        return;
+      }
+
+      await showDialog<void>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Mes demandes créatives'),
+          content: SizedBox(
+            width: 460,
+            child: ListView.separated(
+              shrinkWrap: true,
+              itemCount: bookings.length,
+              separatorBuilder: (_, __) => const Divider(),
+              itemBuilder: (_, index) {
+                final booking = bookings[index];
+                final rawService = booking['creative_services'];
+                final service = rawService is Map
+                    ? Map<String, dynamic>.from(rawService)
+                    : const <String, dynamic>{};
+                final status = booking['status']?.toString() ?? '-';
+                final scheduledAt = booking['scheduled_at']?.toString();
+
+                return ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(service['name']?.toString() ?? 'Prestation créative'),
+                  subtitle: Text(
+                    'Statut : $status'
+                    '${scheduledAt == null ? '' : '\nPrévu : $scheduledAt'}'
+                    '${booking['agreed_amount'] == null ? '' : '\nMontant : ${booking['agreed_amount']} XOF'}',
+                  ),
+                  trailing: status == 'REQUESTED'
+                      ? IconButton(
+                          tooltip: 'Annuler la demande',
+                          icon: const Icon(Icons.cancel_outlined),
+                          onPressed: () async {
+                            try {
+                              await repo.cancelCreativeBooking(
+                                booking['id'].toString(),
+                              );
+                              if (!mounted) return;
+                              Navigator.pop(dialogContext);
+                              _success('Demande créative annulée.');
+                              await _showMyCreativeBookings();
+                            } catch (error) {
+                              _info('Annulation impossible : $error');
+                            }
+                          },
+                        )
+                      : null,
+                );
+              },
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Fermer'),
+            ),
+          ],
+        ),
+      );
+    } catch (error) {
+      _info('Chargement de vos demandes impossible : $error');
+    }
+  }
+
+  Future<void> _showProviderCreativeBookings() async {
+    final repo = ref.read(verticalRepositoryProvider);
+    if (repo == null || !await _ensureAuth() || !mounted) return;
+
+    try {
+      final bookings = await repo.providerCreativeBookings();
+      if (!mounted) return;
+      if (bookings.isEmpty) {
+        _info('Aucune demande reçue pour vos prestations créatives.');
+        return;
+      }
+
+      await showDialog<void>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Demandes reçues'),
+          content: SizedBox(
+            width: 520,
+            child: ListView.separated(
+              shrinkWrap: true,
+              itemCount: bookings.length,
+              separatorBuilder: (_, __) => const Divider(),
+              itemBuilder: (_, index) {
+                final booking = bookings[index];
+                final status = booking['status']?.toString() ?? '-';
+                final scheduledAt = booking['scheduled_at']?.toString();
+
+                return ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(
+                    booking['service_name']?.toString() ?? 'Prestation créative',
+                  ),
+                  subtitle: Text(
+                    'Client : ${booking['customer_id']?.toString() ?? '-'}'
+                    '\nStatut : $status'
+                    '${scheduledAt == null ? '' : '\nDate demandée : $scheduledAt'}'
+                    '${booking['agreed_amount'] == null ? '' : '\nMontant convenu : ${booking['agreed_amount']} XOF'}',
+                  ),
+                  isThreeLine: true,
+                  trailing: status == 'REQUESTED'
+                      ? Wrap(
+                          spacing: 4,
+                          children: [
+                            IconButton(
+                              tooltip: 'Refuser',
+                              icon: const Icon(Icons.close),
+                              onPressed: () async {
+                                final confirmed = await _confirmCreativeDecline();
+                                if (!mounted || !confirmed) return;
+                                try {
+                                  await repo.respondCreativeBooking(
+                                    bookingId: booking['booking_id'].toString(),
+                                    decision: 'DECLINE',
+                                  );
+                                  if (!mounted) return;
+                                  Navigator.pop(dialogContext);
+                                  _success('Demande refusée.');
+                                  await _showProviderCreativeBookings();
+                                } catch (error) {
+                                  _info('Refus impossible : $error');
+                                }
+                              },
+                            ),
+                            IconButton(
+                              tooltip: 'Confirmer et fixer le montant',
+                              icon: const Icon(Icons.check_circle_outline),
+                              onPressed: () async {
+                                final amount = await _creativeAmountDialog();
+                                if (!mounted || amount == null) return;
+                                try {
+                                  await repo.respondCreativeBooking(
+                                    bookingId: booking['booking_id'].toString(),
+                                    decision: 'CONFIRM',
+                                    agreedAmount: amount,
+                                  );
+                                  if (!mounted) return;
+                                  Navigator.pop(dialogContext);
+                                  _success('Réservation confirmée.');
+                                  await _showProviderCreativeBookings();
+                                } catch (error) {
+                                  _info('Confirmation impossible : $error');
+                                }
+                              },
+                            ),
+                          ],
+                        )
+                      : null,
+                );
+              },
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Fermer'),
+            ),
+          ],
+        ),
+      );
+    } catch (error) {
+      _info('Accès aux demandes prestataire impossible : $error');
+    }
+  }
+
+  Future<num?> _creativeAmountDialog() async {
+    final controller = TextEditingController();
+    final amount = await showDialog<num>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Montant convenu'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          decoration: const InputDecoration(
+            labelText: 'Montant en XOF',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Annuler'),
+          ),
+          FilledButton(
+            onPressed: () {
+              final parsed = num.tryParse(controller.text.trim());
+              if (parsed != null && parsed >= 0) {
+                Navigator.pop(dialogContext, parsed);
+              }
+            },
+            child: const Text('Confirmer'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    return amount;
+  }
+
+  Future<bool> _confirmCreativeDecline() async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Refuser cette demande ?'),
+        content: const Text('Le client verra que sa demande a été refusée.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Retour'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Refuser'),
+          ),
+        ],
+      ),
+    );
+    return result == true;
   }
 
   Future<void> _trackParcel() async {
@@ -774,6 +1016,7 @@ class _VerticalDiscoveryPageState
         VerticalModule.homeServices,
         VerticalModule.digital,
         VerticalModule.training,
+        VerticalModule.creative,
         VerticalModule.freight,
         VerticalModule.parcels,
       }.contains(module);
@@ -797,6 +1040,8 @@ class _VerticalDiscoveryPageState
         return 'Commander';
       case VerticalModule.training:
         return 'S’inscrire';
+      case VerticalModule.creative:
+        return 'Demander';
       case VerticalModule.freight:
         return 'Demander';
       case VerticalModule.parcels:
@@ -881,6 +1126,20 @@ class _VerticalDiscoveryPageState
               tooltip: 'Suivre un colis',
               onPressed: _trackParcel,
               icon: const Icon(Icons.qr_code_scanner_outlined),
+            ),
+          if (widget.module == VerticalModule.creative &&
+              client?.auth.currentUser != null)
+            IconButton(
+              tooltip: 'Mes demandes',
+              onPressed: _showMyCreativeBookings,
+              icon: const Icon(Icons.bookmark_outline),
+            ),
+          if (widget.module == VerticalModule.creative &&
+              client?.auth.currentUser != null)
+            IconButton(
+              tooltip: 'Demandes reçues (prestataire)',
+              onPressed: _showProviderCreativeBookings,
+              icon: const Icon(Icons.inbox_outlined),
             ),
           IconButton(
             tooltip: 'Actualiser',
