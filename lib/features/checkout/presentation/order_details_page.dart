@@ -312,7 +312,7 @@ class _OrderDetailsPageState extends ConsumerState<OrderDetailsPage> {
     final reason = reasonController.text.trim();
     amountController.dispose();
     reasonController.dispose();
-    if (values != true || amount == null || amount <= 0 || amount > maxAmount) return;
+    if (!mounted || values != true || amount == null || amount <= 0 || amount > maxAmount) return;
 
     try {
       final client = ref.read(supabaseProvider);
@@ -366,11 +366,12 @@ class _OrderDetailsPageState extends ConsumerState<OrderDetailsPage> {
       ),
     );
     controller.dispose();
-    if (reason == null) return;
+    if (!mounted || reason == null) return;
 
     try {
       final client = ref.read(supabaseProvider);
-      final id = await client?.rpc(
+      if (client == null) throw StateError('Service indisponible.');
+      final id = await client.rpc(
         'open_dispute',
         params: {
           'p_order_id': widget.orderId,
@@ -421,11 +422,12 @@ class _OrderDetailsPageState extends ConsumerState<OrderDetailsPage> {
       ),
     );
     controller.dispose();
-    if (reason == null) return;
+    if (!mounted || reason == null) return;
 
     try {
       final client = ref.read(supabaseProvider);
-      final id = await client?.rpc(
+      if (client == null) throw StateError('Service indisponible.');
+      final id = await client.rpc(
         'open_return',
         params: {
           'p_order_id': widget.orderId,
