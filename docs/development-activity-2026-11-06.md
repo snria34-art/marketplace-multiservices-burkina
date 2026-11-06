@@ -609,3 +609,11 @@ L'annulation globale par `transition_order_status` reste le défaut SQL ouvert, 
 - Scan des références relationnelles non qualifiées sur les chemins non vides : aucune relation applicative non qualifiée identifiée. Les trois types personnalisés non qualifiés qui ont été trouvés sont maintenant protégés par pg_temp dernier.
 - 14 fonctions avec pg_temp explicitement dernier ; aucun ancien chemin public/public,private non protégé du lot n'existe. 3 tests pgTAP ajoutés ; plan security_regression_test.sql = 56, total des 3 suites = 82.
 - Les prédicats ont été évalués en lecture seule et passent. La suite pgTAP/CI complète n'a pas été exécutée car les runners échouent sans steps/logs. Runbook AUD-22 ajouté.
+
+### AUD-02 — contrôle additionnel du ledger et de l'exécution Wave — 7 novembre 2026
+
+- Contrainte unique seller_ledger vérifiée : `(seller_id, entry_type, reference_id)`. complete_refund insère REFUND par groupe avec la même référence refund_id ; un même vendeur multi-boutiques peut donc faire échouer la seconde insertion.
+- execute-payment-refund appelle Wave d'abord, puis complete_refund. Si la comptabilisation DB échoue après confirmation du provider, la transaction locale rollback et la refund reste potentiellement PROCESSING avec provider_refund_confirmed true ; le rapprochement doit éviter toute nouvelle demande de remboursement externe.
+- Aucun appelant DB / trigger / job pg_cron trouvé pour finalize_seller_group, finalize_seller_group_financials ou reverse_seller_group. Aucun appelant Flutter/Edge trouvé dans la recherche GitHub main ; les appels externes hors repo restent à vérifier.
+- L'écran OrderDetailsPage envoie uniquement order_id + amount + reason. Le schéma returns ne stocke pas de quantité ni refund_id. Zéro ordre/paiement/refund/retour/commission/ledger en production à l'heure de l'audit.
+- Runbook et rapport AUD-02 enrichis ; aucun changement financier ou DDL de production effectué.
