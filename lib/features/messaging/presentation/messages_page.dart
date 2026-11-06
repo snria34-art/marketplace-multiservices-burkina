@@ -53,23 +53,36 @@ class _MessagesPageState extends ConsumerState<MessagesPage> {
 
     setState(() => _conversationId = id);
 
-    _channel = repo.client
-        .channel('messages-$id')
-        .onPostgresChanges(
-          event: PostgresChangeEvent.all,
-          schema: 'public',
-          table: 'messages',
-          filter: PostgresChangeFilter(
-            type: PostgresChangeFilterType.eq,
-            column: 'conversation_id',
-            value: id,
+    try {
+      _channel = repo.client
+          .channel('messages-$id')
+          .onPostgresChanges(
+            event: PostgresChangeEvent.all,
+            schema: 'public',
+            table: 'messages',
+            filter: PostgresChangeFilter(
+              type: PostgresChangeFilterType.eq,
+              column: 'conversation_id',
+              value: id,
+            ),
+            callback: (_) {
+              if (!mounted) return;
+              setState(() => _messageRefreshToken++);
+            },
+          )
+          .subscribe();
+    } catch (error) {
+      _channel = null;
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Actualisation instantanée indisponible : $error. Les messages seront actualisés périodiquement.',
+            ),
           ),
-          callback: (_) {
-            if (!mounted) return;
-            setState(() => _messageRefreshToken++);
-          },
-        )
-        .subscribe();
+        );
+      }
+    }
 
     _poll = Timer.periodic(
       const Duration(seconds: 8),
@@ -88,6 +101,21 @@ class _MessagesPageState extends ConsumerState<MessagesPage> {
         ),
       );
     }
+  }
+
+  Future<void> _closeConversation() async {
+    _poll?.cancel();
+    _poll = null;
+
+    final client = ref.read(supabaseProvider);
+    final channel = _channel;
+    _channel = null;
+    if (client != null && channel != null) {
+      unawaited(_removeChannelSafely(client, channel));
+    }
+
+    if (!mounted) return;
+    setState(() => _conversationId = null);
   }
 
   Future<void> _newSupportChat() async {
@@ -179,7 +207,7 @@ class _MessagesPageState extends ConsumerState<MessagesPage> {
               key: ValueKey(_conversationId),
               conversationId: _conversationId!,
               refreshToken: _messageRefreshToken,
-              onBack: () => setState(() => _conversationId = null),
+              onBack: _closeConversation,
             ),
     );
   }
