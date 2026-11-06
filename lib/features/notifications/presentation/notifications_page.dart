@@ -36,6 +36,11 @@ class _NotificationsPageState
           event: PostgresChangeEvent.all,
           schema: 'public',
           table: 'notifications',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'user_id',
+            value: user.id,
+          ),
           callback: (_) {
             if (!mounted) return;
             setState(() => _future = _load());
