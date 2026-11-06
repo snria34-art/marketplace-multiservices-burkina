@@ -5,7 +5,7 @@
 **Branche :** `main`  
 **Supabase :** `dzhhsoikzxibmngjzcch` — PostgreSQL 17.6 — `eu-west-1`  
 **Nature :** audit statique du dépôt + contrôles Supabase + examen des workflows et journaux.  
-**Mises à jour AUD-01/AUD-03/AUD-04/AUD-06/AUD-11/AUD-12/AUD-13/AUD-14/AUD-15/AUD-16/AUD-17/AUD-18/AUD-19/AUD-20/AUD-21/AUD-22 :** protections commandes, accès et GPS renforcées, sources Edge Functions synchronisées, récupération email, couverture pgTAP accrue, et revue des chemins SECURITY DEFINER. Aucun paiement réel, test de charge ou restore production, compte propriétaire ou associé n'a été réalisé.
+**Mises à jour AUD-01/AUD-03/AUD-04/AUD-05/AUD-06/AUD-11/AUD-12/AUD-13/AUD-14/AUD-15/AUD-16/AUD-17/AUD-18/AUD-19/AUD-20/AUD-21/AUD-22 :** protections commandes, accès et GPS renforcées, 22 Edge Functions versionnées, précontrôle paiement avant création de commande, récupération email, couverture pgTAP accrue et revue SECURITY DEFINER. Aucun paiement réel, test de charge ou restore production, compte propriétaire ou associé n'a été réalisé.
 
 ## 1. Conclusion
 
@@ -18,8 +18,8 @@ Les constats ci-dessous sont classés par gravité et par dépendance. « Confir
 | Mesure | Résultat |
 |---|---:|
 | Entrées dans l'arbre GitHub | 657 |
-| Fichiers Dart sous `lib/` | 72 |
-| Fichiers de tests Dart | 7 |
+| Fichiers Dart sous `lib/` | 76 |
+| Fichiers de tests Dart | 8 |
 | Tests SQL dans `supabase/tests/database` | 3 |
 | Assertions pgTAP prévues dans ces trois fichiers | 82 (56 + 13 + 13) |
 | Tables Supabase `public` et `private` | 182 |
@@ -28,7 +28,7 @@ Les constats ci-dessous sont classés par gravité et par dépendance. « Confir
 | Migrations SQL présentes dans GitHub | 333 |
 | Migrations consignées dans Supabase | 332 |
 | Fonctions Edge actives dans Supabase | 21 |
-| Dossiers sources Edge avec `index.ts` dans GitHub | 21 |
+| Dossiers sources Edge avec `index.ts` dans GitHub | 22 |
 | Buckets Storage | 5 |
 
 Les mesures de quantité ne prouvent pas la qualité fonctionnelle. Les 60 assertions SQL couvrent notamment des permissions et des contrôles de sécurité, mais ne constituent pas une suite de tests de bout en bout pour les parcours commerciaux.
@@ -120,28 +120,33 @@ La RPC `public.get_seller_product_variant_inventory(uuid)` manquait sur Supabase
 
 Suivi : https://linear.app/faso/issue/RIA-28/catalogue-ajouter-ledition-du-stock-par-variante-dans-lespace-vendeur
 
-#### AUD-05 — Wave et CinetPay ne sont pas configurés
-**État : confirmé par une exécution réelle du moniteur de santé le 6 novembre 2026 à 20:19:04 UTC. Code et webhooks actifs ; comptes marchands/secrets manquants.**
+#### AUD-05 — Wave et CinetPay non configurés ; précontrôle client ajouté
+**État : secrets toujours absents ; fonctions de paiement actives ; le checkout bloque maintenant avant de créer une commande si les identifiants serveur ne sont pas présents.**
 
-- Wave : `NOT_CONFIGURED`, motif `WAVE_API_KEY_missing`. `create-wave-payment-session-v3` v4 exige `WAVE_API_KEY`; le webhook `wave-payment-webhook-v3` v4 exige `WAVE_WEBHOOK_SECRET`. `WAVE_SIGNING_SECRET` est optionnel pour signer les appels sortants.
-- CinetPay : `NOT_CONFIGURED`, motif `CINETPAY_API_KEY_or_SITE_ID_missing`. `create-cinetpay-payment-session-v3` v6 exige `CINETPAY_API_KEY` et `CINETPAY_SITE_ID`; `cinetpay-webhook-v3` v6 exige aussi `CINETPAY_SECRET_KEY`.
-- Les fonctions de création renvoient HTTP 503 quand les clés nécessaires manquent ; elles ne simulent pas une session de paiement.
-- Les webhooks sont configurés avec `verify_jwt=false` par conception : Wave vérifie une signature HMAC sur le corps brut et une fenêtre temporelle de cinq minutes ; CinetPay vérifie le HMAC de `x-token`, le site marchand et le statut auprès de l'API fournisseur avant `process_payment_event`. Ne pas retirer ces vérifications ni imposer le JWT Supabase sur les callbacks fournisseurs.
+- Dernier moniteur de santé : 6 novembre 2026 à 22:20:04 UTC ; Wave `NOT_CONFIGURED` (`WAVE_API_KEY_missing`), CinetPay `NOT_CONFIGURED` (`CINETPAY_API_KEY_or_SITE_ID_missing`).
+- Wave : `create-wave-payment-session-v3` v4 exige `WAVE_API_KEY`; webhook `wave-payment-webhook-v3` v4 exige `WAVE_WEBHOOK_SECRET`. `WAVE_SIGNING_SECRET` est facultatif pour signer les appels sortants.
+- CinetPay : `create-cinetpay-payment-session-v3` v6 exige `CINETPAY_API_KEY` et `CINETPAY_SITE_ID`; webhook `cinetpay-webhook-v3` v6 exige aussi `CINETPAY_SECRET_KEY`.
+- Les webhooks gardent `verify_jwt=false` et vérifient leur signature fournisseur (Wave HMAC/time window ; CinetPay HMAC, site ID et statut API). Ne pas retirer ces contrôles.
+- Les Edge Functions de création de session répondent 503 si les secrets requis manquent ; elles ne simulent pas un paiement.
 
-**Impact :** aucun parcours de paiement réel ne peut être certifié. Orange Money et Moov Money restent soumis à l'activation marchande CinetPay et aux méthodes activées par le compte.
+**Correction applicative ajoutée :**
+- Nouvelle Edge Function `check-payment-provider-config` v1, `verify_jwt=true), retourne seulement un booléen de configuration, jamais les valeurs ou noms de secrets.
+- Wave est déclaré configuré si API key et secret webhook existent ; CinetPay si API key, site ID et secret webhook existent.
+- Flutter appelle cette fonction avant `checkout_cart`. Si le provider est non configuré, aucune commande n'est créée et aucun stock n'est réservé.
+- Test unitaire ajouté sur le parsing de la réponse : fournisseur configuré, non configuré, statut incohérent et réponse invalide.
 
-**Correction restante :** terminer le KYC/activation marchande, obtenir les clés directement depuis les portails marchands et les configurer via Supabase Edge Function Secrets. Le runbook `docs/runbooks/aud-05-06-payment-and-fcm-configuration.md` détaille les noms exacts requis et la séquence de validation. Aucun secret ne doit être copié dans Flutter, GitHub ou un ticket. Aucun paiement réel n'a été effectué.
+**Impact restant :** aucun paiement réel n'est possible tant que les comptes marchands/KYC et les clés ne sont pas activés. Le précontrôle vérifie la présence des variables serveur, pas la validité du compte, du solde marchand, du webhook ou du canal de paiement. Les tests sandbox restent requis. Runbook : `docs/runbooks/aud-05-06-payment-and-fcm-configuration.md`.
 
-#### AUD-06 — Notifications push FCM bloquées par l'absence de configuration Firebase serveur
-**État : défaut de configuration confirmé et maintenant visible dans le moniteur de santé version 7 ; aucun push réel testé.**
+#### AUD-06 — Notifications push FCM toujours non configurées
+**État : monitorage et code en place ; secrets Firebase absents ; aucune réception réelle testée.**
 
 - `dispatch-push-notifications` v10 exige `FCM_SERVICE_ACCOUNT_JSON` et un `project_id` dans le JSON ou `FCM_PROJECT_ID` en secours.
-- Les journaux consultés dans la fenêtre par défaut de l'outil comportaient 324 événements `fcm_service_account_missing`, avec `hasFcmProjectId: false`. Le worker renvoie HTTP 503 `fcm_not_configured`.
-- Le moniteur `platform-health-monitor` est maintenant en v7 et publie un composant `FCM`. Son dernier contrôle manuel du 6 novembre à 20:19:04 UTC a enregistré `NOT_CONFIGURED`, raison `FCM_SERVICE_ACCOUNT_JSON_missing`, `has_fcm_project_id=false`.
-- Deux migrations étendent la liste blanche SQL et la contrainte de `private.platform_health_checks` pour accepter le composant FCM : `20261106201627_allow_fcm_platform_health_component.sql` et `20261106201705_allow_fcm_health_check_component.sql`. La fonction `private.record_platform_health_checks` reste exécutable uniquement par `service_role`.
-- Deux assertions pgTAP vérifient que FCM est autorisé dans l'enregistreur et la contrainte, et que la frontière `service_role` seule est conservée. Le fichier `security_regression_test.sql` compte désormais 47 assertions ; elles n'ont pas encore été exécutées.
+- Dernier état FCM dans `private.platform_health_checks` : 6 novembre 2026 à 22:20:04 UTC, `NOT_CONFIGURED`, raison `FCM_SERVICE_ACCOUNT_JSON_missing`, `has_fcm_project_id=false`.
+- Logs des dernières 24 h lors du relevé : 450 événements `fcm_service_account_missing` dans `function_logs`.
+- `platform-health-monitor` v7 inspecte la présence et la structure des secrets sans afficher leur valeur ; il ne considère pas un push comme testé si aucun message n'a été envoyé.
+- Deux migrations autorisent FCM dans `private.platform_health_checks` et sa contrainte ; enregistreur reste `service_role` uniquement.
 
-**Correction restante :** associer Android/iOS à un projet Firebase, activer APNs pour iOS, créer un compte de service autorisé pour Firebase Cloud Messaging et saisir le JSON directement dans Supabase Edge Function Secrets. Configurer `FCM_PROJECT_ID` seulement si le champ `project_id` n'est pas fourni dans le JSON. Ne jamais placer la clé privée dans GitHub, Flutter ou la conversation. Effectuer ensuite un vrai push sur un appareil de test, avec consentement et vérification du token.
+**Correction restante :** associer Android/iOS au projet Firebase, activer APNs pour iOS, générer un compte de service limité à Firebase Cloud Messaging et saisir `FCM_SERVICE_ACCOUNT_JSON` directement dans Supabase Edge Function Secrets. Configurer `FCM_PROJECT_ID` si absent du JSON. Aucun secret ne doit aller dans GitHub/Flutter/chat. Effectuer ensuite un vrai push de test sur appareil interne autorisé ; aucun push réel n'a encore été testé.
 
 #### AUD-07 — Dérive de l'historique des migrations
 **État : un seul numéro non réconcilié ; effets fonctionnels déjà présents et équivalence vérifiée. Réparation historique CLI préparée.**
