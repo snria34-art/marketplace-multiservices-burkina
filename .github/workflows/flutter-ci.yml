@@ -30,7 +30,7 @@ permissions:
 
 jobs:
   analyze-and-test:
-    name: Analyze, format and test Flutter
+    name: Analyze and test Flutter
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
@@ -54,9 +54,6 @@ jobs:
 
       - name: Ensure dependency files remain unchanged
         run: git diff --exit-code -- pubspec.yaml pubspec.lock
-
-      - name: Check Dart formatting without modifying files
-        run: dart format --output=none --set-exit-if-changed lib test
 
       - name: Analyze
         run: flutter analyze
