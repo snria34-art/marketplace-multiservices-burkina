@@ -281,16 +281,17 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
 
   @override
   Widget build(BuildContext context) {
-    final address = _selectedAddress;
-    final fee = _quote?['customer_fee']?.toString();
-    final distance = _quote?['distance_km']?.toString();
-    final stops = _quote?['stop_count']?.toString();
-
     return Scaffold(
       appBar: AppBar(title: const Text('Finaliser la commande')),
       body: FutureBuilder<List<Map<String, dynamic>>>(
         future: _addressesFuture,
         builder: (context, snapshot) {
+          // Read the latest selection and quote each time FutureBuilder rebuilds.
+          final address = _selectedAddress;
+          final fee = _quote?['customer_fee']?.toString();
+          final distance = _quote?['distance_km']?.toString();
+          final stops = _quote?['stop_count']?.toString();
+
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
