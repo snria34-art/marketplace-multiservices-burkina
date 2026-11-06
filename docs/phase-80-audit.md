@@ -553,3 +553,17 @@ Relecture en lecture seule des définitions SQL actuellement déployées (`compl
 - Deux assertions pgTAP supplémentaires ajoutées ; `security_regression_test.sql` contient 50 assertions et le total avec l'autre fichier est 63. Les tests n'ont pas été exécutés faute de runner Actions.
 - Limite restante : `admin_roles` et `admin_users.admin_role_id` ne sont toujours pas utilisés par les autorisations ; tous les administrateurs actifs ont les mêmes droits globaux. La matrice OWNER/SUPER_ADMIN, ADMIN, FINANCE, LOGISTICS_ADMIN, SUPPORT et MODERATOR est préparée dans `docs/runbooks/aud-12-admin-rbac-matrix.md`, suivi par Linear RIA-30. Aucun compte propriétaire ni associé n'a été provisionné.
 
+
+
+### AUD-14 — GPS livreur en arrière-plan — 7 novembre 2026
+
+- Le minuteur périodique attaché à `CourierPage` a été remplacé par `Geolocator.getPositionStream()` avec paramètres natifs. Android configure un service de premier plan et une notification persistante ; iOS active `allowBackgroundLocationUpdates` et le mode `UIBackgroundModes/location`.
+- Le manifeste Android déclare ACCESS_FINE/COARSE, ACCESS_BACKGROUND_LOCATION, FOREGROUND_SERVICE et FOREGROUND_SERVICE_LOCATION. Les descriptions Always/WhenInUse iOS précisent que le GPS ne se partage que pendant une livraison active.
+- Le partage commence après un consentement explicite et après vérification d'au moins une affectation active. L'écran explique la demande d'autorisation « Toujours / Autoriser tout le temps » et la notification Android. Le livreur peut arrêter manuellement.
+- À la fin/annulation de la dernière mission, à l'absence d'affectation, à un refus serveur ou au démontage de la page, l'abonnement GPS est annulé. Les erreurs réseau temporaires sont signalées sans créer un deuxième flux.
+- Migration Supabase appliquée : `20261106205236_require_active_courier_assignment_for_location_updates`. La RPC `record_courier_location` refuse maintenant les écritures si aucune affectation du livreur en état actif n'est reliée à un colis/commande non terminés. Aucun changement des ACL/validation des coordonnées ; `anon` reste interdit.
+- Le compte projet ne contient actuellement aucune affectation et aucune position GPS. Un test Flutter est ajouté pour vérifier le refus de démarrer le suivi lorsque le livreur n'a aucune mission ; une assertion pgTAP a été ajoutée (security_regression_test.sql à 51 assertions).
+- Les tests Flutter/pgTAP n'ont pas encore été exécutés faute de runner GitHub Actions. Aucun APK/IPA ni test physique Android/iOS n'a été construit ou exécuté. L'approbation des permissions de localisation par les stores reste à valider.
+- Aucune politique de purge des positions GPS n'est définie. Aucun historique n'a été créé. Le ticket RIA-31 demande de définir la durée de conservation, les finalités et la purge serveur avant l'activation production.
+- Runbook : `docs/runbooks/aud-14-courier-background-location.md`. Ticket RIA-11 en cours.
+
