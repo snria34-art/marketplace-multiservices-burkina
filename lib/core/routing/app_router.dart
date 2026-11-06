@@ -123,7 +123,22 @@ Future<String?> _guardRoute(
           .eq('active', true)
           .maybeSingle();
 
-      if (admin == null) return '/access-status?reason=admin_required';
+      if (admin == null) {
+        if (!isModerationRoute(path)) {
+          return '/access-status?reason=admin_required';
+        }
+
+        final rows = await client
+            .from('user_roles')
+            .select('role')
+            .eq('user_id', user.id);
+        final hasModeratorRole = rows is List &&
+            rows.any((row) => row is Map && row['role'] == 'MODERATOR');
+
+        if (!hasModeratorRole) {
+          return '/access-status?reason=moderator_required';
+        }
+      }
     }
 
     if (isSellerRoute(path)) {
