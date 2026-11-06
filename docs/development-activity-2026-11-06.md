@@ -489,3 +489,14 @@ Contrôles Supabase en lecture seule :
 Le constat historique d'octobre selon lequel les commandes utilisaient encore le stock parent est donc dépassé : la réservation, la consommation et la libération par variante sont présentes dans les fonctions actives. Aucune modification du stock ou des fonctions de réservation n'a été nécessaire durant cette vérification.
 
 L'annulation globale par `transition_order_status` reste le défaut SQL ouvert, suivi par Linear RIA-29. Ne pas la confondre avec le chemin `cancel_unpaid_order`, qui est distinct et n'accepte que les commandes en attente de paiement.
+
+
+### Mise à jour après déploiement AUD-04 — 7 novembre 2026
+
+- Le diagnostic précédent du 6 novembre indiquait correctement que la RPC `get_seller_product_variant_inventory(uuid)` était absente de la base active à ce moment-là.
+- La migration a depuis été appliquée via Supabase et inscrite sous le numéro généré `20261106201211`. Le fichier de dépôt a été réaligné sur ce numéro : `supabase/migrations/20261106201211_add_secure_seller_variant_inventory_read.sql`.
+- Contrôle SQL après déploiement : la fonction existe, vérifie compte actif et propriété vendeur, autorise EXECUTE à `authenticated` uniquement parmi les rôles clients ; `anon` ne peut pas l'appeler. Les droits directs sur `product_variant_inventory` restent refusés à `anon` et `authenticated`.
+- `SellerProductsPage` appelle déjà le lecteur de variantes et la RPC de mise à jour sécurisée. Le chemin de secours vers le stock parent est maintenant interdit lorsqu'une lecture des variantes échoue ; l'interface affiche une erreur et s'arrête sans modifier le stock.
+- Une assertion pgTAP a été ajoutée ; `security_regression_test.sql` comporte 45 assertions. Elles n'ont pas été exécutées. Le flux UI doit encore être testé avec un compte vendeur et des variantes de test.
+- Aucun stock réel n'a été modifié et aucun compte vendeur n'a été créé.
+
