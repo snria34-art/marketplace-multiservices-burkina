@@ -375,3 +375,9 @@ Commits :
 - 7613ddac0b3d30751e2a3e1f551c91ab3823e527 — formatage du bloc RPC de congé.
 
 Aucune action de congé, de modération, de remboursement ou de paiement n'a été exécutée pour valider ces changements ; ils restent à tester sur un environnement de test.
+
+### 21. Dernière garde du rendez-vous beauté
+
+Le formulaire de réservation beauté vérifie maintenant que l'écran est toujours monté après le sélecteur de date/heure avant de poursuivre l'enregistrement. Cela aligne ce parcours avec les autres réservations des modules verticaux.
+
+Commit : 3e3d0834cfda979737241256593655ca7d65408d.
