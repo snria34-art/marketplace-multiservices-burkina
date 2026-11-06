@@ -39,6 +39,7 @@ class _DeliveryTrackingPageState
     _future = _load();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       _subscribeRealtime();
 
       _timer = Timer.periodic(
@@ -85,10 +86,20 @@ class _DeliveryTrackingPageState
   @override
   void dispose() {
     _timer?.cancel();
-    if (_channel != null) {
-      ref.read(supabaseProvider)?.removeChannel(_channel!);
+    final channel = _channel;
+    _channel = null;
+    if (channel != null) {
+      unawaited(_removeChannelSafely(channel));
     }
     super.dispose();
+  }
+
+  Future<void> _removeChannelSafely(RealtimeChannel channel) async {
+    try {
+      await ref.read(supabaseProvider)?.removeChannel(channel);
+    } catch (_) {
+      // Disposal is best-effort; no unhandled async error should escape.
+    }
   }
 
   @override
