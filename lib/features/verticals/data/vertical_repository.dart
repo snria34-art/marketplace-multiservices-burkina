@@ -133,7 +133,7 @@ class VerticalRepository {
       table: 'creative_services',
       title: 'Créatifs',
       icon: 14,
-      select: 'id,category,name,description,starting_price,active,service_providers(display_name)',
+      select: 'id,category,name,description,starting_price,active',
     ),
     VerticalModule.parcels: VerticalConfig(
       table: 'parcels',
