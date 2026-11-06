@@ -586,3 +586,16 @@ L'annulation globale par `transition_order_status` reste le défaut SQL ouvert, 
 - Action dashboard requise : Redirect URLs allow-list marketplaceburkina://auth/recovery, Reset Password email template et SMTP. La configuration Auth URL/SMTP n'est pas accessible par l'intégration Supabase MCP.
 - SMS OTP non configuré pour éviter d'activer un fournisseur facturé sans décision. Aucun email de test/compte réel n'a été créé.
 - Runbook docs/runbooks/aud-19-email-password-recovery.md, suivi RIA-8 en cours.
+
+### AUD-20 — audit des index signalés inutilisés — 7 novembre 2026
+
+- Performance Advisor : 366 lints. Comptage réel : public 571 dont 559 sans scan ; private 44 dont 39 sans scan. Parmi 598 index public/private sans scan, 232 sont primaires ou uniques et 366 sont non uniques/non primaires.
+- Taille des 366 index potentiellement candidats : 3 031 040 bytes (~2.9 MiB). Dernier stats reset 25 août ; dernière autoanalyse 6 novembre. Tables métier presque toutes vides.
+- Index de commandes, produits, colis, GPS, messages, paiement et remboursements conservés car ils couvrent des parcours prévus. Aucune suppression ou migration DDL. Runbook AUD-20 ajouté.
+
+### AUD-21 — tables RLS activées sans policy — 7 novembre 2026
+
+- Audit des 17 tables (15 private, 2 public media). ACL privées limitées à postgres ; tables media publiques accordées à service_role uniquement.
+- has_table_privilege vérifié sur toutes les tables : aucun SELECT/INSERT/UPDATE/DELETE direct anon/authenticated. Fonctions SECURITY DEFINER vérifiées pour avis publiés et preuve de livraison appartenant au client.
+- Deux assertions pgTAP ajoutées au fichier security_regression_test.sql ; 53 assertions dans ce fichier et 79 au total. Pas d'ajout de policy générique.
+- Aucun changement de table/ACL/policy en production. Runbook AUD-21 ajouté.
