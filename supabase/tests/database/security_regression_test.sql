@@ -1,5 +1,5 @@
 begin;
-select plan(51);
+select plan(53);
 
 select ok(
   not has_table_privilege('anon','private.catalog_moderation_findings','SELECT')
@@ -441,6 +441,53 @@ select ok(
   and position('o.status not in' in pg_get_functiondef('public.record_courier_location(double precision,double precision,numeric)'::regprocedure)) > 0
   and not has_function_privilege('anon','public.record_courier_location(double precision,double precision,numeric)','EXECUTE'),
   'courier GPS writes require an active non-terminal delivery assignment and cannot be called by anon'
+);
+
+
+select ok(
+  not exists (
+    select 1
+    from unnest(array[
+      'private.catalog_ai_product_scan_locks',
+      'private.catalog_ai_product_scans',
+      'private.catalog_moderation_audit',
+      'private.catalog_moderation_findings',
+      'private.catalog_moderation_responses',
+      'private.platform_agent_runs',
+      'private.platform_health_checks',
+      'private.platform_repair_audit',
+      'private.platform_repair_backups',
+      'private.product_listing_restrictions',
+      'private.return_policy_audit',
+      'private.return_policy_rules',
+      'private.review_moderation_audit',
+      'private.seller_access_audit',
+      'private.seller_access_requests',
+      'public.delivery_evidence',
+      'public.review_media'
+    ]::text[]) as t(table_name)
+    where
+      has_table_privilege('anon', to_regclass(table_name), 'SELECT')
+      or has_table_privilege('anon', to_regclass(table_name), 'INSERT')
+      or has_table_privilege('anon', to_regclass(table_name), 'UPDATE')
+      or has_table_privilege('anon', to_regclass(table_name), 'DELETE')
+      or has_table_privilege('authenticated', to_regclass(table_name), 'SELECT')
+      or has_table_privilege('authenticated', to_regclass(table_name), 'INSERT')
+      or has_table_privilege('authenticated', to_regclass(table_name), 'UPDATE')
+      or has_table_privilege('authenticated', to_regclass(table_name), 'DELETE')
+  ),
+  'all RLS-enabled tables without policies deny direct table access to anon and authenticated'
+);
+
+select ok(
+  has_function_privilege('anon','public.get_public_review_media(uuid)','EXECUTE')
+  and not has_function_privilege('anon','public.get_customer_delivery_evidence(uuid)','EXECUTE')
+  and has_function_privilege('authenticated','public.get_customer_delivery_evidence(uuid)','EXECUTE')
+  and position('r.status=''PUBLISHED''::public.review_status' in pg_get_functiondef('private.get_public_review_media(uuid)'::regprocedure)) > 0
+  and position('o.customer_id=v_uid' in pg_get_functiondef('private.get_customer_delivery_evidence(uuid)'::regprocedure)) > 0
+  and not has_table_privilege('authenticated','public.review_media','SELECT')
+  and not has_table_privilege('authenticated','public.delivery_evidence','SELECT'),
+  'review media and delivery evidence are exposed only through published-review or customer-order scoped RPCs'
 );
 
 select * from finish();
