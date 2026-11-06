@@ -204,37 +204,41 @@ class _CourierPageState extends ConsumerState<CourierPage> {
       if (action == 'accept') {
         await repo.accept(assignment['id'].toString());
       } else if (action == 'pickup') {
-        if (!await _confirmEvidenceCapture(
+        final pickupEvidenceConfirmed = await _confirmEvidenceCapture(
           'Photographiez uniquement l’article remis par le vendeur. Évitez tout visage et toute donnée personnelle.',
-        )) return;
+        );
+        if (!mounted || !pickupEvidenceConfirmed) return;
         final photo = await ImagePicker().pickImage(
           source: ImageSource.camera,
           imageQuality: 75,
           maxWidth: 1600,
         );
-        if (photo == null) return;
+        if (!mounted || photo == null) return;
         await repo.uploadEvidence(
           packageId: packageId,
           file: photo,
           evidenceType: 'PICKUP',
         );
+        if (!mounted) return;
         final code = await _askCode('Code de retrait', 4);
-        if (code == null) return;
+        if (!mounted || code == null) return;
         await repo.confirmPickup(packageId: packageId, pickupCode: code);
       } else if (action == 'start') {
         await repo.start(packageId);
       } else if (action == 'deliver') {
-        if (!await _confirmEvidenceCapture(
+        final deliveryEvidenceConfirmed = await _confirmEvidenceCapture(
           'Photographiez le colis déposé ou remis. Ne photographiez pas le visage du client sans son accord.',
-        )) return;
+        );
+        if (!mounted || !deliveryEvidenceConfirmed) return;
         final photo = await ImagePicker().pickImage(
           source: ImageSource.camera,
           imageQuality: 75,
           maxWidth: 1600,
         );
         if (photo == null) return;
+        if (!mounted) return;
         final privacy = await _confirmPhotoPrivacy();
-        if (privacy == null) return;
+        if (!mounted || privacy == null) return;
         await repo.uploadEvidence(
           packageId: packageId,
           file: photo,
@@ -242,8 +246,9 @@ class _CourierPageState extends ConsumerState<CourierPage> {
           personVisible: privacy['person_visible'] ?? false,
           personConsent: privacy['person_consent'] ?? false,
         );
+        if (!mounted) return;
         final code = await _askCode('Code de confirmation du client', 6);
-        if (code == null) return;
+        if (!mounted || code == null) return;
         await repo.confirmDelivery(packageId: packageId, deliveryCode: code);
       }
 
