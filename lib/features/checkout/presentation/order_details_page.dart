@@ -243,7 +243,7 @@ class _OrderDetailsPageState extends ConsumerState<OrderDetailsPage> {
               ],
             ),
           );
-    if (selected == null) return;
+    if (!mounted || selected == null) return;
 
     try {
       final repo = ref.read(checkoutRepositoryProvider);
@@ -252,12 +252,21 @@ class _OrderDetailsPageState extends ConsumerState<OrderDetailsPage> {
         orderId: widget.orderId,
         provider: selected,
       );
-      final url = session['checkout_url']?.toString();
+      final url = session['checkout_url']?.toString().trim();
       if (url == null || url.isEmpty) {
         throw StateError('Lien de paiement indisponible.');
       }
+      final paymentUri = Uri.tryParse(url);
+      if (paymentUri == null ||
+          paymentUri.scheme.toLowerCase() != 'https' ||
+          paymentUri.host.isEmpty ||
+          paymentUri.userInfo.isNotEmpty) {
+        throw StateError(
+          'Adresse de paiement invalide : une URL HTTPS sécurisée est requise.',
+        );
+      }
       final opened = await launchUrl(
-        Uri.parse(url),
+        paymentUri,
         mode: LaunchMode.externalApplication,
       );
       if (!opened) throw StateError('Impossible d’ouvrir le guichet.');
