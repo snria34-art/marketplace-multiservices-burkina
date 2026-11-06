@@ -181,3 +181,19 @@ Correction :
 Commit : `51f4251f073b575212f303dc773f17c5b112d59d`.
 
 Le fichier a été relu sur `main`. Les tests et l'analyse Flutter restent à exécuter dans un environnement disposant du SDK.
+
+### 11. Message exact en cas d’échec après création du produit
+
+Fichier : `lib/features/seller/presentation/seller_products_page.dart`
+
+Le produit est créé côté serveur avant la sélection et le téléversement de ses photos. En cas d'échec d'une étape ultérieure, l'ancienne interface affichait à tort un échec global de création, alors que le produit existait déjà en brouillon. Cela pouvait provoquer la création de doublons lors d'une nouvelle tentative.
+
+Correction :
+- mémorisation de l'identifiant retourné après la création ;
+- rejet d'un identifiant vide ou égal à `null` ;
+- message distinct selon que la création elle-même a échoué ou que les photos/la validation ont échoué après création ;
+- indication explicite de ne pas recréer le produit et de reprendre l'ajout des photos depuis la liste.
+
+Commit : `7472cdc366a3f7faa89b1ff28b0341847605b36a`.
+
+Le fichier a été relu depuis `main`. Aucun test automatisé ou build Flutter n'a été exécuté.
