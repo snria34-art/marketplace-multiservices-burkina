@@ -25,9 +25,10 @@ class CourierPage extends ConsumerStatefulWidget {
 
 class _CourierPageState extends ConsumerState<CourierPage> {
   late Future<List<Map<String, dynamic>>> _future;
-  Timer? _locationTimer;
+  StreamSubscription<Position>? _locationSubscription;
   bool _sharingLocation = false;
   bool _locationInFlight = false;
+  bool _locationErrorShown = false;
 
   @override
   void initState() {
@@ -43,69 +44,142 @@ class _CourierPageState extends ConsumerState<CourierPage> {
 
   Future<void> _toggleLocation() async {
     if (_sharingLocation) {
-      _locationTimer?.cancel();
-      setState(() => _sharingLocation = false);
+      await _stopLocation(
+        message: 'Le partage de votre position est arrêté.',
+      );
+      return;
+    }
+
+    final repo = ref.read(courierRepositoryProvider);
+    if (repo == null) {
+      _showLocationMessage('Service de livraison indisponible.');
       return;
     }
 
     try {
-      await _recordLocation();
+      final assignments = await repo.assignments();
       if (!mounted) return;
-      setState(() => _sharingLocation = true);
-      _locationTimer = Timer.periodic(
-        const Duration(seconds: 15),
-        (_) async {
-          if (!mounted || !_sharingLocation || _locationInFlight) return;
+      if (assignments.isEmpty) {
+        _showLocationMessage(
+          'Aucune mission active : la position ne peut pas être partagée.',
+        );
+        return;
+      }
 
-          try {
-            await _recordLocation();
-          } catch (_) {
-            _locationTimer?.cancel();
-            if (!mounted) return;
-            setState(() => _sharingLocation = false);
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text(
-                  'Le partage de position a été interrompu. Réactivez-le pour reprendre le suivi.',
-                ),
-              ),
-            );
-          }
+      final accepted = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Partager votre position'),
+          content: const Text(
+            'Pendant une mission active, votre position GPS sera transmise '
+            'régulièrement pour permettre au client de suivre la livraison. '
+            'Le suivi peut continuer lorsque l’application est en arrière-plan. '
+            'Android affiche une notification persistante. Vous pouvez arrêter '
+            'le partage à tout moment ; il s’arrête aussi quand vous n’avez '
+            'plus de mission active.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Pas maintenant'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text('Autoriser le suivi'),
+            ),
+          ],
+        ),
+      );
+      if (!mounted || accepted != true) return;
+
+      await DeviceLocationService.ensureBackgroundTrackingPermission();
+      if (!mounted) return;
+
+      setState(() {
+        _sharingLocation = true;
+        _locationErrorShown = false;
+      });
+
+      _locationSubscription = DeviceLocationService.positionStream().listen(
+        (position) => unawaited(_recordLocation(position)),
+        onError: (Object error) {
+          unawaited(
+            _stopLocation(
+              message:
+                  'Le GPS a interrompu le suivi. Réactivez-le pour reprendre '
+                  'la transmission de position.',
+            ),
+          );
         },
       );
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            'Localisation indisponible : ' + error.toString(),
+          content: Text('Localisation indisponible : $error'),
+          action: SnackBarAction(
+            label: 'Paramètres',
+            onPressed: () => unawaited(Geolocator.openAppSettings()),
           ),
         ),
       );
     }
   }
 
-  Future<void> _recordLocation() async {
-    if (_locationInFlight) return;
+  Future<void> _recordLocation(Position position) async {
+    if (!_sharingLocation || _locationInFlight) return;
 
     final repo = ref.read(courierRepositoryProvider);
     if (repo == null) {
-      throw StateError('Service de livraison indisponible.');
+      await _stopLocation(
+        message: 'Le service de livraison est indisponible.',
+      );
+      return;
     }
 
     _locationInFlight = true;
     try {
-      final Position position = await DeviceLocationService.current();
-      if (!mounted) return;
-
       await repo.recordLocation(
         latitude: position.latitude,
         longitude: position.longitude,
         accuracy: position.accuracy,
       );
+      _locationErrorShown = false;
+    } catch (error) {
+      if (error.toString().contains('active_courier_assignment_required')) {
+        await _stopLocation(
+          message:
+              'Votre mission est terminée ou annulée. Le partage GPS est arrêté.',
+        );
+      } else if (!_locationErrorShown && mounted) {
+        _locationErrorShown = true;
+        _showLocationMessage(
+          'Position non transmise. Vérifiez votre connexion ; le suivi '
+          'reprendra à la prochaine mesure GPS.',
+        );
+      }
     } finally {
       _locationInFlight = false;
     }
+  }
+
+  Future<void> _stopLocation({String? message}) async {
+    final subscription = _locationSubscription;
+    _locationSubscription = null;
+    await subscription?.cancel();
+
+    if (!mounted) return;
+    if (_sharingLocation) {
+      setState(() => _sharingLocation = false);
+    }
+    if (message != null) _showLocationMessage(message);
+  }
+
+  void _showLocationMessage(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
   }
 
   Future<bool> _confirmEvidenceCapture(String message) async {
@@ -255,7 +329,17 @@ class _CourierPageState extends ConsumerState<CourierPage> {
       }
 
       if (!mounted) return;
-      setState(() => _future = _load());
+      final remainingAssignments = await repo.assignments();
+      if (!mounted) return;
+
+      if (remainingAssignments.isEmpty && _sharingLocation) {
+        await _stopLocation(
+          message:
+              'Vous n’avez plus de mission active. Le partage GPS est arrêté.',
+        );
+      }
+      if (!mounted) return;
+      setState(() => _future = Future.value(remainingAssignments));
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Mise à jour enregistrée.')),
@@ -306,7 +390,7 @@ class _CourierPageState extends ConsumerState<CourierPage> {
 
   @override
   void dispose() {
-    _locationTimer?.cancel();
+    _locationSubscription?.cancel();
     super.dispose();
   }
 
