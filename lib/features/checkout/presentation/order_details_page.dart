@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -55,77 +56,100 @@ class _OrderDetailsPageState extends ConsumerState<OrderDetailsPage> {
 
     if (!mounted) return;
 
-    var channel = client
-        .channel('order-payment-' + widget.orderId)
-        .onPostgresChanges(
+    try {
+      var channel = client
+          .channel('order-payment-' + widget.orderId)
+          .onPostgresChanges(
+            event: PostgresChangeEvent.all,
+            schema: 'public',
+            table: 'payments',
+            filter: PostgresChangeFilter(
+              type: PostgresChangeFilterType.eq,
+              column: 'order_id',
+              value: widget.orderId,
+            ),
+            callback: (_) {
+              if (!mounted) return;
+              setState(() => _future = _load());
+            },
+          )
+          .onPostgresChanges(
+            event: PostgresChangeEvent.all,
+            schema: 'public',
+            table: 'orders',
+            filter: PostgresChangeFilter(
+              type: PostgresChangeFilterType.eq,
+              column: 'id',
+              value: widget.orderId,
+            ),
+            callback: (_) {
+              if (!mounted) return;
+              setState(() => _future = _load());
+            },
+          )
+          .onPostgresChanges(
+            event: PostgresChangeEvent.all,
+            schema: 'public',
+            table: 'order_groups',
+            filter: PostgresChangeFilter(
+              type: PostgresChangeFilterType.eq,
+              column: 'order_id',
+              value: widget.orderId,
+            ),
+            callback: (_) {
+              if (!mounted) return;
+              setState(() => _future = _load());
+            },
+          );
+
+      for (final groupId in orderGroupIds) {
+        channel = channel.onPostgresChanges(
           event: PostgresChangeEvent.all,
           schema: 'public',
-          table: 'payments',
+          table: 'order_packages',
           filter: PostgresChangeFilter(
             type: PostgresChangeFilterType.eq,
-            column: 'order_id',
-            value: widget.orderId,
-          ),
-          callback: (_) {
-            if (!mounted) return;
-            setState(() => _future = _load());
-          },
-        )
-        .onPostgresChanges(
-          event: PostgresChangeEvent.all,
-          schema: 'public',
-          table: 'orders',
-          filter: PostgresChangeFilter(
-            type: PostgresChangeFilterType.eq,
-            column: 'id',
-            value: widget.orderId,
-          ),
-          callback: (_) {
-            if (!mounted) return;
-            setState(() => _future = _load());
-          },
-        )
-        .onPostgresChanges(
-          event: PostgresChangeEvent.all,
-          schema: 'public',
-          table: 'order_groups',
-          filter: PostgresChangeFilter(
-            type: PostgresChangeFilterType.eq,
-            column: 'order_id',
-            value: widget.orderId,
+            column: 'order_group_id',
+            value: groupId,
           ),
           callback: (_) {
             if (!mounted) return;
             setState(() => _future = _load());
           },
         );
+      }
 
-    for (final groupId in orderGroupIds) {
-      channel = channel.onPostgresChanges(
-        event: PostgresChangeEvent.all,
-        schema: 'public',
-        table: 'order_packages',
-        filter: PostgresChangeFilter(
-          type: PostgresChangeFilterType.eq,
-          column: 'order_group_id',
-          value: groupId,
+      _orderChannel = channel.subscribe();
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Actualisation instantanée indisponible : $error. Utilisez Actualiser pour vérifier l’état.',
+          ),
         ),
-        callback: (_) {
-          if (!mounted) return;
-          setState(() => _future = _load());
-        },
       );
     }
+  }
 
-    _orderChannel = channel.subscribe();
+  Future<void> _removeOrderChannelSafely(
+    SupabaseClient client,
+    RealtimeChannel channel,
+  ) async {
+    try {
+      await client.removeChannel(channel);
+    } catch (_) {
+      // Channel cleanup is best-effort during navigation/disposal.
+    }
   }
 
   @override
   void dispose() {
     final client = ref.read(supabaseProvider);
     final channel = _orderChannel;
+    _orderChannel = null;
     if (client != null && channel != null) {
-      client.removeChannel(channel);
+      unawaited(_removeOrderChannelSafely(client, channel));
     }
     super.dispose();
   }
