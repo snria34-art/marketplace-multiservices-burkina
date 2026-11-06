@@ -1,5 +1,5 @@
 begin;
-select plan(48);
+select plan(50);
 
 select ok(
   not has_table_privilege('anon','private.catalog_moderation_findings','SELECT')
@@ -410,6 +410,25 @@ select ok(
   and position('return not exists' in pg_get_functiondef('public.deactivate_notification_device(text)'::regprocedure)) > 0
   and position('private.require_active_account()' in pg_get_functiondef('public.deactivate_notification_device(text)'::regprocedure)) = 0,
   'push-token deactivation is authenticated, user-scoped, idempotent, and still available to inactive accounts'
+);
+
+
+select ok(
+  position('private.is_admin()' in pg_get_functiondef('public.get_admin_dashboard()'::regprocedure)) > 0
+  and position('public.is_admin_actor()' in pg_get_functiondef('public.get_admin_dashboard()'::regprocedure)) = 0
+  and position('private.is_admin()' in pg_get_functiondef('private.admin_run_safe_platform_repairs()'::regprocedure)) > 0
+  and position('private.is_admin()' in pg_get_functiondef('private.get_platform_health()'::regprocedure)) > 0
+  and position('private.is_admin()' in pg_get_functiondef('private.rollback_platform_repair(uuid)'::regprocedure)) > 0
+  and position('private.is_admin()' in pg_get_functiondef('private.admin_set_return_window(uuid,integer)'::regprocedure)) > 0,
+  'platform dashboard, repair, health and return-policy controls require a registered active admin'
+);
+
+select ok(
+  position('public.is_admin_actor()' in pg_get_functiondef('private.admin_decide_catalog_finding(uuid,text,text)'::regprocedure)) > 0
+  and position('public.is_admin_actor()' in pg_get_functiondef('private.admin_decide_review(uuid,text,text)'::regprocedure)) > 0
+  and position('private.is_admin()' in pg_get_functiondef('public.enforce_profile_security_fields()'::regprocedure)) > 0
+  and position('private.is_admin()' in pg_get_functiondef('public.enforce_seller_document_review_fields()'::regprocedure)) > 0,
+  'moderators retain catalog/review moderation but cannot change account or seller-document verification fields'
 );
 
 select * from finish();
