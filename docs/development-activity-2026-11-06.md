@@ -387,3 +387,9 @@ Commit : 3e3d0834cfda979737241256593655ca7d65408d.
 L'écran vendeur ne présente plus le stock classique comme disponible sans réserve lorsque le chargement des variantes échoue. Le message précise désormais que le stock parent ne peut être utilisé que pour les produits sans stock par variante. Si la RPC serveur renvoie use_variant_stock_editor, l'interface indique clairement que la migration de lecture des variantes n'est pas déployée et qu'aucune quantité n'a été modifiée. Le cas stock_below_reserved dispose aussi d'un message explicite.
 
 Commit : 226cea1fbc0dcefa9b9dc30a2b01f5f971d27fbf.
+
+### 23. Gestion des erreurs des sélecteurs photo/vidéo vendeur
+
+Les callbacks asynchrones de sélection de photo et de vidéo dans la réponse de modération vendeur interceptent désormais les erreurs du système de fichiers, de la caméra/galerie et de l'initialisation du lecteur vidéo. L'utilisateur reçoit un message d'échec au lieu d'une exception asynchrone non gérée. Les mises à jour d'état restent conditionnées au cycle de vie du dialogue, et le contrôleur vidéo est libéré dans finally.
+
+Commit : dfd0760b6194d031dfccd2abf1492edeb8fada2f.
