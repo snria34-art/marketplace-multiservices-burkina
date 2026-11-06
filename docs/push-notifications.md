@@ -102,3 +102,38 @@ La configuration Firebase n'est pas présente dans le dépôt : `google-services
 ### État
 
 Le worker backend est déployé en version 8. La configuration Firebase et les fichiers natifs réels restent à fournir par le propriétaire du projet Firebase. Aucune notification de test ni notification de masse n'a été envoyée pendant ce diagnostic.
+
+
+## Correctif opérationnel du 6 novembre 2026 — version 10
+
+La fonction `dispatch-push-notifications` est maintenant déployée en **version 10 (ACTIVE)**.
+
+### Changements de code vérifiés
+
+- Synchronisation du code de production version 9 avec le dépôt.
+- Limitation à cinq notifications traitées simultanément.
+- Limitation à cinq appareils traités simultanément par notification.
+- Isolation des erreurs au niveau appareil : une erreur réseau isolée ne doit plus faire échouer tout le lot d'appareils.
+- Journalisation structurée des erreurs de traitement sans journaliser les jetons FCM ni la clé privée.
+- `verify_jwt=false` reste volontairement en place avec la vérification du secret interne `verify_push_dispatch_secret`.
+
+### Cause 503 confirmée après déploiement
+
+Les journaux de la version 10 montrent encore :
+
+`fcm_service_account_missing`
+
+et
+
+`hasFcmProjectId: false`
+
+Le code confirme donc que le secret `FCM_SERVICE_ACCOUNT_JSON` n'est pas disponible dans l'environnement de la fonction et qu'aucun `FCM_PROJECT_ID` de secours n'est défini. Le 503 est conservé volontairement : il ne faut pas déclarer une notification envoyée lorsque FCM n'est pas authentifié.
+
+### Ce qui reste nécessaire
+
+1. Ajouter le compte de service Firebase réel comme secret Supabase `FCM_SERVICE_ACCOUNT_JSON`.
+2. Vérifier que le `project_id` du compte de service correspond au projet Firebase.
+3. Ajouter la configuration native issue de ce même projet Firebase pour Android et iOS.
+4. Après ces configurations, autoriser un test unique sur un appareil de test.
+
+Le connecteur Supabase disponible permet de lire et de déployer les Edge Functions, mais ne fournit pas ici d'action de gestion des secrets Edge Function. Aucun secret n'a été inventé, lu ou écrit par cette intervention. Aucun push de test ni test de masse n'a été déclenché.
