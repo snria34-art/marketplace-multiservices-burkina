@@ -651,3 +651,11 @@ Relecture en lecture seule des définitions SQL actuellement déployées (`compl
 - L'écran client `OrderDetailsPage` ne propose que montant global XOF + motif. Aucun choix boutique/article/quantité, le retour `returns` ne conserve aucune quantité et ne référence aucun refund.
 - Tous les comptes métier restent nuls : commandes 0, groupes 0, lignes 0, paiements 0, remboursements 0, retours 0, commissions 0, ledger 0. Aucun risque financier réel n'a été touché dans cet audit.
 - Runbook AUD-02 enrichi avec les risques d'unicité et de rapprochement fournisseur. Aucune migration ou fonction financière n'est appliquée ; règles coupon/livraison/commission et convention canonique du ledger à valider sur staging.
+
+### AUD-02 / AUD-03 — capture Wave après annulation et ledger — 7 novembre 2026
+
+- Le chemin `process_payment_event` pour une capture reçue après commande CANCELLED crée une demande refund REQUESTED de la partie payée restante ; aucune vente n'est finalisée dans ce chemin.
+- `complete_refund` n'exige pas la présence d'un crédit SALE et écrit néanmoins des lignes REFUND négatives sur chaque order_group ; il peut donc créer une dette seller sans vente créditée. Au remboursement total, il exclut CANCELLED dans l'UPDATE de la commande parent, mais marque tous les order_groups REFUNDED, créant une incohérence parent/enfants.
+- Un index unique `uq_seller_ledger_ref_type(seller_id,entry_type,reference_id)` rend aussi vulnérable le remboursement d'une commande comportant plusieurs boutiques appartenant au même vendeur, puisque complete_refund écrit une ligne REFUND par groupe avec refund_id comme référence.
+- Wave refund est appelé avant l'écriture ledger ; si cette écriture échoue, fournisseur remboursé mais transaction DB rollback, demande locale peut rester PROCESSING. Ajouter un état de rapprochement sans répéter l'appel fournisseur.
+- Runbook AUD-02 et registre mis à jour. Code financier de production non modifié. Zéro ligne de commande, paiement, refund, retour, commission, seller ledger en base au moment des vérifications.
