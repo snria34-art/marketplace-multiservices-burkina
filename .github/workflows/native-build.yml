@@ -4,11 +4,10 @@ concurrency:
   group: native-build-${{ github.ref }}
   cancel-in-progress: true
 
+# Keep this workflow manual until signing and Firebase configuration are ready.
+# This prevents a version tag from unexpectedly consuming Actions minutes.
 on:
   workflow_dispatch:
-  push:
-    tags:
-      - 'v*'
 
 permissions:
   contents: read
@@ -29,7 +28,7 @@ jobs:
           java-version: '17'
       - name: Dependencies
         run: flutter pub get
-      - name: Build Android APK
+      - name: Build Android App Bundle (AAB)
         run: flutter build appbundle --release
 
   ios-release:
@@ -43,5 +42,5 @@ jobs:
           cache: true
       - name: Dependencies
         run: flutter pub get
-      - name: Build iOS simulator (unsigned)
+      - name: Build iOS simulator (debug, unsigned)
         run: flutter build ios --simulator --debug
