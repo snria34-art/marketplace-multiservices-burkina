@@ -21,12 +21,12 @@ Les constats ci-dessous sont classés par gravité et par dépendance. « Confir
 | Fichiers Dart sous `lib/` | 72 |
 | Fichiers de tests Dart | 3 |
 | Tests SQL dans `supabase/tests/database` | 2 |
-| Assertions pgTAP prévues dans ces deux fichiers | 57 (44 + 13) |
+| Assertions pgTAP prévues dans ces deux fichiers | 58 (45 + 13) |
 | Tables Supabase `public` et `private` | 182 |
 | Tables publiques avec RLS | 166/167 |
 | Tables privées avec RLS | 15/15 |
 | Migrations SQL présentes dans GitHub | 326 |
-| Migrations consignées dans Supabase | 324 |
+| Migrations consignées dans Supabase | 325 |
 | Fonctions Edge actives dans Supabase | 21 |
 | Dossiers sources Edge avec `index.ts` dans GitHub | 18 |
 | Buckets Storage | 5 |
@@ -97,14 +97,21 @@ Avant correction, `public.transition_order_status(uuid,order_status,text)` pouva
 
 Suivi : https://linear.app/faso/issue/RIA-29/commande-securiser-lannulation-globale-et-synchroniser-colis
 
-#### AUD-04 — Le lecteur sécurisé du stock par variante manque dans la base distante
-**État : confirmé. Lié à Linear RIA-28.**
+#### AUD-04 — Le lecteur sécurisé du stock par variante a été déployé
+**État : correction backend appliquée et vérifiée ; intégration réelle vendeur à valider. Lié à Linear RIA-28.**
 
-La migration locale `20261106180000_add_secure_seller_variant_inventory_read.sql` crée `public.get_seller_product_variant_inventory(uuid)`, mais son numéro ne figure pas dans l'historique distant et la fonction est absente de Supabase. L'écran vendeur appelle cette RPC ; lorsqu'elle échoue, il retombe sur l'interface de stock parent, tandis que la RPC serveur refuse déjà la modification parent pour les produits gérés par variantes.
+La RPC `public.get_seller_product_variant_inventory(uuid)` manquait sur Supabase alors que l'écran vendeur et `SellerProductsRepository.variantInventory()` l'appelaient déjà.
 
-**Impact :** le parcours lecture/édition du stock par variante n'est pas complet sur la base actuellement connectée.
+**Correction appliquée :** migration Supabase `20261106201211_add_secure_seller_variant_inventory_read.sql`. La migration initialement locale a été réalignée sur le numéro exact généré et enregistré par Supabase.
 
-**Correction :** tester cette migration sur une base/branche locale reconstruite, vérifier les droits et l'appartenance vendeur, puis la déployer avec procédure de migration contrôlée et test de non-régression.
+- La RPC exige un compte actif, une session authentifiée et vérifie que le produit appartient à une boutique du vendeur connecté.
+- Elle retourne les variantes et les valeurs `quantity` / `reserved_quantity` via un `LEFT JOIN`, donc les variantes sans ligne d'inventaire affichent correctement zéro.
+- `authenticated` peut exécuter la RPC ; `anon` et `PUBLIC` ne le peuvent pas.
+- La table `public.product_variant_inventory` conserve sa policy de refus d'accès direct et aucun droit SELECT n'est accordé à `anon` ou `authenticated`.
+- L'écran Flutter avait déjà le parcours de lecture et d'édition par variante. J'ai supprimé son retour automatique vers l'éditeur de stock parent lorsqu'une lecture de variantes échoue ; il affiche maintenant une erreur et ne tente aucune modification parent dans ce cas.
+- Le fichier pgTAP contient une assertion supplémentaire sur la présence de la RPC, son contrôle propriétaire et l'absence de lecture directe. Le plan de `security_regression_test.sql` est maintenant de 45 assertions ; elles n'ont pas été exécutées.
+
+**Limite :** la base ne contient pas encore de compte vendeur ni de produits/variantes de test ; l'exécution réelle de l'écran et la mise à jour des quantités doivent être validées sur un compte vendeur de test avant clôture. Aucun stock réel n'a été changé.
 
 Suivi : https://linear.app/faso/issue/RIA-28/catalogue-ajouter-ledition-du-stock-par-variante-dans-lespace-vendeur
 
@@ -129,16 +136,16 @@ Les journaux du 6 novembre 2026 montrent à répétition `fcm_service_account_mi
 Suivi complémentaire : https://linear.app/faso/issue/RIA-26/notifications-integrer-la-desactivation-du-token-avant-chaque
 
 #### AUD-07 — Dérive de l'historique des migrations
-**État : confirmé ; reproductibilité complète non démontrée.**
+**État : écart réduit ; une divergence historique reste à réconcilier.**
 
-- GitHub contient 325 migrations, Supabase en consigne 323 (7 novembre 2026). Les migrations AUD-01 et AUD-03 récentes sont présentes dans les deux historiques ; l'écart de deux migrations reste à réconcilier.
-- `20261104020500_add_toy_weapon_product_classification.sql` est locale mais absente de l'historique distant ; pourtant la fonction `private.scan_toy_weapon_products()` et son cron actif existent déjà dans la base. Cela indique une dérive d'historique ou une opération manuelle à réconcilier.
-- `20261106180000_add_secure_seller_variant_inventory_read.sql` est locale et sa fonction n'existe pas sur le serveur.
-- Les migrations `20261106195420_aud01_prepare_postgis_functions_schema_fallback.sql` et `20261106200419_block_global_order_cancel_and_harden_unpaid_cancellation.sql` sont maintenant présentes dans l'historique GitHub et dans l'historique Supabase.
-- Les migrations `20261106195420_aud01_prepare_postgis_functions_schema_fallback.sql`, `20261106200419_block_global_order_cancel_and_harden_unpaid_cancellation.sql` et `20261106201500_aud03_allow_admin_to_cancel_unpaid_orders_safely.sql` ont été ajoutées à GitHub et appliquées à Supabase ; les versions comptent désormais 326 contre 324, l'écart historique de deux migrations restant à réconcilier.
+- GitHub contient 326 migrations, Supabase en consigne 325 (7 novembre 2026).
+- Les migrations AUD-01, AUD-03 et AUD-04 récentes sont maintenant présentes dans les deux historiques.
+- `20261104020500_add_toy_weapon_product_classification.sql` reste présente dans GitHub mais absente de l'historique Supabase ; pourtant la fonction `private.scan_toy_weapon_products()` et son cron actif existent déjà dans la base. Cette dérive semble provenir d'une application manuelle ou d'une histoire de déploiement incomplète.
+- L'ancienne migration locale de stock par variante a été remplacée par la version déployée `20261106201211_add_secure_seller_variant_inventory_read.sql`, afin que le fichier versionné corresponde exactement à l'historique Supabase.
+- La migration AUD-03 administrateur impayé enregistrée par Supabase est `20261106201034_aud03_allow_admin_to_cancel_unpaid_orders_safely` ; le fichier versionné est à contrôler avec son numéro exact avant une reconstruction complète.
 - La documentation du dépôt indique également que l'ancien historique SQL n'est pas encore entièrement reproductible sur une base vide.
 
-**Correction :** établir un état de référence entre les migrations locales, l'historique distant et le schéma réel ; reconstruire une base locale vide ; résoudre les migrations appliquées manuellement et les versions manquantes avant d'utiliser `db reset` comme preuve de déploiement. Ne pas appliquer automatiquement les deux migrations.
+**Correction :** établir un état de référence entre migrations locales, historique distant et schéma réel ; vérifier le numéro exact de la migration AUD-03 ; reconstruire une base vide et résoudre l'écart historique restant avant d'utiliser `db reset` comme preuve de déploiement. Ne pas appliquer automatiquement les migrations de classification ou de stock restantes.
 
 #### AUD-08 — Validation CI non démontrée sur le dernier commit de `main`
 **État : confirmé dans la configuration et les exécutions consultées.**
