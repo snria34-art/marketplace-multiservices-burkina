@@ -55,7 +55,7 @@ class _SellerCouponsPageState extends ConsumerState<SellerCouponsPage> {
       context: context,
       builder: (_) => const _CouponDialog(),
     );
-    if (form == null) return;
+    if (!mounted || form == null) return;
 
     final client = ref.read(supabaseProvider);
     if (client == null) return;
