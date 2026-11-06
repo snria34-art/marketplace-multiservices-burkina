@@ -625,3 +625,22 @@ L'annulation globale par `transition_order_status` reste le défaut SQL ouvert, 
 - La contrainte uq_seller_ledger_ref_type(seller_id,entry_type,reference_id) peut aussi faire échouer un remboursement multi-groupe si même seller_id possède plusieurs shops ; la fonction insère plusieurs REFUND avec reference_id=refund_id.
 - Edge refund appelle Wave avant la comptabilisation locale : provider-confirmed + SQL failure laisse un risque de refund en PROCESSING mais déjà remboursé en externe. Le runbook prescrit rapprochement interne sans retry provider.
 - Aucun code financier ni ledger touché. Toutes les tables métier concernées restent vides. Runbook AUD-02 complété.
+
+### AUD-05 — bloquer checkout lorsque les credentials paiement manquent — 7 novembre 2026
+
+- Ajout de `check-payment-provider-config` (v1, verify_jwt=true), Edge Function qui renvoie uniquement un booléen de configuration, aucune information de secret.
+- Wave configuré = WAVE_API_KEY + WAVE_WEBHOOK_SECRET ; CinetPay = CINETPAY_API_KEY + CINETPAY_SITE_ID + CINETPAY_SECRET_KEY.
+- `CheckoutRepository.ensurePaymentProviderConfigured()` appelle la fonction ; `CheckoutPage._checkout()` l'exécute avant `checkout_cart`. Si provider manquant, aucune commande ou réservation de stock n'est créée.
+- Model parser `PaymentProviderAvailability` ajouté et 4 tests unitaires ajoutés.
+- Déploiement vérifié live : fonction active v1, verify_jwt true ; Supabase expose 22 Edge Functions et main contient maintenant 22 dossiers sources.
+- Wave et CinetPay restent NOT_CONFIGURED ; aucun secret, marchand ou paiement test n'a été créé.
+
+### AUD-06 — FCM reste non configuré — 7 novembre 2026
+
+- Health snapshot du 6 novembre 22:20 UTC : FCM NOT_CONFIGURED, service-account manquant, project_id absent. 450 logs `fcm_service_account_missing` sur les dernières 24 h.
+- Aucun push d'appareil réel envoyé ; les secrets Firebase/APNs restent à fournir depuis les consoles officielles.
+
+### AUD-17 — nouveau test du précontrôle paiement — 7 novembre 2026
+
+- Total Flutter test files : 8. `payment_provider_availability_test.dart` apporte 4 assertions Flutter pour les réponses valides, non configurées, incohérentes et invalides.
+- Suite CI toujours non exécutée : GitHub Actions a échoué avant ses étapes. Le test source est présent sur main mais pas certifié exécuté.
