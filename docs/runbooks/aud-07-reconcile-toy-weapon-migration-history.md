@@ -46,9 +46,10 @@ Le trigger `private.prevent_reactivation_of_restricted_product()` est aussi pré
 
 La documentation officielle Supabase décrit `supabase migration repair` comme l'outil permettant d'ajouter ou retirer des entrées de l'historique distant sans rejouer le SQL de la migration.
 
-Après avoir vérifié que le terminal est bien lié au projet `dzhhsoikzxibmngjzcch`, exécuter :
+Après authentification de la CLI et liaison explicite au bon projet, exécuter :
 
 ```bash
+supabase link --project-ref dzhhsoikzxibmngjzcch
 supabase migration list
 supabase migration repair 20261104020500 --status applied
 supabase migration list
