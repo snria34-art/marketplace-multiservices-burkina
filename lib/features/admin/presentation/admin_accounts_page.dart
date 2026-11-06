@@ -77,7 +77,7 @@ class _AdminAccountsPageState extends ConsumerState<AdminAccountsPage> {
       ),
     );
     reasonController.dispose();
-    if (reason == null) return;
+    if (!mounted || reason == null) return;
 
     try {
       final client = ref.read(supabaseProvider);
