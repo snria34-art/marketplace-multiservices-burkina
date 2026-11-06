@@ -11,6 +11,8 @@ import '../../features/auth/presentation/access_status_page.dart';
 import 'route_access.dart';
 
 import '../../features/auth/presentation/sign_in_page.dart';
+import '../../features/auth/presentation/forgot_password_page.dart';
+import '../../features/auth/presentation/auth_recovery_page.dart';
 import '../../features/cart/presentation/cart_page.dart';
 import '../../features/catalog/presentation/home_page.dart';
 import '../../features/checkout/presentation/checkout_page.dart';
@@ -189,6 +191,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     routes: [
       GoRoute(path: '/', builder: (_, __) => const HomePage()),
       GoRoute(path: '/auth', builder: (_, __) => const SignInPage()),
+      GoRoute(
+        path: '/auth/forgot-password',
+        builder: (_, __) => const ForgotPasswordPage(),
+      ),
+      GoRoute(
+        path: '/auth/recovery',
+        builder: (_, __) => const AuthRecoveryPage(),
+      ),
       GoRoute(
         path: '/access-status',
         builder: (_, state) => AccessStatusPage(
