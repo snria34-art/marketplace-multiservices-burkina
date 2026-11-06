@@ -245,3 +245,21 @@ Commits :
 - `a071ac53fc62e9e8404b3eb7857e23927eaea51e`
 
 La fonction SQL et son comportement ont été vérifiés en lecture seule sur Supabase. Les deux fichiers Flutter ont été relus depuis `main`. Aucun test Flutter, analyse statique ni build n'a été exécuté dans cette session.
+
+
+### 15. Audit du stock par variante — point fonctionnel ouvert
+
+Fichiers examinés :
+- `lib/features/seller/data/seller_products_repository.dart`
+- `lib/features/seller/presentation/seller_products_page.dart`
+- fonctions Supabase `set_seller_stock` et `set_seller_variant_stock`
+
+Le serveur possède déjà une RPC dédiée au stock par variante, avec contrôle de propriété vendeur, contrôle des quantités réservées et journalisation des mouvements. L'interface Flutter actuelle ne charge ni les variantes ni leur inventaire et ne propose que l'édition du stock parent. Or la RPC `set_seller_stock` bloque explicitement le stock parent lorsqu'un produit utilise le stock par variante.
+
+Aucune modification hasardeuse du schéma ou des fonctions SQL n'a été faite. Le manque est dans l'interface et le repository Flutter. Une tâche dédiée a été créée dans Linear : [RIA-28 — édition du stock par variante](https://linear.app/faso/issue/RIA-28/catalogue-ajouter-ledition-du-stock-par-variante-dans-lespace-vendeur).
+
+### Vérification de suppression du panier
+
+La fonction SQL `set_cart_item_quantity` a été consultée en lecture seule. Elle vérifie que l'article appartient au panier actif du client connecté, exige un compte actif, supprime l'article si la quantité vaut zéro et met à jour `carts.updated_at`. Le client utilise maintenant cette RPC pour retirer un article, plutôt qu'un `DELETE` direct.
+
+Les modifications Flutter ont été relues sur `main`. Aucun test ni build n'a été exécuté.
