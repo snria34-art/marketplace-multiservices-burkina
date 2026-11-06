@@ -410,3 +410,9 @@ Commit : fbc477e2d482e5414e9bc73c4c03f29e69564ad0.
 Commits :
 - 0ea83371cef3f9da61ef1cadce45186d5b44e44b — date d'expiration produit.
 - f9bea997a02e7f7f78e9765ce07922be7c59391c — sélection photo/vidéo des avis.
+
+### 26. Validation HTTPS du paiement repris depuis le détail de commande
+
+L'action « Reprendre le paiement » dans le détail de commande ouvrait auparavant l'URL retournée par la session de paiement sans refaire les contrôles appliqués par le checkout initial. Elle valide maintenant l'URL avant ouverture : syntaxe analysable, schéma HTTPS, hôte présent et absence d'identifiants utilisateur intégrés. La reprise du paiement s'arrête aussi si le dialogue de sélection du fournisseur revient après fermeture de l'écran.
+
+Commit : b28667823294af5d8025a17b8a06f53b29cd9d49.
