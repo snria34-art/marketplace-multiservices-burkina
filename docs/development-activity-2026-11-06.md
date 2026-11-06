@@ -165,3 +165,19 @@ Correction :
 Commit : `fd8462b3752337bcc2b69ed29831b328a7184761`.
 
 Le changement a été relu depuis `main`. Aucun test Flutter ni build n'a été exécuté dans cette session, faute de SDK Flutter/Dart disponible.
+
+### 10. Protection des écrans vendeur pendant les opérations asynchrones
+
+Fichier : `lib/features/seller/presentation/seller_products_page.dart`
+
+Plusieurs opérations de création de produit, de sélection de photos et de modification du stock reprenaient l'exécution après des `await` sans vérifier que l'écran était toujours monté. Une navigation pendant le chargement ou l'ouverture du sélecteur pouvait conduire à l'utilisation d'un `BuildContext` démonté ou d'un provider après destruction du widget.
+
+Correction :
+- vérification de `mounted` après le chargement des boutiques et catégories ;
+- arrêt de la suite du formulaire si l'écran est fermé avant son retour ;
+- contrôles après les sélecteurs d'images et avant l'ouverture des dialogues d'emballage ;
+- vérification après le dialogue de stock avant de relire le provider.
+
+Commit : `51f4251f073b575212f303dc773f17c5b112d59d`.
+
+Le fichier a été relu sur `main`. Les tests et l'analyse Flutter restent à exécuter dans un environnement disposant du SDK.
