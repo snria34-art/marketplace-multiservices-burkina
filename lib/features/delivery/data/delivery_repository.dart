@@ -6,6 +6,13 @@ class DeliveryRepository {
 
   final SupabaseClient client;
 
+  static const _activeAssignmentStatuses = {
+    'ASSIGNED',
+    'ACCEPTED',
+    'PICKED_UP',
+    'IN_TRANSIT',
+  };
+
   Future<List<Map<String, dynamic>>> packagesForOrder(
     String orderId,
   ) async {
@@ -32,8 +39,14 @@ class DeliveryRepository {
             : null;
 
         final assignments = package['delivery_assignments'];
-        final assignment = assignments is List && assignments.isNotEmpty
-            ? Map<String, dynamic>.from(assignments.first as Map)
+        final activeAssignments = assignments is List
+            ? assignments.where((raw) {
+                final status = (raw as Map)['status']?.toString().toUpperCase();
+                return __activeAssignmentStatuses.contains(status);
+              }).toList()
+            : const [];
+        final assignment = activeAssignments.isNotEmpty
+            ? Map<String, dynamic>.from(activeAssignments.first as Map)
             : null;
         package['assignment'] = assignment;
 
@@ -90,13 +103,6 @@ class DeliveryRepository {
 
     final packageIds = <String>{};
     final courierIds = <String>{};
-    const activeAssignmentStatuses = {
-      'ASSIGNED',
-      'ACCEPTED',
-      'PICKED_UP',
-      'IN_TRANSIT',
-    };
-
     for (final rawGroup in groups as List) {
       final group = rawGroup as Map;
       final rawPackages = group['order_packages'];
