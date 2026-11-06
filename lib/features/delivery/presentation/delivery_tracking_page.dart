@@ -52,8 +52,9 @@ class _DeliveryTrackingPageState
   }
 
   Future<void> _subscribeRealtime() async {
+    final client = ref.read(supabaseProvider);
     final repo = ref.read(deliveryRepositoryProvider);
-    if (repo == null) return;
+    if (client == null || repo == null) return;
 
     try {
       final channel = await repo.watchOrder(
@@ -65,7 +66,7 @@ class _DeliveryTrackingPageState
       );
 
       if (!mounted) {
-        await ref.read(supabaseProvider)?.removeChannel(channel);
+        await client.removeChannel(channel);
         return;
       }
       _channel = channel;
