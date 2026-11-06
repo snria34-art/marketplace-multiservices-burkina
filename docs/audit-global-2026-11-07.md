@@ -5,7 +5,7 @@
 **Branche :** `main`  
 **Supabase :** `dzhhsoikzxibmngjzcch` — PostgreSQL 17.6 — `eu-west-1`  
 **Nature :** audit statique du dépôt + contrôles Supabase + examen des workflows et journaux.  
-**Mises à jour AUD-01/AUD-03/AUD-04/AUD-06/AUD-11/AUD-12/AUD-13/AUD-14/AUD-15/AUD-16/AUD-17/AUD-18/AUD-19 :** protections commandes, accès et GPS renforcées, parité Edge Functions restaurée, tests de contrats ajoutés, capacité/backup évalués et récupération du mot de passe email ajoutée côté app. Aucun paiement réel, test de charge ou restore production, compte propriétaire ou associé n'a été réalisé.
+**Mises à jour AUD-01/AUD-03/AUD-04/AUD-06/AUD-11/AUD-12/AUD-13/AUD-14/AUD-15/AUD-16/AUD-17/AUD-18/AUD-19/AUD-20 :** protections commandes, accès et GPS renforcées, parité Edge Functions restaurée, récupération email ajoutée côté app, tests de contrats et diagnostics capacité/index approfondis. Aucun paiement réel, test de charge ou restore production, compte propriétaire ou associé n'a été réalisé.
 
 ## 1. Conclusion
 
@@ -348,10 +348,26 @@ Runbook : `docs/runbooks/aud-19-email-password-recovery.md`.
 
 ### P3 — Alertes d'information, pas des défauts à corriger en masse
 
-#### AUD-20 — 368 index signalés inutilisés
-**État : information de l'advisor performance.**
+#### AUD-20 — 366 index non uniques signalés inutilisés
+**État : mesure PostgreSQL détaillée ; aucune suppression justifiée à ce stade.**
 
-Le signal « unused index » dépend des statistiques d'utilisation et du trafic observé. Le volume métier est actuellement quasi nul. Ne pas supprimer ces index sans mesure en charge et examen des requêtes/contraintes.
+Supabase Performance Advisor remonte 366 index `unused_index` au niveau INFO (observés le 6 novembre à 21:40 UTC).
+
+Lecture de `pg_stat_user_indexes` et `pg_index` :
+- Stats reset : 25 août 2026 à 20:33 UTC.
+- Schéma `public` : 571 index dont 559 sans scan.
+- Schéma `private` : 44 index dont 39 sans scan.
+- Total public/private sans scan : 598 ; parmi eux 232 index sont primaires ou uniques et ne doivent pas être considérés comme candidats à la suppression.
+- Les 366 restants sont précisément les index non uniques/non primaires sans scan, même nombre que l'advisor.
+- Taille des 366 index : 3 031 040 octets (~2,9 MiB). Taille totale des 598 index sans scan : 5 414 912 octets (~5,2 MiB).
+- La plupart des tables métier contrôlées ont zéro ligne ; les tables produits, commandes, remboursements, avis, livreurs, messages, boutiques et demandes de service ne présentent pas encore de trafic représentatif.
+- Dernier ANALYZE observé : 21 septembre 2026 ; dernier AUTOANALYZE : 6 novembre 2026.
+
+Plusieurs index sans scan protègent des parcours critiques qui ne sont simplement pas utilisés avec des tables vides : historique commandes, produits par boutique/état, péremption, missions coursier, dernières positions GPS, colis, messages, paiements, commissions, payouts et remboursements. D'autres index uniques assurent l'idempotence checkout, les références fournisseurs, les slugs ou les noms de boutiques.
+
+**Décision :** aucun index supprimé et aucune migration destructive préparée. Le coût mémoire actuel des 366 index candidats est inférieur à 3 MiB, alors qu'une suppression prématurée peut rendre les premiers parcours métier lents ou dégrader l'intégrité. Refaire la mesure après un jeu de données staging représentatif et trafic réel, étudier les plans EXPLAIN/BUFFERS et les contraintes avant toute décision.
+
+Runbook : `docs/runbooks/aud-20-unused-index-review.md`.
 
 #### AUD-21 — 17 tables RLS sans policy
 **État : contrôlé, non retenu comme vulnérabilité directe.**
