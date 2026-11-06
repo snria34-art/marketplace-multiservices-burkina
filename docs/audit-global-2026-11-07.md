@@ -5,7 +5,7 @@
 **Branche :** `main`  
 **Supabase :** `dzhhsoikzxibmngjzcch` — PostgreSQL 17.6 — `eu-west-1`  
 **Nature :** audit statique du dépôt + contrôles Supabase + examen des workflows et journaux.  
-**Mise à jour AUD-01 :** une migration non destructive a été appliquée uniquement aux deux RPC spatiales pour préparer le déplacement PostGIS ; aucune table, donnée métier, colonne, index, clé secrète, fonction Edge, configuration de paiement ou compte propriétaire n'a été modifié/créé.
+**Mises à jour AUD-01/AUD-03 :** préparation non destructive des deux RPC PostGIS et durcissement des RPC d'annulation impayée appliqués sur Supabase. Aucun paiement, remboursement, solde vendeur, ligne métier ou compte propriétaire n'a été créé/modifié.
 
 ## 1. Conclusion
 
@@ -21,12 +21,12 @@ Les constats ci-dessous sont classés par gravité et par dépendance. « Confir
 | Fichiers Dart sous `lib/` | 72 |
 | Fichiers de tests Dart | 3 |
 | Tests SQL dans `supabase/tests/database` | 2 |
-| Assertions pgTAP prévues dans ces deux fichiers | 54 (41 + 13) |
+| Assertions pgTAP prévues dans ces deux fichiers | 56 (43 + 13) |
 | Tables Supabase `public` et `private` | 182 |
 | Tables publiques avec RLS | 166/167 |
 | Tables privées avec RLS | 15/15 |
-| Migrations SQL présentes dans GitHub | 324 |
-| Migrations consignées dans Supabase | 322 |
+| Migrations SQL présentes dans GitHub | 325 |
+| Migrations consignées dans Supabase | 323 |
 | Fonctions Edge actives dans Supabase | 21 |
 | Dossiers sources Edge avec `index.ts` dans GitHub | 18 |
 | Buckets Storage | 5 |
@@ -57,22 +57,43 @@ Les mesures de quantité ne prouvent pas la qualité fonctionnelle. Les 54 asser
 ### P1 — Bloquants métier, financiers et opérationnels
 
 #### AUD-02 — Les remboursements partiels débitent potentiellement des vendeurs non concernés
-**État : confirmé dans la fonction SQL. Lié à Linear RIA-25.**
+**État : confirmé ; modèle de correction documenté, code financier de production non modifié. Lié à Linear RIA-25.**
 
-`public.complete_refund(uuid,text)` répartit le montant du remboursement au prorata du sous-total de **tous** les groupes vendeurs de la commande. La fonction ne reçoit pas d'allocation explicite par article, quantité ou groupe. Pour un retour partiel qui concerne une seule boutique, son ledger peut donc être débité alors que d'autres boutiques supportent aussi une part du remboursement.
+`public.complete_refund(uuid,text)` répartit le montant de chaque remboursement au prorata du subtotal de **tous** les groupes vendeurs de la commande. La fonction ne reçoit pas d'allocation explicite par article, quantité ou groupe. Pour un retour partiel qui concerne une seule boutique, le ledger d'autres vendeurs peut donc être débité.
 
-**Correction :** spécifier l'allocation par ligne d'article/groupe, quantités, remise, commission, frais de livraison, taxes éventuelles et remboursements déjà traités. Ajouter des tests transactionnels pour les commandes multi-vendeurs, plusieurs remboursements partiels, vendeurs multiples et plusieurs boutiques appartenant au même vendeur. Ne pas modifier la fonction de production avant définition de cette règle comptable.
+Constats complémentaires vérifiés le 7 novembre :
+
+- `public.refunds` n'a pas de référence à un groupe, un article, un retour ou une quantité.
+- `public.returns` peut référencer un seul `order_item_id`, mais n'enregistre pas la quantité demandée/acceptée et ne référence aucun remboursement.
+- `request_refund(order_id, amount, reason)` ne reçoit pas la portée commerciale du remboursement.
+- `orders.discount_total` conserve la remise globale ; aucune ventilation par `order_item` ou groupe n'est figée au checkout. Les sous-totaux des groupes et les prix des lignes restent bruts.
+- Deux fonctions de finalisation vendeur existent avec des conventions différentes : `finalize_seller_group` crédite le `SALE` brut et débite la `COMMISSION` séparément ; `finalize_seller_group_financials` crédite le `SALE` net et conserve la commission dans une autre convention de statut. Aucun appelant SQL interne ou trigger appelant ces routines n'a été identifié lors des contrôles ; leurs appels serveur réels doivent être confirmés.
+- `reverse_seller_group` est une inversion complète du groupe, pas un mécanisme générique de retour partiel d'un article.
+
+**Risque :** imputation financière erronée entre boutiques, vendeurs, plateforme et frais de livraison ; la quantité retournée et la commission correspondante ne sont pas traçables.
+
+**Correction retenue :** modèle explicite et immuable `refund_allocations` par groupe/article/quantité et type d'allocation, snapshots de remise/funding par ligne au checkout, règles distinctes pour le remboursement client, le débit vendeur, le reversement de commission et les frais de livraison. Les tests doivent garantir que la somme des allocations égale exactement le montant rendu au client et qu'aucun vendeur non concerné n'est débité.
+
+**Limite volontaire :** ne pas modifier `complete_refund`, `refunds`, `seller_ledger`, les commissions ou les soldes avant validation des règles coupons/livraison/commission et tests sur base isolée. Le runbook `docs/runbooks/aud-02-refund-allocation.md` contient le diagnostic, le modèle recommandé, les invariants et la matrice de tests.
 
 Suivi : https://linear.app/faso/issue/RIA-25/bloquant-finance-corriger-lallocation-des-remboursements-partiels
 
-#### AUD-03 — L'annulation globale ne synchronise pas tous les colis et remboursements
-**État : confirmé dans la fonction SQL. Lié à Linear RIA-29.**
+#### AUD-03 — L'annulation globale ne synchronisait pas les colis, affectations et remboursements
+**État : correction serveur appliquée et vérifiée pour le chemin d'annulation globale ; tests d'intégration et validation des parcours utilisateurs encore requis. Lié à Linear RIA-29.**
 
-`public.transition_order_status(uuid,order_status,text)` est exécutable par `authenticated`. Elle autorise l'annulation d'une commande payée par le client ou l'administrateur et libère des réservations de stock. Elle met à jour la commande et les groupes, mais ne synchronise pas systématiquement les colis et affectations coursier, ne bloque pas explicitement une annulation après prise en charge et ne déclenche pas, à elle seule, une demande de remboursement pour un paiement déjà encaissé.
+Avant correction, `public.transition_order_status(uuid,order_status,text)` pouvait annuler directement une commande payée, libérer les stocks et ne pas fermer tous les colis/affectations ni lancer un remboursement cohérent.
 
-Le chemin distinct `cancel_unpaid_order(uuid)` est plus restrictif et traite correctement les commandes en attente de paiement ; il ne corrige pas le problème de la RPC globale.
+**Correction appliquée sur Supabase :** migration `20261106200419_block_global_order_cancel_and_harden_unpaid_cancellation.sql`.
 
-**Correction :** définir une machine d'état cohérente commande/groupe/colis/affectation/paiement/remboursement et retirer les transitions impossibles. Ajouter des tests sur colis créé, accepté, ramassé, en transit, livré et paiement déjà encaissé. Coordonner avec AUD-02.
+- La transition globale `CANCELLED` délègue maintenant à `public.cancel_unpaid_order(uuid)`. Elle ne marque plus directement une commande payée comme annulée et ne libère plus le stock elle-même.
+- Le parcours impayé exige une commande `PENDING_PAYMENT` appartenant au client, un compte actif et l'absence de paiement réglé.
+- Il refuse toute commande ayant un colis/une affectation déjà ramassé(e), en transit, livré(e), retourné(e), endommagé(e) ou perdu(e), ainsi qu'une consommation de stock déjà enregistrée.
+- Il libère le stock par produit et variante, annule les affectations pré-départ et écrit `delivery_assignment_events`, annule les colis/groupes, libère les utilisations de coupons et journalise l'annulation dans `order_events`.
+- Les privilèges `EXECUTE` restent limités à `authenticated` et `service_role`, pas à `anon`.
+
+**Vérification SQL après migration :** propriétaire PostgreSQL et `SECURITY DEFINER` conservés ; délégation vers le flux impayé confirmée ; absence de libération de stock directe dans la fonction globale confirmée ; gardes paiement/dispatch/consommation confirmées dans le flux impayé ; aucun accès anon. La base ne contient actuellement aucune commande, paiement, réservation de livraison, remboursement ou utilisation de coupon : aucun flux métier réel n'a été exécuté.
+
+**Limites restantes :** les deux nouveaux tests pgTAP sont ajoutés, mais non exécutés ; les parcours Flutter/Edge doivent être testés sur un runner et une base isolée. L'annulation d'une commande déjà payée reste volontairement bloquée par cette RPC tant qu'un workflow de remboursement/retour complet n'est pas défini (voir AUD-02). Cette correction ne déclare pas le ticket RIA-29 entièrement terminé.
 
 Suivi : https://linear.app/faso/issue/RIA-29/commande-securiser-lannulation-globale-et-synchroniser-colis
 
@@ -110,9 +131,10 @@ Suivi complémentaire : https://linear.app/faso/issue/RIA-26/notifications-integ
 #### AUD-07 — Dérive de l'historique des migrations
 **État : confirmé ; reproductibilité complète non démontrée.**
 
-- GitHub contient 323 migrations, Supabase en consigne 321.
+- GitHub contient 325 migrations, Supabase en consigne 323 (7 novembre 2026). Les migrations AUD-01 et AUD-03 récentes sont présentes dans les deux historiques ; l'écart de deux migrations reste à réconcilier.
 - `20261104020500_add_toy_weapon_product_classification.sql` est locale mais absente de l'historique distant ; pourtant la fonction `private.scan_toy_weapon_products()` et son cron actif existent déjà dans la base. Cela indique une dérive d'historique ou une opération manuelle à réconcilier.
 - `20261106180000_add_secure_seller_variant_inventory_read.sql` est locale et sa fonction n'existe pas sur le serveur.
+- Les migrations `20261106195420_aud01_prepare_postgis_functions_schema_fallback.sql` et `20261106200419_block_global_order_cancel_and_harden_unpaid_cancellation.sql` sont maintenant présentes dans l'historique GitHub et dans l'historique Supabase.
 - La migration `20261106195420_aud01_prepare_postgis_functions_schema_fallback.sql` a été ajoutée à GitHub et appliquée à Supabase ; les versions comptent désormais 324 contre 322, l'écart de deux migrations restant à réconcilier.
 - La documentation du dépôt indique également que l'ancien historique SQL n'est pas encore entièrement reproductible sur une base vide.
 
