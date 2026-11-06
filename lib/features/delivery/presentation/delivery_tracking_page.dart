@@ -39,16 +39,7 @@ class _DeliveryTrackingPageState
     _future = _load();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final repo = ref.read(deliveryRepositoryProvider);
-      if (repo != null) {
-        _channel = repo.watchOrder(
-          widget.orderId,
-          () {
-            if (!mounted) return;
-            setState(() => _future = _load());
-          },
-        );
-      }
+      _subscribeRealtime();
 
       _timer = Timer.periodic(
         const Duration(seconds: 15),
@@ -58,6 +49,30 @@ class _DeliveryTrackingPageState
         },
       );
     });
+  }
+
+  Future<void> _subscribeRealtime() async {
+    final repo = ref.read(deliveryRepositoryProvider);
+    if (repo == null) return;
+
+    try {
+      final channel = await repo.watchOrder(
+        widget.orderId,
+        () {
+          if (!mounted) return;
+          setState(() => _future = _load());
+        },
+      );
+
+      if (!mounted) {
+        await ref.read(supabaseProvider)?.removeChannel(channel);
+        return;
+      }
+      _channel = channel;
+    } catch (_) {
+      // The existing periodic refresh remains as a fallback if Realtime
+      // subscription setup is temporarily unavailable.
+    }
   }
 
   Future<List<Map<String, dynamic>>> _load() {
