@@ -68,3 +68,37 @@ Le code serveur et Flutter sont prêts, mais l'activation réelle sur les télé
 5. Vérifier la réception, puis confirmer que le taux d'erreur Health revient à la normale.
 
 **Important :** le déploiement version 8 synchronise le code, mais ne peut pas remplacer les secrets Firebase manquants et ne prouve pas encore la réception d'une notification sur un téléphone.
+
+## Diagnostic et correction restante — 6 novembre 2026
+
+### Ce qui fonctionne côté serveur
+
+- Le job pg_cron numéro 1 est actif et s'exécute chaque minute.
+- Il appelle `/functions/v1/dispatch-push-notifications`.
+- Les appels de vérification `verify_push_dispatch_secret` retournent HTTP 200 dans les journaux observés entre 14:29 et 14:38 UTC.
+- La fonction est déployée en version 8 (ACTIVE), avec `verify_jwt=false` et le contrôle applicatif du secret conservé.
+
+### Blocage restant
+
+La configuration Firebase n'est pas présente dans le dépôt : `google-services.json`, `GoogleService-Info.plist` et `firebase_options.dart` doivent provenir du projet Firebase réel. Le compte de service FCM doit être installé dans les secrets Supabase. Sans ces éléments, l'API FCM ne peut pas authentifier les envois.
+
+### Procédure de finalisation sans exposer de clé
+
+1. Dans Firebase Console, ouvrir le projet réel de Marketplace Burkina (ou le créer si aucun projet n'existe).
+2. Enregistrer l'application Android avec son identifiant de package exact et l'application iOS avec son Bundle ID exact.
+3. Télécharger `google-services.json` et `GoogleService-Info.plist`, puis générer `firebase_options.dart` avec FlutterFire CLI. Ces fichiers doivent correspondre aux identifiants natifs du dépôt.
+4. Dans Google Cloud Console du même projet, activer Firebase Cloud Messaging API et créer un compte de service avec uniquement la permission nécessaire pour envoyer des messages FCM (`cloudmessaging.messages.create`).
+5. Générer une clé JSON pour ce compte de service. Ne pas la coller dans le chat, dans GitHub, dans un ticket ou dans un fichier source.
+6. Dans Supabase Dashboard → projet `dzhhsoikzxibmngjzcch` → Edge Functions → Secrets, créer `FCM_SERVICE_ACCOUNT_JSON` avec le contenu JSON complet. Le champ `project_id` du JSON doit correspondre au projet Firebase. Le code lit aussi `FCM_PROJECT_ID` comme solution de repli si nécessaire.
+7. Après configuration, vérifier les journaux et envoyer au maximum une notification de test vers un appareil de test explicitement choisi. Ne pas lancer de test de masse.
+
+### Protection des clés
+
+- Ne jamais committer le JSON du compte de service.
+- Ne jamais utiliser une clé Firebase Admin dans Flutter ou dans une application mobile.
+- Limiter l'accès au secret Supabase aux personnes qui administrent le projet.
+- Si une clé de service est exposée, la révoquer immédiatement dans Google Cloud IAM et en générer une nouvelle.
+
+### État
+
+Le worker backend est déployé en version 8. La configuration Firebase et les fichiers natifs réels restent à fournir par le propriétaire du projet Firebase. Aucune notification de test ni notification de masse n'a été envoyée pendant ce diagnostic.
