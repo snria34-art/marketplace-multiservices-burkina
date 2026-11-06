@@ -563,3 +563,15 @@ L'annulation globale par `transition_order_status` reste le défaut SQL ouvert, 
 - Tests CI Flutter/pgTAP/Deno toujours non exécutés avec une étape lisible. Plus de tests d'intégration réels restent nécessaires avant de mesurer un score de qualité.
 - Ticket suivi : RIA-27.
 
+
+
+### AUD-18 — mesure de capacité et plan de reprise — 7 novembre 2026
+
+- Relevé Postgres en lecture seule : 80 MB, max_connections 60, 3 réservées, 11 connexions observées.
+- Logs PgBouncer 24 h : zéro saturation / connexion client refusée ; les 71 timeouts correspondaient à des connexions serveur inactives.
+- Archiver WAL : 33 222 archivages, 0 échec ; aucun slot ni lien de réplication. Cela ne prouve pas la disponibilité de sauvegardes quotidiennes/PITR.
+- Base d'essai insuffisante : Auth users 0, profils 0, produits 0, storage objects 0.
+- Le test de charge k6 read-only est préparé pour staging uniquement ; aucun test n'a été exécuté et le projet de production n'a reçu aucune charge artificielle.
+- Le compute/plan exact, la limite pooler et la présence/rétention des backups doivent être vérifiés dans Supabase Dashboard. Aucun coût compute ou option PITR engagés.
+- La restauration et la stratégie RPO/RTO restent non testées. Runbook `docs/runbooks/aud-18-capacity-backup-restore.md`, ticket Linear RIA-32.
+
