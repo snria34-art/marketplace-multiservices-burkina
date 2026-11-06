@@ -78,3 +78,45 @@ Commit : `654f6fb97dd2c9bb19fa426704020eeeb858f5e4`.
 Un taux de correction de 89 % ne peut pas être certifié à partir d'une revue partielle ou d'un nombre de fichiers corrigés. Il faut un inventaire exhaustif des défauts, une pondération par criticité et des validations reproductibles. Ce rapport ne transforme donc pas l'objectif de 89 % en score fictif.
 
 La correction de configuration livrée ici est vérifiable dans GitHub, mais le projet n'est pas certifié prêt pour la production. Les validations automatisées restent volontairement non exécutées.
+
+
+## Addendum — vérifications connectées du 6 novembre 2026
+
+### Supabase réel
+
+- Projet : `dzhhsoikzxibmngjzcch`, statut `ACTIVE_HEALTHY`, PostgreSQL `17.6.1.166`, région `eu-west-1`.
+- Historique distant : 321 migrations.
+- Schémas contrôlés : 182 tables.
+- L'unique table recensée sans RLS dans le schéma public reste `public.spatial_ref_sys` (8 500 lignes).
+
+### Blocage de propriété de spatial_ref_sys
+
+La lecture de `pg_class` et des privilèges confirme :
+
+- propriétaire : `supabase_admin` ;
+- RLS : désactivé ;
+- `anon` et `authenticated` disposent de SELECT, INSERT, UPDATE, DELETE et TRUNCATE ;
+- le rôle de connexion `postgres` n'est pas superuser et n'est pas membre de `supabase_admin`.
+
+Le compte connecté ne peut donc pas appliquer `ALTER TABLE ... ENABLE ROW LEVEL SECURITY` ni retirer les privilèges accordés par le propriétaire PostGIS. Aucun contournement par changement de rôle n'a été tenté. Il faut une intervention par le propriétaire de l'extension ou une réduction ciblée de l'exposition Data API qui préserve les fonctions PostGIS. Ne pas déplacer l'extension ou modifier les catalogues système.
+
+### Conseillers Supabase
+
+- Sécurité : 1 ERROR (`spatial_ref_sys` sans RLS), 5 WARN (extensions en `public` et fonctions PostGIS exécutables par anon/authenticated), 17 INFO (RLS activé sans policy ; ne pas ajouter de policies permissives pour faire disparaître les alertes).
+- Performance : 368 index signalés inutilisés. Aucun index supprimé : le signal est non concluant avant trafic représentatif.
+- Health : la fonction push continue de renvoyer 503 tant que le compte de service FCM est absent.
+
+### Notifications — correction livrée
+
+- `dispatch-push-notifications` : **version 10 ACTIVE**.
+- Vérification du code déployé : le worker traite au plus cinq notifications simultanément et cinq appareils simultanément par notification.
+- Les journaux de la version 10 confirment encore `fcm_service_account_missing` et `hasFcmProjectId=false`. Il s'agit d'une configuration externe manquante, pas d'une erreur qui peut être corrigée en modifiant le code.
+- Le compte de service n'a pas été créé, lu ou ajouté : aucune interface de gestion des secrets Edge Function n'est exposée par le connecteur Supabase utilisé ici.
+
+### Flutter — correction livrée
+
+`PushNotificationService.initialize` intercepte maintenant toutes les exceptions de l'initialisation Firebase et journalise le détail uniquement en mode debug. L'absence de fichiers Firebase natifs ne doit pas remonter comme exception non gérée au démarrage de l'application.
+
+### Limites de validation
+
+Aucun workflow GitHub Actions, analyse Flutter, test Dart/SQL, build mobile, migration de production, notification de test ou campagne de notifications n'a été lancé. Les corrections de code et le déploiement Edge Function sont confirmés par relecture GitHub/Supabase ; la compilation Flutter et la réception sur un téléphone restent à valider après configuration Firebase.
