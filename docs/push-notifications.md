@@ -85,3 +85,6 @@ Le service Flutter expose maintenant `signOutAndDeactivateCurrentDevice()` :
 3. Appeler `auth.signOut()` seulement après la désactivation.
 
 Le listener `signedOut` ne tente plus une RPC tardive. Les futurs boutons et menus de déconnexion doivent utiliser cette méthode. L'intégration des interfaces et les scénarios de session expirée/perte réseau sont suivis dans Linear **RIA-26**. Aucun parcours complet de déconnexion n'a encore été testé sur appareil.
+
+
+Le listener `onAuthStateChange` possède également un gestionnaire `onError` explicite. Les erreurs de rafraîchissement ou de réseau transmises par le flux sont journalisées en mode debug au lieu de devenir des exceptions non gérées. Aucun token ni contenu privé n'est journalisé.
