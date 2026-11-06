@@ -5,7 +5,7 @@
 **Branche :** `main`  
 **Supabase :** `dzhhsoikzxibmngjzcch` — PostgreSQL 17.6 — `eu-west-1`  
 **Nature :** audit statique du dépôt + contrôles Supabase + examen des workflows et journaux.  
-**Mises à jour AUD-01/AUD-03/AUD-04/AUD-06/AUD-11/AUD-12/AUD-13/AUD-16 :** préparation PostGIS, annulation impayée sécurisée, RPC stock variante, surveillance FCM/Storage, guards de navigation, séparation admin/modérateur et déconnexion avec révocation du token appliquées/documentées. Aucun paiement, remboursement, stock, solde vendeur, compte propriétaire ou associé n'a été créé/modifié.
+**Mises à jour AUD-01/AUD-03/AUD-04/AUD-06/AUD-11/AUD-12/AUD-13/AUD-14/AUD-15/AUD-16 :** préparation PostGIS, annulation impayée sécurisée, RPC stock variante, surveillance FCM/Storage, guards de navigation, séparation admin/modérateur, révocation FCM à la déconnexion, GPS arrière-plan et parité des sources Edge Functions appliqués/documentés. Aucun paiement réel, compte propriétaire ou associé n'a été créé.
 
 ## 1. Conclusion
 
@@ -262,17 +262,24 @@ L'ancien code utilisait un `Timer.periodic(15s)` attaché à la page coursier : 
 
 Runbook : `docs/runbooks/aud-14-courier-background-location.md`. Suivi livraison/GPS : https://linear.app/faso/issue/RIA-11/07-livraison-et-gps. Conservation GPS : https://linear.app/faso/issue/RIA-31/confidentialite-definir-la-conservation-et-la-purge-des-positions-gps.
 
-#### AUD-15 — Trois fonctions Edge déployées n'ont pas de source correspondante dans GitHub
-**État : confirmé.**
+#### AUD-15 — Dérive entre sources Edge Functions et déploiements Supabase
+**État : source parity restaurée ; trois fonctions déployées et relues ; CI Deno non confirmé.**
 
-Supabase expose 21 fonctions actives ; le dépôt contient 18 dossiers de fonctions avec `index.ts`. Les fonctions déployées sans source locale correspondante sont :
-- `expire-products` v2 ;
-- `admin-health-check` v2 ;
-- `payment-webhook-gateway` v3.
+Au départ, Supabase exposait 21 fonctions et le dépôt ne contenait que 18 dossiers sources. Les trois absentes étaient `expire-products` v2, `admin-health-check` v2 et `payment-webhook-gateway` v3.
 
-La dernière est un ancien endpoint qui répond explicitement HTTP 410 `legacy_endpoint_retired`, mais demeure déployé. Les deux premières ont du code métier et des contrôles administrateur côté serveur.
+**Corrections appliquées :**
+- Sources de `expire-products` et `admin-health-check` restaurées dans GitHub. Les deux exigences `admin_users.active=true` et `profiles.status='ACTIVE'` sont maintenant vérifiées côté fonction, avec refus par défaut si une lecture d'autorisation échoue.
+- Code tombstone de `payment-webhook-gateway` versionné ; la fonction reste explicitement retirée, HTTP 410 `legacy_endpoint_retired`, sans logique de paiement.
+- Les trois fonctions ont été redéployées et relues depuis Supabase :
+  - `expire-products` v3, `verify_jwt=true`, contrôles admin + profil ACTIVE confirmés ;
+  - `admin-health-check` v3, `verify_jwt=true`, contrôles admin + profil ACTIVE confirmés ;
+  - `payment-webhook-gateway` v4, `verify_jwt=false`, HTTP 410 confirmé.
+- Le projet expose toujours 21 fonctions et GitHub contient maintenant 21 dossiers sources correspondants : parité 21/21. Aucun endpoint n'a été supprimé ou désactivé.
+- Aucun secret n'a été lu ou ajouté à GitHub ; aucun paiement ni produit réel n'a été modifié.
 
-**Correction :** versionner les deux sources manquantes, documenter le tombstone 410, puis vérifier les références entrantes et sortantes avant de désactiver une ancienne fonction.
+**Limite CI :** le workflow Edge Functions a échoué sans enregistrer d'étapes ou journaux récupérables. Les sources déployées ont été relues, mais `deno check` n'est donc pas confirmé. Le test Deno doit être relancé quand GitHub Actions attribuera un runner.
+
+Runbook : `docs/runbooks/aud-15-edge-function-source-parity.md`.
 
 #### AUD-16 — Le moniteur Storage ne couvrait initialement que deux buckets sur cinq
 **État : correction de surveillance appliquée et testée ; flux d'accès aux objets encore à valider.**
