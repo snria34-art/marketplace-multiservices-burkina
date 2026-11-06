@@ -33,6 +33,7 @@ void main() {
         '/',
         '/auth/forgot-password',
         '/auth/recovery',
+        '/recovery',
         '/restaurants',
         '/transport',
         '/mechanics',
