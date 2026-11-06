@@ -260,6 +260,61 @@ class VerticalRepository {
       ))
           .toString();
 
+  Future<String> requestCreativeBooking({
+    required String serviceId,
+    DateTime? scheduledAt,
+  }) async =>
+      (await client.rpc(
+        'request_creative_booking',
+        params: {
+          'p_service_id': serviceId,
+          'p_scheduled_at': scheduledAt?.toUtc().toIso8601String(),
+        },
+      ))
+          .toString();
+
+  Future<void> cancelCreativeBooking(String bookingId) async {
+    await client.rpc(
+      'cancel_creative_booking',
+      params: {'p_booking_id': bookingId},
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> myCreativeBookings() async {
+    final user = client.auth.currentUser;
+    if (user == null) return const [];
+
+    final rows = await client
+        .from('creative_bookings')
+        .select(
+          'id,service_id,scheduled_at,status,agreed_amount,creative_services(name,category)',
+        )
+        .eq('customer_id', user.id)
+        .limit(100);
+
+    return _maps(rows);
+  }
+
+  Future<List<Map<String, dynamic>>> providerCreativeBookings() async {
+    final rows = await client.rpc('get_provider_creative_bookings');
+    return _maps(rows);
+  }
+
+  Future<void> respondCreativeBooking({
+    required String bookingId,
+    required String decision,
+    num? agreedAmount,
+  }) async {
+    await client.rpc(
+      'respond_creative_booking',
+      params: {
+        'p_booking_id': bookingId,
+        'p_decision': decision,
+        'p_agreed_amount': agreedAmount,
+      },
+    );
+  }
+
   Future<String> applyToJob(String jobId) async =>
       (await client.rpc(
         'apply_to_job',
