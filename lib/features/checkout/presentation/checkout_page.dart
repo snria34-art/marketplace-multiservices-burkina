@@ -160,7 +160,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
     if (repo == null) return;
 
     try {
-      await repo.createAddress(
+      final createdAddress = await repo.createAddress(
         label: result['label']?.toString(),
         recipientName: result['recipient_name'].toString(),
         phone: result['phone']?.toString(),
@@ -170,8 +170,23 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
         longitude: double.tryParse(result['longitude']?.toString() ?? ''),
       );
 
+      final createdAddressId = createdAddress['id']?.toString();
+      if (createdAddressId == null || createdAddressId.trim().isEmpty) {
+        throw StateError(
+          'L’adresse a été enregistrée sans identifiant exploitable.',
+        );
+      }
+
       if (!mounted) return;
-      setState(() => _addressesFuture = _loadAddresses());
+      setState(() {
+        _selectedAddressId = createdAddressId;
+        _selectedAddress = createdAddress;
+        _quote = null;
+        _quoteError = false;
+        _addressesFuture = _loadAddresses();
+      });
+
+      await _selectAddress(createdAddress);
     } catch (error) {
       if (!mounted) return;
 
