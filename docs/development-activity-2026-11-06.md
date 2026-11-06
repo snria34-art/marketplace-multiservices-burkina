@@ -393,3 +393,11 @@ Commit : 226cea1fbc0dcefa9b9dc30a2b01f5f971d27fbf.
 Les callbacks asynchrones de sélection de photo et de vidéo dans la réponse de modération vendeur interceptent désormais les erreurs du système de fichiers, de la caméra/galerie et de l'initialisation du lecteur vidéo. L'utilisateur reçoit un message d'échec au lieu d'une exception asynchrone non gérée. Les mises à jour d'état restent conditionnées au cycle de vie du dialogue, et le contrôleur vidéo est libéré dans finally.
 
 Commit : dfd0760b6194d031dfccd2abf1492edeb8fada2f.
+
+### 24. Garde des actions de remboursement, litige et retour après dialogue
+
+Dans le détail de commande, les parcours de demande de remboursement, d'ouverture de litige et de retour vérifient maintenant que l'écran est toujours monté après la fermeture du dialogue avant de lire les providers ou d'appeler Supabase. Les parcours litige et retour échouent explicitement si le client Supabase n'est pas disponible, au lieu d'afficher un succès avec un identifiant nul.
+
+La logique financière SQL n'a pas été modifiée. RIA-25 confirme que la fonction de finalisation répartit encore les montants sur tous les groupes de la commande sans allocation explicite. La correction de ce calcul reste bloquée par la règle métier d'allocation et des tests isolés obligatoires ; aucune fonction de remboursement, écriture ledger ou transaction fournisseur n'a été exécutée.
+
+Commit : fbc477e2d482e5414e9bc73c4c03f29e69564ad0.
