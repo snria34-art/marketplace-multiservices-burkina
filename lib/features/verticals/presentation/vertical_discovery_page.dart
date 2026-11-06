@@ -61,7 +61,8 @@ class _VerticalDiscoveryPageState
 
   Future<void> _act(Map<String, dynamic> item) async {
     final repo = ref.read(verticalRepositoryProvider);
-    if (repo == null || !await _ensureAuth()) return;
+    if (repo == null) return;
+    if (!await _ensureAuth() || !mounted) return;
 
     try {
       switch (widget.module) {
@@ -189,7 +190,7 @@ class _VerticalDiscoveryPageState
       ),
     );
     controller.dispose();
-    if (code == null) return;
+    if (!mounted || code == null) return;
 
     final repo = ref.read(verticalRepositoryProvider);
     if (repo == null) return;
@@ -257,9 +258,9 @@ class _VerticalDiscoveryPageState
 
   Future<void> _createFreight(VerticalRepository repo) async {
     final pickup = await _addressDialog();
-    if (pickup == null) return;
+    if (!mounted || pickup == null) return;
     final destination = await _addressDialog();
-    if (destination == null) return;
+    if (!mounted || destination == null) return;
     final weight = TextEditingController();
     final description = TextEditingController();
 
@@ -305,7 +306,7 @@ class _VerticalDiscoveryPageState
     );
     weight.dispose();
     description.dispose();
-    if (values == null) return;
+    if (!mounted || values == null) return;
 
     try {
       final id = await repo.createFreight(
@@ -398,7 +399,7 @@ class _VerticalDiscoveryPageState
     delivery.dispose();
     weight.dispose();
 
-    if (values == null) return;
+    if (!mounted || values == null) return;
 
     try {
       final id = await repo.createParcel(
@@ -417,10 +418,11 @@ class _VerticalDiscoveryPageState
   Future<void> _requestRide(VerticalRepository repo) async {
     try {
       final position = await DeviceLocationService.current();
+      if (!mounted) return;
       final destination = await _destinationDialog(
         LatLng(position.latitude, position.longitude),
       );
-      if (destination == null) return;
+      if (!mounted || destination == null) return;
 
       final id = await repo.createRide(
         pickup: {
@@ -702,7 +704,7 @@ class _VerticalDiscoveryPageState
       context: context,
       initialTime: const TimeOfDay(hour: 9, minute: 0),
     );
-    if (time == null) return null;
+    if (time == null || !mounted) return null;
 
     return DateTime(date.year, date.month, date.day, time.hour, time.minute);
   }
@@ -717,7 +719,7 @@ class _VerticalDiscoveryPageState
         end: DateTime.now().add(const Duration(days: 2)),
       ),
     );
-    if (range == null) return null;
+    if (range == null || !mounted) return null;
     return DateTimeRange(
       start: DateTime(range.start.year, range.start.month, range.start.day, 9),
       end: DateTime(range.end.year, range.end.month, range.end.day, 18),
@@ -891,7 +893,7 @@ class _VerticalDiscoveryPageState
           ? FloatingActionButton.extended(
               onPressed: () async {
                 final repo = ref.read(verticalRepositoryProvider);
-                if (repo != null && await _ensureAuth()) {
+                if (repo != null && await _ensureAuth() && mounted) {
                   await _requestRide(repo);
                 }
               },
