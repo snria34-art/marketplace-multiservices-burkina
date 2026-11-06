@@ -426,3 +426,14 @@ Commits :
 - 5de2cbf62195762d124eaa4558bd17a552ba1aff — reprise depuis le détail de commande.
 
 - Garde complémentaire dans le checkout : après la création de la commande, le client vérifie désormais que l'écran existe toujours avant de créer la session de paiement. Cela évite de poursuivre le flux externe après une navigation pendant l'enregistrement de la commande. Commit : 814e5dbc0d78bd01514b4b1d3bbf86d69721f692.
+
+### 28. Cycle de vie du GPS livreur, de Realtime et du catalogue
+
+- Le démarrage du partage GPS vérifie maintenant que la page livreur est encore montée après le premier envoi de position, avant d'activer l'état UI et le timer. Le chargement GPS s'arrête aussi si l'écran est quitté pendant l'obtention des coordonnées. Un contrôle redondant après la sélection de photo de livraison a été retiré.
+- Le suivi de livraison vérifie le cycle de vie du widget dans son callback post-frame avant d'initialiser Realtime/le timer. Le canal Realtime est désormais retiré via une routine asynchrone protégée, lancée sans laisser d'exception non gérée depuis dispose().
+- Le chargement initial des catégories du catalogue s'arrête après la réponse réseau si la page a déjà été détruite, avant de muter l'état local ou de lancer le chargement produit suivant.
+
+Commits :
+- 6ff4812db44f3991c47a46d04058dc48ba87c616 — GPS livreur.
+- f7c022732b8a214271bd96c5cc619ca9ace55472 — canal Realtime du suivi livraison.
+- f2c832d61065fb74bf36a9aab9de39f92a40103d — chargement du catalogue.
