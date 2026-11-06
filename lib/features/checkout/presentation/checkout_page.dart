@@ -235,6 +235,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
         orderId: orderId,
         provider: _paymentProvider,
       );
+      if (!mounted) return;
 
       final checkoutUrl = paymentSession['checkout_url']?.toString();
       if (checkoutUrl == null || checkoutUrl.trim().isEmpty) {
