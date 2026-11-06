@@ -174,10 +174,10 @@ class _SellerProductsPageState
         return;
       }
     } catch (_) {
-      // Keep the existing parent-stock flow available until the secure
-      // variant-inventory read migration is deployed. The server-side stock
-      // RPC still rejects parent edits for products using variant stock.
-      _show('Lecture des variantes indisponible. Le stock classique reste modifiable uniquement pour les produits sans stock par variante.');
+      // Do not fall back to parent stock when the variant read failed:
+      // the app cannot safely determine which stock model this product uses.
+      _show('Impossible de charger les stocks par variante. Réessayez ; aucun stock n’a été modifié.');
+      return;
     }
 
     final rawInventory = product['inventory'];
@@ -233,7 +233,7 @@ class _SellerProductsPageState
     } catch (error) {
       final rawError = error.toString();
       final message = rawError.contains('use_variant_stock_editor')
-          ? 'Ce produit utilise un stock par variante. La lecture sécurisée des variantes n’est pas encore déployée sur le serveur ; aucun stock n’a été modifié.'
+          ? 'Ce produit utilise un stock par variante. Rechargez les variantes ; le stock parent n’a pas été modifié.'
           : rawError.contains('stock_below_reserved')
               ? 'Le stock ne peut pas être inférieur à la quantité déjà réservée.'
               : 'Stock non modifié. Vérifiez la quantité et réessayez.';
