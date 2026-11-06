@@ -95,7 +95,7 @@ class _ServicesPageState extends ConsumerState<ServicesPage> {
 
     controller.dispose();
 
-    if (description == null) return;
+    if (!mounted || description == null) return;
 
     try {
       final requestId = await repository.createRequest(
