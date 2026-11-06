@@ -475,3 +475,17 @@ La recherche Flutter n'a retrouvé aucun appel direct à cette RPC dans les écr
 Tâche prioritaire créée dans Linear : [RIA-29 — sécuriser l'annulation globale et synchroniser colis, affectations et remboursements](https://linear.app/faso/issue/RIA-29/commande-securiser-lannulation-globale-et-synchroniser-colis).
 
 Aucune fonction de transition, réservation de stock, table de commande ou remboursement n'a été modifiée. Une correction de production reste bloquée jusqu'à la définition du traitement des commandes payées et aux tests transactionnels isolés ; elle doit être coordonnée avec RIA-25.
+
+### 33. Vérification finale du cycle de stock et de l'ancienne RPC checkout
+
+Contrôles Supabase en lecture seule :
+- `checkout_cart` (RPC accessible à `authenticated`) réserve chaque ligne par `reserve_variant_inventory(product_id, variant_id, quantity)` ;
+- `checkout_active_cart` utilise également cette fonction, mais EXECUTE est retiré à `authenticated` et à `anon` : seul `service_role` peut l'appeler ;
+- `consume_order_inventory` et `consume_package_inventory` consomment le stock avec `consume_variant_inventory(product_id, variant_id, quantity)` ;
+- `cancel_unpaid_order`, les échecs de paiement et l'annulation d'un groupe utilisent `release_variant_inventory` ;
+- `package_inventory_consumptions(package_id)` a une clé primaire, ce qui rend la consommation d'un même colis idempotente ;
+- les deux fonctions checkout sont les seules fonctions applicatives actuellement trouvées qui insèrent des lignes dans `order_packages`, avec un colis créé par groupe vendeur.
+
+Le constat historique d'octobre selon lequel les commandes utilisaient encore le stock parent est donc dépassé : la réservation, la consommation et la libération par variante sont présentes dans les fonctions actives. Aucune modification du stock ou des fonctions de réservation n'a été nécessaire durant cette vérification.
+
+L'annulation globale par `transition_order_status` reste le défaut SQL ouvert, suivi par Linear RIA-29. Ne pas la confondre avec le chemin `cancel_unpaid_order`, qui est distinct et n'accepte que les commandes en attente de paiement.
