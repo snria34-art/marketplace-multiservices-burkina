@@ -1,5 +1,5 @@
 begin;
-select plan(53);
+select plan(55);
 
 select ok(
   not has_table_privilege('anon','private.catalog_moderation_findings','SELECT')
@@ -488,6 +488,50 @@ select ok(
   and not has_table_privilege('authenticated','public.review_media','SELECT')
   and not has_table_privilege('authenticated','public.delivery_evidence','SELECT'),
   'review media and delivery evidence are exposed only through published-review or customer-order scoped RPCs'
+);
+
+
+select ok(
+  (
+    select count(*) = 12
+    from pg_proc p
+    where p.oid = any(array[
+      'public.admin_add_associate_after_payment(uuid,uuid,uuid,numeric,numeric,text)'::regprocedure,
+      'public.apply_to_job(uuid)'::regprocedure,
+      'public.create_accommodation_booking(uuid,date,date,integer)'::regprocedure,
+      'public.create_beauty_booking(uuid,timestamp with time zone)'::regprocedure,
+      'public.create_digital_order(uuid)'::regprocedure,
+      'public.create_freight_request(jsonb,jsonb,numeric,numeric,text)'::regprocedure,
+      'public.create_home_service_request(uuid,timestamp with time zone,jsonb)'::regprocedure,
+      'public.create_parcel_request(text,text,jsonb,jsonb,numeric)'::regprocedure,
+      'public.create_ride_request(jsonb,jsonb)'::regprocedure,
+      'public.create_vehicle_rental_booking(uuid,timestamp with time zone,timestamp with time zone)'::regprocedure,
+      'public.enroll_training_course(uuid)'::regprocedure,
+      'public.reserve_event_ticket(uuid,integer)'::regprocedure
+    ]::regprocedure[])
+    and p.prosecdef
+    and pg_get_userbyid(p.proowner) = 'postgres'
+    and exists (
+      select 1 from unnest(coalesce(p.proconfig, array[]::text[])) cfg
+      where cfg = 'search_path="pg_catalog, public, private, pg_temp"'
+    )
+    and not has_function_privilege('anon', p.oid, 'EXECUTE')
+  ),
+  'application SECURITY DEFINER booking and service RPCs put pg_temp last and remain unavailable to anon'
+);
+
+select ok(
+  (select prosecdef from pg_proc where oid='public.handle_new_user()'::regprocedure)
+  and (select pg_get_userbyid(proowner)='postgres' from pg_proc where oid='public.handle_new_user()'::regprocedure)
+  and exists (
+    select 1 from pg_proc p, unnest(coalesce(p.proconfig,array[]::text[])) cfg
+    where p.oid='public.handle_new_user()'::regprocedure
+      and cfg='search_path="pg_catalog, public, pg_temp"'
+  )
+  and not has_function_privilege('anon','public.handle_new_user()','EXECUTE')
+  and not has_function_privilege('authenticated','public.handle_new_user()','EXECUTE')
+  and has_function_privilege('service_role','public.handle_new_user()','EXECUTE'),
+  'auth user creation trigger has a protected search path and remains server-trigger only'
 );
 
 select * from finish();
