@@ -148,3 +148,20 @@ Commits :
 ### Contrôle des fichiers
 
 Chaque fichier modifié a été relu depuis `main` après l'écriture. Le SDK Dart/Flutter n'est pas disponible dans l'environnement d'exécution de cette session : aucune analyse de compilation ni test n'est déclaré réussi. Aucun workflow, build, test payant, paiement réel, push ou migration de production n'a été déclenché.
+
+### 9. Sélection de l’adresse nouvellement créée au checkout
+
+Fichier : `lib/features/checkout/presentation/checkout_page.dart`
+
+Après l'enregistrement d'une nouvelle adresse, le checkout conservait auparavant l'adresse déjà sélectionnée. Le devis et la commande pouvaient donc rester associés à l'ancienne adresse malgré l'ajout de la nouvelle.
+
+Correction :
+- récupération de la ligne réellement créée par `createAddress` ;
+- validation de la présence de son identifiant ;
+- sélection immédiate de cette adresse dans l'écran ;
+- invalidation de l'ancien devis puis recalcul sur la nouvelle adresse ;
+- protection conservée contre les réponses asynchrones obsolètes grâce au compteur de requêtes existant.
+
+Commit : `fd8462b3752337bcc2b69ed29831b328a7184761`.
+
+Le changement a été relu depuis `main`. Aucun test Flutter ni build n'a été exécuté dans cette session, faute de SDK Flutter/Dart disponible.
