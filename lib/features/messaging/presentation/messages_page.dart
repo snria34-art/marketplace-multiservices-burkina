@@ -40,10 +40,15 @@ class _MessagesPageState extends ConsumerState<MessagesPage> {
 
   Future<void> _openConversation(String id) async {
     final repo = ref.read(messagingRepositoryProvider);
-    if (repo == null) return;
+    if (repo == null || !mounted) return;
 
-    if (_channel != null) {
-      await repo.client.removeChannel(_channel!);
+    final previousChannel = _channel;
+    _channel = null;
+    _poll?.cancel();
+
+    if (previousChannel != null) {
+      await _removeChannelSafely(repo.client, previousChannel);
+      if (!mounted) return;
     }
 
     setState(() => _conversationId = id);
@@ -66,7 +71,6 @@ class _MessagesPageState extends ConsumerState<MessagesPage> {
         )
         .subscribe();
 
-    _poll?.cancel();
     _poll = Timer.periodic(
       const Duration(seconds: 8),
       (_) {
@@ -74,7 +78,16 @@ class _MessagesPageState extends ConsumerState<MessagesPage> {
       },
     );
 
-    await repo.markRead(id);
+    try {
+      await repo.markRead(id);
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Conversation ouverte, mais lecture non confirmée : $error'),
+        ),
+      );
+    }
   }
 
   Future<void> _newSupportChat() async {
@@ -102,13 +115,26 @@ class _MessagesPageState extends ConsumerState<MessagesPage> {
     }
   }
 
+  Future<void> _removeChannelSafely(
+    SupabaseClient client,
+    RealtimeChannel channel,
+  ) async {
+    try {
+      await client.removeChannel(channel);
+    } catch (_) {
+      // Channel cleanup is best-effort during navigation/disposal.
+    }
+  }
+
   @override
   void dispose() {
     _poll?.cancel();
 
     final client = ref.read(supabaseProvider);
-    if (_channel != null && client != null) {
-      client.removeChannel(_channel!);
+    final channel = _channel;
+    _channel = null;
+    if (client != null && channel != null) {
+      unawaited(_removeChannelSafely(client, channel));
     }
 
     super.dispose();
@@ -274,9 +300,9 @@ class _ConversationViewState
 
     try {
       await repo.send(widget.conversationId, body);
+      if (!mounted) return;
       _controller.clear();
-
-      if (mounted) setState(() => _messagesFuture = _load());
+      setState(() => _messagesFuture = _load());
     } catch (error) {
       if (!mounted) return;
 
