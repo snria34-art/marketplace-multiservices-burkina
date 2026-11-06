@@ -49,9 +49,11 @@ class AccessStatusPage extends ConsumerWidget {
                   onPressed: () async {
                     try {
                       await client?.auth.signOut();
-                    } finally {
-                      if (context.mounted) context.go('/auth');
+                    } catch (_) {
+                      // The route guard will still deny protected pages if
+                      // the network cannot complete the sign-out request.
                     }
+                    if (context.mounted) context.go('/auth');
                   },
                   icon: const Icon(Icons.logout),
                   label: const Text('Se déconnecter'),
