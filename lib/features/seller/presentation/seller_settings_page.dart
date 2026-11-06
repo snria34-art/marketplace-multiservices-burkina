@@ -83,7 +83,7 @@ class _SellerSettingsPageState extends ConsumerState<SellerSettingsPage> {
 
     name.dispose();
     phone.dispose();
-    if (values == null) return;
+    if (!mounted || values == null) return;
 
     try {
       final client = ref.read(supabaseProvider);
