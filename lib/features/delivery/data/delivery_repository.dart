@@ -18,6 +18,7 @@ class DeliveryRepository {
         .order('created_at');
 
     final result = <Map<String, dynamic>>[];
+    final courierIds = <String>{};
 
     for (final rawGroup in groups as List) {
       final group = Map<String, dynamic>.from(rawGroup as Map);
@@ -36,49 +37,124 @@ class DeliveryRepository {
             : null;
         package['assignment'] = assignment;
 
-        if (assignment != null) {
-          final courierId = assignment['courier_id']?.toString();
-
-          if (courierId != null && courierId.isNotEmpty) {
-            final locations = await client
-                .from('courier_locations')
-                .select('id,location,accuracy_m,recorded_at')
-                .eq('courier_id', courierId)
-                .order('recorded_at', ascending: false)
-                .limit(1);
-
-            if ((locations as List).isNotEmpty) {
-              package['latest_location'] =
-                  Map<String, dynamic>.from(locations.first as Map);
-            }
-          }
+        final courierId = assignment?['courier_id']?.toString();
+        if (courierId != null && courierId.isNotEmpty) {
+          courierIds.add(courierId);
         }
 
         result.add(package);
       }
     }
 
+    // Fetch the latest position once per distinct courier and in parallel.
+    // This avoids sequential N+1 requests when an order contains several
+    // packages assigned to the same courier or to different couriers.
+    final latestLocations = <String, Map<String, dynamic>>{};
+    await Future.wait(courierIds.map((courierId) async {
+      final rows = await client
+          .from('courier_locations')
+          .select('id,location,accuracy_m,recorded_at')
+          .eq('courier_id', courierId)
+          .order('recorded_at', ascending: false)
+          .limit(1);
+
+      if (rows.isNotEmpty) {
+        latestLocations[courierId] =
+            Map<String, dynamic>.from(rows.first as Map);
+      }
+    }));
+
+    for (final package in result) {
+      final assignment = package['assignment'];
+      if (assignment is! Map) continue;
+      final courierId = assignment['courier_id']?.toString();
+      final latest = courierId == null ? null : latestLocations[courierId];
+      if (latest != null) {
+        package['latest_location'] = latest;
+      }
+    }
+
     return result;
   }
 
-  RealtimeChannel watchOrder(
+  Future<RealtimeChannel> watchOrder(
     String orderId,
     VoidCallback onChange,
-  ) {
-    return client
-        .channel('delivery-order-$orderId')
-        .onPostgresChanges(
-          event: PostgresChangeEvent.all,
-          schema: 'public',
-          table: 'courier_locations',
-          callback: (_) => onChange(),
+  ) async {
+    final groups = await client
+        .from('order_groups')
+        .select(
+          'order_packages(id,delivery_assignments(courier_id,status))',
         )
-        .onPostgresChanges(
-          event: PostgresChangeEvent.all,
-          schema: 'public',
-          table: 'delivery_events',
-          callback: (_) => onChange(),
-        )
-        .subscribe();
+        .eq('order_id', orderId);
+
+    final packageIds = <String>{};
+    final courierIds = <String>{};
+    const activeAssignmentStatuses = {
+      'ASSIGNED',
+      'ACCEPTED',
+      'PICKED_UP',
+      'IN_TRANSIT',
+    };
+
+    for (final rawGroup in groups as List) {
+      final group = rawGroup as Map;
+      final rawPackages = group['order_packages'];
+      if (rawPackages is! List) continue;
+
+      for (final rawPackage in rawPackages) {
+        final package = rawPackage as Map;
+        final packageId = package['id']?.toString();
+        if (packageId != null && packageId.isNotEmpty) {
+          packageIds.add(packageId);
+        }
+
+        final rawAssignments = package['delivery_assignments'];
+        if (rawAssignments is! List) continue;
+
+        for (final rawAssignment in rawAssignments) {
+          final assignment = rawAssignment as Map;
+          final status = assignment['status']?.toString().toUpperCase();
+          final courierId = assignment['courier_id']?.toString();
+          if (courierId != null &&
+              courierId.isNotEmpty &&
+              activeAssignmentStatuses.contains(status)) {
+            courierIds.add(courierId);
+          }
+        }
+      }
+    }
+
+    var channel = client.channel('delivery-order-$orderId');
+
+    for (final courierId in courierIds) {
+      channel = channel.onPostgresChanges(
+        event: PostgresChangeEvent.insert,
+        schema: 'public',
+        table: 'courier_locations',
+        filter: PostgresChangeFilter(
+          type: PostgresChangeFilterType.eq,
+          column: 'courier_id',
+          value: courierId,
+        ),
+        callback: (_) => onChange(),
+      );
+    }
+
+    for (final packageId in packageIds) {
+      channel = channel.onPostgresChanges(
+        event: PostgresChangeEvent.all,
+        schema: 'public',
+        table: 'delivery_events',
+        filter: PostgresChangeFilter(
+          type: PostgresChangeFilterType.eq,
+          column: 'package_id',
+          value: packageId,
+        ),
+        callback: (_) => onChange(),
+      );
+    }
+
+    return channel.subscribe();
   }
 }
