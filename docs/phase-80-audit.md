@@ -631,3 +631,14 @@ Relecture en lecture seule des définitions SQL actuellement déployées (`compl
 - has_table_privilege confirme zéro privilège direct CRUD pour anon et authenticated sur les 17 objets. Les fonctions média exposent seulement les avis PUBLISHED à l'anonyme et les preuves DELIVERY de la commande du client authentifié.
 - Deux assertions pgTAP ajoutées dans security_regression_test.sql ; ce fichier contient 53 assertions. Total des 3 suites : 79 assertions.
 - Aucune policy permissive ou ACL directe n'a été ajoutée ; runbook docs/runbooks/aud-21-rls-no-policy-tables.md.
+
+### AUD-22 — audit et durcissement des fonctions SECURITY DEFINER — 7 novembre 2026
+
+- Catalogue Supabase : 166 fonctions SECURITY DEFINER dans public/private ; 163 détenues par postgres (application), 3 C PostGIS détenues par supabase_admin. 107 exécutables authenticated, 6 anon.
+- Les 163 fonctions applicatives ont toutes un search_path explicite ; 48 utilisent search_path='' ; les trois seules fonctions sans search_path sont les surcharges natives PostGIS ST_EstimatedExtent (traitées avec AUD-01/Supabase Support).
+- Les six fonctions anon ont été relues : deux helpers média limités aux avis PUBLISHED, private.is_admin() vérifie utilisateur + admin actif + profil ACTIVE, et trois fonctions C PostGIS. Pas de REVOKE global.
+- Un scan a identifié 3 types personnalisés non qualifiés dans trois fonctions (verification_status x2, payment_status x1). Migrations appliquées : 20261106220518 (13 fonctions : 12 RPC métier + handle_new_user) et 20261106220850 (process_payment_provider_event). Chemins explicites, pg_catalog en premier, pg_temp en dernier.
+- Les fonctions conservent propriétaire et ACL EXECUTE : aucune logique métier, donnée financière, commande, paiement ou stock modifié.
+- Validation live : 13/13 fonctions première migration avec chemin exact ; trigger handle_new_user réservé au service_role ; process_payment_provider_event réservé au service_role. 14 fonctions avec pg_temp en dernier ; aucun ancien chemin public / public,private non protégé ne subsiste pour les fonctions du lot.
+- 3 assertions pgTAP ajoutées dans security_regression_test.sql ; 56 assertions dans ce fichier, 82 dans les trois suites prévues. Les prédicats sont vrais en lecture seule sur production ; pgTAP complet et Flutter CI ne sont pas exécutés.
+- Runbook : docs/runbooks/aud-22-security-definer-search-path-review.md. Les trois fonctions PostGIS sans search_path restent à traiter uniquement après migration de l'extension par Supabase Support.
