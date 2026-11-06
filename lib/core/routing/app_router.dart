@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -156,9 +158,8 @@ Future<String?> _guardRoute(
 final appRouterProvider = Provider<GoRouter>((ref) {
   final client = ref.watch(supabaseProvider);
   final authRefresh = _AuthRefreshListenable(client);
-  ref.onDispose(authRefresh.dispose);
 
-  return GoRouter(
+  final router = GoRouter(
     refreshListenable: authRefresh,
     redirect: (context, state) => _guardRoute(client, state),
     navigatorKey: appNavigatorKey,
@@ -346,5 +347,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/seller/settings', builder: (_, __) => const SellerSettingsPage()),
     ],
   );
+
+  ref.onDispose(() {
+    router.dispose();
+    authRefresh.dispose();
+  });
+
+  return router;
 });
 
