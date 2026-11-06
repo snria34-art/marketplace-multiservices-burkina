@@ -567,3 +567,15 @@ Relecture en lecture seule des définitions SQL actuellement déployées (`compl
 - Aucune politique de purge des positions GPS n'est définie. Aucun historique n'a été créé. Le ticket RIA-31 demande de définir la durée de conservation, les finalités et la purge serveur avant l'activation production.
 - Runbook : `docs/runbooks/aud-14-courier-background-location.md`. Ticket RIA-11 en cours.
 
+
+
+### AUD-15 — parité des sources Edge Functions restaurée — 7 novembre 2026
+
+- Trois fonctions déployées n'avaient aucun fichier source dans GitHub : `expire-products` v2, `admin-health-check` v2 et `payment-webhook-gateway` v3.
+- Les sources des deux fonctions actives ont été restaurées sous `supabase/functions/expire-products/` et `supabase/functions/admin-health-check/`. Le code vérifie le Bearer JWT Supabase, `admin_users.active=true` et `profiles.status='ACTIVE'`, avec refus par défaut si la vérification échoue.
+- Le gateway a été versionné comme tombstone, sans logique de paiement, avec réponse HTTP 410 `legacy_endpoint_retired`.
+- Déploiement Supabase vérifié après lecture des sources live : `expire-products` v3, `admin-health-check` v3, `payment-webhook-gateway` v4. Les deux premières ont `verify_jwt=true` et le contrôle profil actif ; le gateway garde `verify_jwt=false` et renvoie HTTP 410.
+- Supabase a toujours 21 fonctions ; le dépôt contient désormais 21 dossiers de fonctions correspondants. Aucun endpoint supprimé/désactivé, aucun secret ou paiement réel touché.
+- Le workflow Deno CI s'est déclenché mais les jobs n'ont retourné aucune étape/journal accessible. Le code live a été vérifié, mais `deno check` reste non confirmé.
+- Runbook : `docs/runbooks/aud-15-edge-function-source-parity.md`.
+
