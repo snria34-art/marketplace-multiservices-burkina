@@ -211,3 +211,15 @@ Correction :
 Commit : `cec45abff5a772b3c0cae067b01be0d61dbdc715`.
 
 Le changement a été relu sur `main`. Le comportement reste à valider par test Flutter sur appareil ou émulateur.
+
+### 13. Messages de connexion après retour réseau
+
+Fichier : `lib/features/auth/presentation/sign_in_page.dart`
+
+La page pouvait afficher un SnackBar après le retour d'une requête d'inscription ou de connexion, même si l'utilisateur avait déjà quitté l'écran. Le helper `_show` utilise maintenant `mounted` avant d'accéder au `ScaffoldMessenger`.
+
+Commit : `8dc8dd7a65b21cf55854daa37f4d52f54ca654a8`.
+
+### Vérification des chemins de déconnexion
+
+La recherche du code Flutter ne retrouve pas de commande `auth.signOut()` appelée depuis une interface. La méthode `PushNotificationService.signOutAndDeactivateCurrentDevice()` existe, mais aucun écran de déconnexion n'a été identifié à brancher. RIA-26 reste donc ouvert : il faudra intégrer cette méthode au moment où les commandes de déconnexion seront ajoutées, puis tester les cas session expirée et réseau indisponible. Aucune déconnexion réelle n'a été exécutée.
