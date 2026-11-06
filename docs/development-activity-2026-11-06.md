@@ -358,3 +358,20 @@ Contrôle financier en lecture seule :
 - la table refunds ne permet pas d'identifier le groupe ou l'article réellement remboursé.
 
 Le risque de RIA-25 est donc confirmé dans les deux parcours de finalisation présents dans l'application. Une demande partielle ciblée sur un vendeur peut débiter les autres vendeurs de la même commande. Aucune finalisation de remboursement, aucun paiement fournisseur et aucune écriture de ledger n'ont été exécutés. Les parcours financiers restent non certifiés jusqu'à la correction du modèle d'allocation et aux tests isolés.
+
+### 20. Annulation correcte des congés mécanicien et garde des derniers dialogues
+
+L'écran mécanicien n'enregistre plus une période de congé lorsque le mécanicien annule la saisie du motif. L'annulation conserve la disponibilité précédemment choisie, ne crée pas de congé et la page peut tout de même rafraîchir son état. Le contrôleur du motif est désormais libéré après la fermeture du dialogue. Le chargement du profil mécanicien est aussi suivi d'une vérification du cycle de vie avant d'ouvrir la suite des dialogues.
+
+Les derniers parcours protégés après fermeture d'un écran sont : réponse de modération vendeur avec média, ajout d'adresse au checkout, rédaction d'un avis, et choix de disponibilité/congé mécanicien.
+
+Commits :
+- 966a02349042015d702e70c209545ff8e8e1d8d8 — vérifications additionnelles des dialogues des modules verticaux.
+- c0501ffa312c0d69aaa427e2c1fda7f63956c68c — protection du dialogue de réponse de modération et des sélecteurs média.
+- 60862986f7df605e9c06e6febb8a2f24242e7e9f — protection après création d'adresse.
+- 75e70e3b4aa22757358f64d854444e43668f62c4 — protection après dialogue d'avis.
+- a50769addacaf7b4ec8b9d8458a73ed65b5ea84b — protection des dialogues mécanicien et libération du contrôleur.
+- 88c6183ca152b38a126eec18d0288463206a1946 — annulation effective du congé mécanicien.
+- 7613ddac0b3d30751e2a3e1f551c91ab3823e527 — formatage du bloc RPC de congé.
+
+Aucune action de congé, de modération, de remboursement ou de paiement n'a été exécutée pour valider ces changements ; ils restent à tester sur un environnement de test.
