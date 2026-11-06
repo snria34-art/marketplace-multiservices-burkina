@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/providers/repository_providers.dart';
+import '../../../core/widgets/account_session_action_button.dart';
 import '../data/seller_repository.dart';
 
 final sellerRepositoryProvider = Provider<SellerRepository?>((ref) {
@@ -129,6 +130,7 @@ class _SellerDashboardPageState
             onPressed: () => context.push('/seller/shop'),
             icon: const Icon(Icons.storefront_outlined),
           ),
+          const AccountSessionActionButton(),
         ],
       ),
       body: ListView(
