@@ -27,6 +27,7 @@ class _CourierPageState extends ConsumerState<CourierPage> {
   late Future<List<Map<String, dynamic>>> _future;
   StreamSubscription<Position>? _locationSubscription;
   bool _sharingLocation = false;
+  bool _locationStarting = false;
   bool _locationInFlight = false;
   bool _locationErrorShown = false;
 
@@ -50,9 +51,13 @@ class _CourierPageState extends ConsumerState<CourierPage> {
       return;
     }
 
+    if (_locationStarting) return;
+    setState(() => _locationStarting = true);
+
     final repo = ref.read(courierRepositoryProvider);
     if (repo == null) {
       _showLocationMessage('Service de livraison indisponible.');
+      if (mounted) setState(() => _locationStarting = false);
       return;
     }
 
@@ -123,6 +128,8 @@ class _CourierPageState extends ConsumerState<CourierPage> {
           ),
         ),
       );
+    } finally {
+      if (mounted) setState(() => _locationStarting = false);
     }
   }
 
@@ -401,13 +408,23 @@ class _CourierPageState extends ConsumerState<CourierPage> {
         title: const Text('Espace livreur'),
         actions: [
           IconButton(
-            tooltip: 'Partager ma position',
-            onPressed: _toggleLocation,
-            icon: Icon(
-              _sharingLocation
-                  ? Icons.location_on
-                  : Icons.location_off_outlined,
-            ),
+            tooltip: _locationStarting
+                ? 'Activation du suivi GPS'
+                : (_sharingLocation
+                    ? 'Arrêter le partage de position'
+                    : 'Partager ma position'),
+            onPressed: _locationStarting ? null : _toggleLocation,
+            icon: _locationStarting
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : Icon(
+                    _sharingLocation
+                        ? Icons.location_on
+                        : Icons.location_off_outlined,
+                  ),
           ),
           const AccountSessionActionButton(),
         ],
