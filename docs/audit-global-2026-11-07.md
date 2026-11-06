@@ -21,12 +21,12 @@ Les constats ci-dessous sont classés par gravité et par dépendance. « Confir
 | Fichiers Dart sous `lib/` | 72 |
 | Fichiers de tests Dart | 3 |
 | Tests SQL dans `supabase/tests/database` | 2 |
-| Assertions pgTAP prévues dans ces deux fichiers | 61 (48 + 13) |
+| Assertions pgTAP prévues dans ces deux fichiers | 63 (50 + 13) |
 | Tables Supabase `public` et `private` | 182 |
 | Tables publiques avec RLS | 166/167 |
 | Tables privées avec RLS | 15/15 |
-| Migrations SQL présentes dans GitHub | 328 |
-| Migrations consignées dans Supabase | 327 |
+| Migrations SQL présentes dans GitHub | 330 |
+| Migrations consignées dans Supabase | 329 |
 | Fonctions Edge actives dans Supabase | 21 |
 | Dossiers sources Edge avec `index.ts` dans GitHub | 18 |
 | Buckets Storage | 5 |
@@ -141,15 +141,16 @@ Suivi : https://linear.app/faso/issue/RIA-28/catalogue-ajouter-ledition-du-stock
 #### AUD-07 — Dérive de l'historique des migrations
 **État : un seul numéro non réconcilié ; effets fonctionnels déjà présents et équivalence vérifiée. Réparation historique CLI préparée.**
 
-- GitHub contient 328 migrations, Supabase en consigne 327. Le seul numéro GitHub absent de l'historique distant est `20261104020500_add_toy_weapon_product_classification.sql`.
+- GitHub contient 330 migrations, Supabase en consigne 329.
+- Le seul numéro GitHub absent de l'historique distant est `20261104020500_add_toy_weapon_product_classification.sql`.
 - Le corps de `private.scan_toy_weapon_products()` dans le fichier et dans la base est identique après normalisation des espaces ; propriétaire `postgres`, `SECURITY DEFINER`, `search_path = ''`, ACL n'accordant EXECUTE qu'à postgres.
 - Le cron distant `toy-weapon-classifier` est actif, ID 5, toutes les 10 minutes, commande exacte `select private.scan_toy_weapon_products();`. Les tables dépendantes sont présentes.
-- Les dernières migrations AUD-01/AUD-03/AUD-04/FCM sont présentes dans les deux historiques. Le fichier de stock variante et la migration AUD-03 admin ont été alignés sur leur timestamp exact.
+- Les migrations AUD-01/AUD-03/AUD-04/FCM/AUD-12 sont maintenant présentes dans les deux historiques ; seul l'ancien numéro `20261104020500` reste en divergence.
 
 **Correction restante :** exécuter uniquement la réparation d'historique officielle, sans rejouer le SQL :
 `supabase link --project-ref dzhhsoikzxibmngjzcch`, puis `supabase migration repair 20261104020500 --status applied`, puis `supabase migration list`. La procédure complète figure dans `docs/runbooks/aud-07-reconcile-toy-weapon-migration-history.md`.
 
-La commande CLI n'est pas disponible via les connecteurs actuels ; aucune insertion manuelle dans la table d'historique n'a été faite et aucun cron/fonction n'a été réexécuté. Résultat attendu : 328 migrations locales et distantes.
+La commande CLI n'est pas disponible via les connecteurs actuels ; aucune insertion manuelle dans la table d'historique n'a été faite et aucun cron/fonction n'a été réexécuté. Résultat attendu : 330 migrations locales et distantes.
 
 #### AUD-08 — CI automatique préparée ; exécution GitHub Actions bloquée avant la première étape
 **État : workflows automatiques ajoutés sur `main`, mais le runner GitHub n'a pas exécuté les étapes lors des premières tentatives.**
@@ -183,7 +184,7 @@ Les modules immobilier, professionnels, agriculture, santé et créatifs n'appar
 **Correction :** définir pour chaque verticale son parcours métier, les contrôles de disponibilité/propriété, les RPC de création et les statuts, puis ajouter l'interface et les tests.
 
 #### AUD-11 — Les routes protégées ne contrôlaient pas la session ou le rôle
-**État : gardes Flutter ajoutés sur main ; tests unitaires écrits mais non exécutés ; droits backend toujours nécessaires.**
+**État : gardes Flutter ajoutés sur main ; parcours administrateur/modérateur séparé ; tests unitaires écrits mais non exécutés.**
 
 Le routeur précédent n'avait ni `redirect` ni `refreshListenable` lié aux changements d'authentification. Les routes privées étaient affichables sans vérification préalable.
 
@@ -191,21 +192,36 @@ Le routeur précédent n'avait ni `redirect` ni `refreshListenable` lié aux cha
 - `GoRouter` écoute maintenant les événements d'authentification Supabase et réévalue les redirections. Le routeur et l'écouteur sont libérés ensemble à la destruction du provider.
 - Les routes panier, checkout, commandes, suivi livraison, favoris, achats groupés, messages, notifications, admin, vendeur et coursier exigent une session.
 - Les profils doivent avoir le statut `ACTIVE`. Les comptes `SUSPENDED` ou `BLOCKED` sont orientés vers une page d'accès restreint.
-- Les routes `/admin/*` exigent un enregistrement `admin_users.active=true`, cohérent avec `private.is_admin()`.
+- Les routes d'administration générales exigent un enregistrement `admin_users.active=true`, cohérent avec `private.is_admin()`.
+- Exception de moindre privilège : un utilisateur portant uniquement `MODERATOR` peut accéder à `/admin/catalog-moderation` et `/admin/reviews`, mais pas au tableau de bord global, aux comptes, remboursements, paramètres ou réparations plateforme. Les autres routes admin exigent toujours `admin_users.active=true`.
 - Les routes `/seller/*` exigent le rôle `SELLER` et un profil réel dans `public.sellers`. Les profils vendeur en attente peuvent encore accéder à leur espace pour suivre leur validation ; les mutations restent contrôlées par les RPC.
 - `/courier` exige le rôle `COURIER`, en accord avec les fonctions SQL de colis.
 - Les erreurs de lecture de rôle/status provoquent un refus par défaut. Les destinations de retour à la connexion sont filtrées pour ne permettre que les routes internes sûres.
 
-**Tests ajoutés :** 9 tests unitaires couvrent les groupes de routes, les familles admin/vendeur/coursier et les redirections internes. Aucun n'a encore été exécuté car GitHub Actions n'a pas attribué de runner dans les dernières exécutions ; aucune validation Flutter locale n'est disponible ici.
+**Tests ajoutés :** 10 tests unitaires couvrent les groupes de routes, les familles admin/vendeur/coursier, le périmètre modérateur et les redirections internes. Aucun n'a encore été exécuté car GitHub Actions n'a pas attribué de runner dans les dernières exécutions ; aucune validation Flutter locale n'est disponible ici.
 
-**Frontière serveur :** les guards Flutter ne remplacent pas RLS/RPC. Les accès admin sont toujours décidés par `private.is_admin()`, et les RPC vendeur/coursier continuent à vérifier compte actif, rôle et propriété côté serveur.
+**Frontière serveur :** les guards Flutter ne remplacent pas RLS/RPC. Les opérations de plateforme sont maintenant restreintes côté base à `private.is_admin()`. Les RPC vendeur/coursier continuent à vérifier compte actif, rôle et propriété côté serveur.
 
-#### AUD-12 — Le modèle de rôles administrateur ne différencie pas encore les permissions
-**État : confirmé dans le schéma et les fonctions SQL inspectées.**
+#### AUD-12 — Le rôle MODERATOR héritait de contrôles administrateur trop larges
+**État : séparation modérateur/administrateur renforcée ; hiérarchie fine entre administrateurs encore à définir.**
 
-Les tables `admin_roles` et la colonne `admin_users.admin_role_id` existent, mais aucune fonction SQL inspectée ne référence `admin_role_id` ou `admin_roles`. `private.is_admin()` vérifie seulement qu'une ligne `admin_users` est active et que le profil est actif. Les opérations administratives qui l'appellent accordent donc un accès administrateur commun, sans matrice de permissions basée sur le rôle lié.
+Le helper `public.is_admin_actor()` reconnaît les rôles actifs `ADMIN`, `SUPER_ADMIN` et `MODERATOR`. Il est utilisé par les actions de modération du catalogue/avis, mais aussi par certaines fonctions d'administration générale. Un modérateur pouvait donc auparavant appeler des opérations globales qu'il n'a pas besoin d'exécuter.
 
-**Correction :** décider des profils ADMIN/SUPER_ADMIN/finance/modération/logistique, créer une matrice de permissions serveur et tester les refus négatifs. Le compte propriétaire initial n'est pas encore provisionné et aucune création n'a été réalisée pendant cet audit.
+**Correction appliquée sur Supabase :** migration `20261106204520_restrict_platform_admin_actions_to_registered_admins.sql`.
+
+Les actions suivantes exigent maintenant `private.is_admin()`, qui vérifie l'existence d'un enregistrement actif dans `public.admin_users` et un profil `ACTIVE` :
+- `get_admin_dashboard()` : métriques globales des utilisateurs, commandes, vendeurs et support ;
+- `private.admin_run_safe_platform_repairs()`, `private.get_platform_health()`, `private.get_platform_repair_audit()`, `private.rollback_platform_repair()` ;
+- `private.admin_get_return_policy_settings()` et `private.admin_set_return_window()` ;
+- les triggers `enforce_profile_security_fields()` et `enforce_seller_document_review_fields()`, empêchant un modérateur de modifier le statut/vérification de son propre profil ou les métadonnées de validation de documents vendeur.
+
+**Les modérateurs conservent** les fonctions de file et décision de modération du catalogue et des avis qui contrôlent explicitement `public.is_admin_actor()`. Le routeur Flutter a été adapté en conséquence : rôle `MODERATOR` autorisé uniquement sur les écrans catalogue/avis ; les autres écrans admin restent réservés aux lignes actives de `admin_users`.
+
+**Vérification SQL après migration :** toutes les fonctions sensibles listées utilisent maintenant `private.is_admin()` et ne référencent plus `public.is_admin_actor()`. Les fonctions `private.admin_decide_catalog_finding` et `private.admin_decide_review` conservent leur garde `public.is_admin_actor()`. Les droits EXECUTE aux rôles clients restent inchangés, sans accès anon. Aucun utilisateur ou rôle n'a été créé dans la base hébergée.
+
+**Risque restant :** `admin_roles` et `admin_users.admin_role_id` existent, mais le champ `admin_role_id` n'est toujours pas utilisé par les fonctions d'autorisation. Tous les administrateurs enregistrés dans `admin_users` disposent encore des mêmes permissions générales. La matrice propriétaire / SUPER_ADMIN / opérations financières / logistique / support doit être définie et appliquée avant d'ajouter des associés ou autres administrateurs. Le compte propriétaire initial reste non provisionné selon la consigne du projet.
+
+**Tests :** deux assertions pgTAP supplémentaires vérifient l'usage de `private.is_admin()` pour les opérations globales et le maintien des autorisations de modération. Le fichier `security_regression_test.sql` contient 50 assertions ; les deux fichiers pgTAP totalisent 63 assertions prévues. Elles ne sont pas exécutées à cause de l'indisponibilité actuelle du runner CI.
 
 #### AUD-13 — Le cycle de déconnexion et de désactivation des tokens n'était pas intégré
 **État : parcours centralisé ajouté ; RPC serveur durcie et vérifiée ; tests runtime encore requis. Lié à Linear RIA-26.**
