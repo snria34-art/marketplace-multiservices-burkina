@@ -3,7 +3,7 @@
 **Projet :** Marketplace Multiservices Burkina  
 **Référence Supabase :** `dzhhsoikzxibmngjzcch`  
 **État au 7 novembre 2026 :** PostGIS 3.3.7 dans `public`, propriétaire `supabase_admin`.  
-**Statut :** préflight terminé ; déplacement en attente d'une intervention Supabase Support.
+**Statut :** préflight terminé ; fonctions préparées et vérifiées dans Supabase ; déplacement non destructif de l'extension en attente de Supabase Support.
 
 ## 1. Diagnostic vérifié
 
@@ -57,198 +57,51 @@ Ouvrir un ticket depuis le tableau de bord Supabase, pour le projet `dzhhsoikzxi
 >
 > Merci d'effectuer le déplacement non destructif de PostGIS vers `extensions` avec votre procédure Support, sans DROP/CREATE CASCADE côté projet. Merci de confirmer que les colonnes geography, leurs index GiST, les vues PostGIS et les données `spatial_ref_sys` sont conservés, puis de nous indiquer quand nous pouvons exécuter les ajustements de fonctions applicatives ci-dessous.
 >
-> Nous avons identifié deux fonctions applicatives qui utilisent actuellement `public.st_*` et `public.geography`. Nous mettrons à jour ces fonctions immédiatement après votre intervention.
+> Nous avons déjà préparé les deux fonctions applicatives avant votre intervention : elles utilisent désormais `search_path = pg_catalog, extensions, public` et des références PostGIS non qualifiées. Elles fonctionnent donc actuellement avec PostGIS dans `public` et sont prêtes à résoudre les objets dans `extensions` après votre déplacement.
+>
+> Merci de confirmer le déplacement non destructif et de nous indiquer lorsqu'il est terminé afin que nous exécutions les vérifications post-migration.
 >
 > Merci.
 
 Le support ne doit pas être remplacé par un essai de migration destructive exécuté depuis SQL Editor.
 
-## 4. Fonctions métier à adapter après confirmation du déplacement
+## 4. Préparation des fonctions métier — déjà appliquée
 
-Après que Support confirme que `pg_extension.extnamespace` de PostGIS est `extensions`, appliquer les deux définitions suivantes dans une migration versionnée. Elles conservent les mêmes signatures, contrôles de propriété, validations et réponses métier ; seuls les préfixes PostGIS et le `search_path` changent.
+Les deux RPC applicatives ont été préparées **avant** le déplacement PostGIS dans la migration :
 
-### 4.1 `calculate_delivery_fee(uuid,jsonb)`
+`supabase/migrations/20261106195420_aud01_prepare_postgis_functions_schema_fallback.sql`
 
-```sql
-CREATE OR REPLACE FUNCTION public.calculate_delivery_fee(
-  p_cart_id uuid,
-  p_delivery_address jsonb
-)
-RETURNS jsonb
-LANGUAGE plpgsql
-STABLE
-SECURITY DEFINER
-SET search_path TO 'pg_catalog', 'public', 'extensions'
-AS $function$
-declare
-  v_user uuid := (select auth.uid());
-  v_lat double precision;
-  v_lon double precision;
-  v_distance numeric := 0;
-  v_stop_count integer := 0;
-  v_base_fee numeric := 0;
-  v_per_km_fee numeric := 0;
-  v_per_stop_fee numeric := 0;
-  v_customer_fee numeric := 0;
-  v_rule_id uuid;
-begin
-  perform private.require_active_account();
-  if v_user is null then
-    raise exception 'not_authenticated';
-  end if;
+Le correctif a été appliqué sur Supabase le 6 novembre 2026 à 19:54:20 UTC, puis relu et vérifié.
 
-  if p_cart_id is null then
-    raise exception 'cart_required';
-  end if;
+Les deux fonctions sont :
 
-  perform 1
-  from public.carts
-  where id = p_cart_id
-    and customer_id = v_user
-    and status = 'ACTIVE';
-  if not found then
-    raise exception 'cart_not_active_or_not_owned';
-  end if;
+- `public.calculate_delivery_fee(uuid,jsonb)`
+- `public.record_courier_location(double precision,double precision,numeric)`
 
-  v_lat := nullif(trim(p_delivery_address ->> 'latitude'), '')::double precision;
-  v_lon := nullif(trim(p_delivery_address ->> 'longitude'), '')::double precision;
-
-  if v_lat is not null and (v_lat < -90 or v_lat > 90) then
-    raise exception 'latitude_invalid';
-  end if;
-
-  if v_lon is not null and (v_lon < -180 or v_lon > 180) then
-    raise exception 'longitude_invalid';
-  end if;
-
-  select count(distinct p.shop_id)::integer
-    into v_stop_count
-  from public.cart_items ci
-  join public.products p on p.id = ci.product_id
-  where ci.cart_id = p_cart_id
-    and p.status = 'ACTIVE';
-
-  if v_lat is not null and v_lon is not null then
-    select coalesce(
-      max(
-        extensions.st_distance(
-          s.location,
-          extensions.st_setsrid(
-            extensions.st_makepoint(v_lon, v_lat),
-            4326
-          )::extensions.geography,
-          true
-        ) / 1000
-      ),
-      0
-    )
-    into v_distance
-    from public.cart_items ci
-    join public.products p on p.id = ci.product_id
-    join public.shops s on s.id = p.shop_id
-    where ci.cart_id = p_cart_id
-      and p.status = 'ACTIVE'
-      and s.location is not null;
-  end if;
-
-  select id, base_fee, per_km_fee, per_stop_fee
-    into v_rule_id, v_base_fee, v_per_km_fee, v_per_stop_fee
-  from public.delivery_pricing_rules
-  where active = true
-    and min_distance_km <= v_distance
-    and (max_distance_km is null or v_distance <= max_distance_km)
-  order by min_distance_km desc
-  limit 1;
-
-  if v_rule_id is null then
-    raise exception 'delivery_pricing_not_configured';
-  end if;
-
-  v_customer_fee := greatest(
-    0,
-    round(
-      v_base_fee
-      + (v_distance * v_per_km_fee)
-      + greatest(v_stop_count - 1, 0) * v_per_stop_fee,
-      0
-    )
-  );
-
-  return jsonb_build_object(
-    'customer_fee', v_customer_fee,
-    'distance_km', round(v_distance, 2),
-    'stop_count', greatest(v_stop_count, 1),
-    'pricing_rule_id', v_rule_id,
-    'currency', 'XOF'
-  );
-end;
-$function$;
-```
-
-### 4.2 `record_courier_location(double precision,double precision,numeric)`
+Elles utilisent maintenant :
 
 ```sql
-CREATE OR REPLACE FUNCTION public.record_courier_location(
-  p_latitude double precision,
-  p_longitude double precision,
-  p_accuracy_m numeric DEFAULT NULL::numeric
-)
-RETURNS bigint
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path TO 'pg_catalog', 'public', 'extensions'
-AS $function$
-declare
-  v_user uuid := auth.uid();
-  v_id bigint;
-begin
-  perform private.require_active_account();
-  if v_user is null then
-    raise exception 'not_authenticated' using errcode = '42501';
-  end if;
-
-  if not private.has_role('COURIER'::public.user_role) then
-    raise exception 'courier_role_required' using errcode = '42501';
-  end if;
-
-  if p_latitude is null or p_latitude < -90 or p_latitude > 90 then
-    raise exception 'latitude_invalid' using errcode = '22023';
-  end if;
-
-  if p_longitude is null or p_longitude < -180 or p_longitude > 180 then
-    raise exception 'longitude_invalid' using errcode = '22023';
-  end if;
-
-  if p_accuracy_m is not null and p_accuracy_m < 0 then
-    raise exception 'accuracy_invalid' using errcode = '22023';
-  end if;
-
-  insert into public.courier_locations(
-    courier_id,
-    location,
-    accuracy_m,
-    recorded_at
-  )
-  values(
-    v_user,
-    extensions.st_setsrid(
-      extensions.st_makepoint(p_longitude, p_latitude),
-      4326
-    )::extensions.geography,
-    p_accuracy_m,
-    now()
-  )
-  returning id into v_id;
-
-  return v_id;
-end;
-$function$;
+SET search_path = pg_catalog, extensions, public
 ```
 
-`CREATE OR REPLACE FUNCTION` conserve les privilèges d'exécution existants. Après application, vérifier explicitement que :
-- `calculate_delivery_fee(uuid,jsonb)` reste exécutable par `authenticated`, pas par `anon` ni `PUBLIC` ;
-- `record_courier_location(double precision,double precision,numeric)` reste exécutable par `authenticated`, pas par `anon` ni `PUBLIC` ;
-- les propriétaires et la configuration `SECURITY DEFINER` sont inchangés.
+Les références explicites `public.st_distance`, `public.st_setsrid`, `public.st_makepoint` et `::public.geography` ont été remplacées par les noms non qualifiés `st_distance`, `st_setsrid`, `st_makepoint` et `::geography`.
+
+Cette stratégie est volontaire :
+
+- **Avant le déplacement**, aucun de ces objets n'existe dans `extensions`, donc PostgreSQL les résout dans `public`.
+- **Après le déplacement**, `extensions` est prioritaire dans le `search_path`, donc les mêmes appels résolvent les objets PostGIS déplacés, sans modifier une deuxième fois le corps des fonctions.
+- `anon`, `authenticated` et `service_role` n'ont pas le droit `CREATE` sur `public` ni `extensions`, ce qui évite qu'un client puisse y injecter un objet qui détournerait cette résolution.
+
+Contrôles réussis après application :
+
+- les deux fonctions restent détenues par `postgres` et sont toujours `SECURITY DEFINER` ;
+- leur `search_path` vaut `pg_catalog, extensions, public` ;
+- aucune référence PostGIS explicite vers `public.*` ne subsiste dans les deux corps ;
+- `anon` ne peut pas exécuter les deux RPC ; `authenticated` et `service_role` le peuvent ;
+- un calcul réel `ST_Distance` a réussi et a retourné 10,88 mètres pour deux points de test ;
+- aucune table, colonne, ligne métier, index ou extension n'a été supprimé ou déplacé par cette migration.
+
+**Conséquence :** il n'est pas nécessaire de réécrire les deux fonctions après le déplacement. Il restera à vérifier qu'elles résolvent correctement les objets dans `extensions` une fois l'opération Support terminée.
 
 ## 5. Vérifications après déplacement et migration
 
@@ -303,7 +156,7 @@ Résultat attendu : une distance positive en mètres, sans erreur SRID/type.
 
 ### 5.4 Vérifier les fonctions applicatives
 
-- Contrôler les définitions `pg_get_functiondef` et vérifier les références `extensions.st_*` / `extensions.geography`.
+- Contrôler `pg_get_functiondef` et vérifier qu'aucun appel `public.st_*` ni cast `::public.geography` n'est présent ; vérifier que le `search_path` contient `pg_catalog, extensions, public` dans cet ordre.
 - Contrôler les privilèges `EXECUTE` des deux RPC.
 - Exécuter `calculate_delivery_fee` avec une session client de test et un panier contrôlé.
 - Exécuter `record_courier_location` avec un compte coursier de test autorisé, puis vérifier l'enregistrement dans `courier_locations` et le nettoyage du jeu de test.
@@ -318,7 +171,9 @@ Résultat attendu : une distance positive en mètres, sans erreur SRID/type.
 
 ## 6. État et limites
 
-- Le déplacement PostGIS n'a pas été exécuté, car les colonnes geography métier existent et la méthode support est la seule option non destructive recommandée.
-- Aucun privilège, migration, fonction, donnée ou paramètre de production n'a été modifié.
-- Les deux nouvelles définitions SQL sont préparées mais **ne doivent pas être appliquées avant la confirmation du déplacement par Supabase Support**.
-- Après le retour Support, intégrer ces définitions dans une migration versionnée et la tester avant déploiement.
+- **Préparation applicative : terminée et vérifiée.** La migration `20261106195420_aud01_prepare_postgis_functions_schema_fallback.sql` est présente dans GitHub et dans l'historique Supabase.
+- **Déplacement de PostGIS : non effectué.** PostGIS 3.3.7 se trouve toujours dans `public`, propriété de `supabase_admin`, et `extrelocatable=false`.
+- Le déplacement sans perte des trois colonnes `geography`, des index GiST, des vues et des données de référence nécessite toujours l'intervention Supabase Support.
+- Aucun compte propriétaire n'a été créé. Aucun paiement ou secret Firebase n'a été touché.
+- Après confirmation du Support, vérifier le schéma de l'extension, les trois colonnes, les deux index GiST, le calcul spatial, les fonctions RPC et Security Advisor. Ne pas déclarer AUD-01 terminé avant ces contrôles.
+
