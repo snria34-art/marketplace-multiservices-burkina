@@ -157,10 +157,15 @@ class _CartPageState extends ConsumerState<CartPage> {
                           (item['unit_price']?.toString() ?? '0') + ' XOF',
                         ),
                         trailing: SizedBox(
-                          width: 132,
+                          width: 176,
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.end,
                             children: [
+                              IconButton(
+                                tooltip: 'Retirer du panier',
+                                onPressed: () => _changeQuantity(item, 0),
+                                icon: const Icon(Icons.delete_outline),
+                              ),
                               IconButton(
                                 onPressed: () =>
                                     _changeQuantity(item, quantity - 1),
