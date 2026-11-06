@@ -312,3 +312,33 @@ Vérification Supabase en lecture seule du 6 novembre 2026 :
 Conséquence : le code Flutter et la migration sont dans GitHub, mais la lecture sécurisée des variantes n'est pas encore disponible dans le projet Supabase actif. Le stock par variante reste bloqué en production tant que cette migration n'est pas déployée et testée. Aucune migration n'a été appliquée pendant cet audit.
 
 Aucun test Dart/Flutter ni analyse statique n'a été exécuté : le SDK n'est pas installé dans l'environnement de cette session. Les deux corrections doivent être validées avec flutter analyze, les tests et un build sur un environnement Flutter avant d'être considérées comme certifiées.
+
+### 18. Protection des actions asynchrones après navigation
+
+Les parcours concernés vérifient maintenant que l'écran est toujours monté après le retour d'une boîte de dialogue ou d'un sélecteur avant d'accéder à Riverpod, au contexte Flutter ou de poursuivre une action sensible. Les corrections couvrent :
+- demandes de trajets, fret, colis et suivi dans les modules verticaux ;
+- captures de preuves de retrait/livraison et saisie des codes par les livreurs ;
+- demande de paiement vendeur ;
+- création de demandes de service et de transport ;
+- création/modification de boutique, paramètres vendeur, coupons et promotions ;
+- décisions de modération, blocage/réactivation des comptes et actions de remboursement administrateur ;
+- ajout d'un associé après vérification du paiement.
+
+Commits de cette série :
+- de9e82490f0ea3d5881f51f478c5e0b4f2967b90
+- c14878b6ee553e5d3c3cfa93790be56385a4799e
+- a61d72f24aab31201f89ec2f794813a3343b56be
+- c8e57a8ad0a09641867d230f49e7dfbf6c49f89e
+- 3b1d7202a6acd37fccfe364434f591519349a9c5
+- 20839ddbcb8565bf516b90ed48c03d456273d5c9
+- f621f99a22bcb11eb61f6ce8ff8533d66088cd34
+- fe190c38e5fd400c77dbc4a95310477e2c107526
+- cc6820aed129d261c148c1734879feb068ea544e
+- fdd9958766142417f88c077ab15a0fe4f444e849
+- 8bb3ff30fbcba7c1480129e88bfd7d3e79861d16
+- bd750a29ab759ff33fbc83e3132c15822bb81ec8
+- af4152bc439fcf0d2c9f0eddde64203b1d24eb2e
+- c532ead2d67961434b532872e3b054618c0488a2
+- 7939ba264c3b68582129b0a63481c72761ffcc99
+
+Ces modifications limitent les opérations déclenchées après fermeture d'un écran. Elles ne remplacent pas les contrôles d'autorisation et de validité exécutés par les RPC serveur. Les parcours financiers doivent encore être testés sur environnement isolé avant validation.
