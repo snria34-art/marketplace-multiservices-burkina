@@ -526,3 +526,16 @@ Relecture en lecture seule des définitions SQL actuellement déployées (`compl
 - `platform-health-monitor` v7 teste maintenant les cinq buckets : avatars, documents, shop-media, order-feedback-media, product-media.
 - Un probe manuel a reçu HTTP 200 et les cinq buckets ont répondu HTTP 200.
 - Ce test n'est pas une preuve d'upload/download ou d'accès correct par rôle ; les tests avec objets factices et vérifications positives/négatives restent à faire.
+
+
+### AUD-13 — Déconnexion et révocation FCM intégrées — 7 novembre 2026
+
+- Le nouveau composant `AccountSessionActionButton` est posé sur l'accueil, les tableaux de bord vendeur, administrateur et livreur ; la page de compte suspendu/bloqué utilise aussi le service commun.
+- Aucun écran ne fait directement `auth.signOut()`. La déconnexion passe par `PushNotificationService.signOutAndDeactivateCurrentDevice(client:)`.
+- Si Firebase est initialisé mais que le token n'est pas en cache, le service tente de le récupérer avant de révoquer.
+- La méthode attend que le RPC confirme `true` avant de vider le token et fermer la session. En cas d'échec, la session reste ouverte pour permettre une nouvelle tentative.
+- La migration `20261106203915_secure_notification_device_deactivation_for_blocked_accounts` a été appliquée. La RPC est maintenant `SECURITY DEFINER` avec `auth.uid()` obligatoire, filtre strict sur `user_id` et `push_token`, token non vide, résultat idempotent qui confirme qu'aucune ligne active correspondante ne reste.
+- Le SECURITY DEFINER est nécessaire car la policy `active_account_guard` de `notification_devices` empêcherait sinon un compte suspendu/bloqué de désactiver son propre token avant sa déconnexion. La fonction ne permet toujours pas de modifier le token d'un autre utilisateur.
+- ACL vérifiée : `anon` sans EXECUTE ; `authenticated` et `service_role` autorisés. Propriétaire postgres et `search_path = pg_catalog, public` conservés.
+- Un test pgTAP structurel supplémentaire est ajouté : `security_regression_test.sql` comporte 48 assertions. Un test Flutter vérifie le bouton lorsque Supabase n'est pas configuré.
+- Pas de token ou compte réel dans la base ; les tests Flutter/pgTAP ne sont pas exécutés. Le test final sur appareil Android/iOS (push reçu, logout, aucun push post-logout, nouvelle connexion et réenregistrement du token) reste requis.
