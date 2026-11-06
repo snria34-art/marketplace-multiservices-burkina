@@ -603,3 +603,17 @@ Relecture en lecture seule des définitions SQL actuellement déployées (`compl
 - Backups : le projet n'a pas exposé la liste des sauvegardes/restore points via les outils. Le plan reste à vérifier dans Billing. 17.6 est éligible à la sauvegarde physique Supabase, mais ne prouve pas le plan ni les backups actifs. Les objets Storage nécessitent une sauvegarde indépendante ; 0 objet actuellement.
 - Restauration réelle non testée. Runbook `docs/runbooks/aud-18-capacity-backup-restore.md`. Ticket RIA-32 en attente pour tester sur staging et documenter RPO/RTO. Aucun compute, plan, backup, objet ou donnée métier n'a été modifié.
 
+
+### AUD-19 — récupération email du mot de passe ajoutée — 7 novembre 2026
+
+- Le formulaire de connexion contient maintenant le lien « Mot de passe oublié ? » qui ouvre /auth/forgot-password.
+- Ce formulaire appelle resetPasswordForEmail avec redirectTo marketplaceburkina://auth/recovery et retourne un message générique qui ne révèle pas si l'adresse existe.
+- Un écouteur global démarre immédiatement après Supabase.initialize() et attend AuthChangeEvent.passwordRecovery. L'écran /auth/recovery ne donne pas accès au champ du nouveau mot de passe sans cet événement et une session.
+- Le nouveau mot de passe est confirmé deux fois, avec un minimum de 8 caractères, via auth.updateUser(UserAttributes(password: ...)).
+- Android : filtre deeplink pour marketplaceburkina://auth/recovery. iOS : le schéma personnalisé était déjà déclaré.
+- Une route alias /recovery est conservée pour les parseurs mobiles qui exposent seulement le chemin.
+- Tests ajoutés : 3 tests pour le marqueur de récupération et extension du test de routes. Le dépôt comporte maintenant 7 fichiers de tests Flutter, 3 fichiers SQL pgTAP et 77 assertions déclarées.
+- À faire dans Supabase Dashboard : ajouter exactement marketplaceburkina://auth/recovery dans Authentication > URL Configuration > Redirect URLs ; vérifier le Reset Password email template et le SMTP. Les outils connectés ne permettent pas de lire/modifier cette allow-list.
+- Le SMTP intégré peut être limité/best-effort ; aucun SMTP payant n'a été ajouté. Aucun email réel ni compte utilisateur n'a été créé. Aucun fournisseur SMS n'a été configuré.
+- OTP téléphone reporté : nécessite Twilio/MessageBird/Vonage ou autre fournisseur SMS et des frais par message ; aucune activation sans validation du coût.
+- Tests réels email/lien sur Android/iOS et exécution CI restent à faire. Runbook : docs/runbooks/aud-19-email-password-recovery.md.
