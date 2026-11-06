@@ -599,3 +599,13 @@ L'annulation globale par `transition_order_status` reste le défaut SQL ouvert, 
 - has_table_privilege vérifié sur toutes les tables : aucun SELECT/INSERT/UPDATE/DELETE direct anon/authenticated. Fonctions SECURITY DEFINER vérifiées pour avis publiés et preuve de livraison appartenant au client.
 - Deux assertions pgTAP ajoutées au fichier security_regression_test.sql ; 53 assertions dans ce fichier et 79 au total. Pas d'ajout de policy générique.
 - Aucun changement de table/ACL/policy en production. Runbook AUD-21 ajouté.
+
+### AUD-22 — revue SECURITY DEFINER et durcissement search_path — 7 novembre 2026
+
+- Inventaire live : 166 fonctions SECURITY DEFINER ; 163 fonctions app détenues postgres, 3 C PostGIS détenues supabase_admin. 107 EXECUTE authenticated, 6 EXECUTE anon.
+- Revue des helpers anon : can_read_published_review_media/get_public_review_media ne révèlent que les médias d'avis publiés ; private.is_admin exige auth.uid, admin_users.active et profiles.status ACTIVE ; trois autres sont les helpers PostGIS natifs.
+- 163 fonctions applicatives ont toutes un search_path explicite ; seules les trois fonctions PostGIS C restent sans search_path, rôle propriétaire supabase_admin. 48 fonctions ont search_path vide.
+- Deux migrations appliquées et synchronisées : 20261106220518_harden_security_definer_search_paths (12 RPC + trigger handle_new_user) ; 20261106220850_harden_payment_provider_event_search_path (RPC paiement service-role-only). Elles ajoutent pg_temp en dernière position sans changer body, owner, ACL ou données.
+- Scan des références relationnelles non qualifiées sur les chemins non vides : aucune relation applicative non qualifiée identifiée. Les trois types personnalisés non qualifiés qui ont été trouvés sont maintenant protégés par pg_temp dernier.
+- 14 fonctions avec pg_temp explicitement dernier ; aucun ancien chemin public/public,private non protégé du lot n'existe. 3 tests pgTAP ajoutés ; plan security_regression_test.sql = 56, total des 3 suites = 82.
+- Les prédicats ont été évalués en lecture seule et passent. La suite pgTAP/CI complète n'a pas été exécutée car les runners échouent sans steps/logs. Runbook AUD-22 ajouté.
