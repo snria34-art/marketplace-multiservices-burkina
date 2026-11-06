@@ -49,6 +49,7 @@ class _CourierPageState extends ConsumerState<CourierPage> {
 
     try {
       await _recordLocation();
+      if (!mounted) return;
       setState(() => _sharingLocation = true);
       _locationTimer = Timer.periodic(
         const Duration(seconds: 15),
@@ -94,6 +95,7 @@ class _CourierPageState extends ConsumerState<CourierPage> {
     _locationInFlight = true;
     try {
       final Position position = await DeviceLocationService.current();
+      if (!mounted) return;
 
       await repo.recordLocation(
         latitude: position.latitude,
@@ -236,7 +238,6 @@ class _CourierPageState extends ConsumerState<CourierPage> {
           maxWidth: 1600,
         );
         if (!mounted || photo == null) return;
-        if (!mounted) return;
         final privacy = await _confirmPhotoPrivacy();
         if (!mounted || privacy == null) return;
         await repo.uploadEvidence(
