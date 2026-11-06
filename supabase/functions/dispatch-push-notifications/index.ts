@@ -40,6 +40,19 @@ const json = (body: unknown, status = 200) =>
     headers: { "content-type": "application/json" },
   });
 
+function safeErrorInfo(error: unknown): Record<string, string | number> {
+  if (error && typeof error === "object") {
+    const value = error as Record<string, unknown>;
+    const info: Record<string, string | number> = {
+      name: typeof value.name === "string" ? value.name : "UnknownError",
+    };
+    if (typeof value.code === "string") info.code = value.code;
+    if (typeof value.status === "number") info.status = value.status;
+    return info;
+  }
+  return { name: "UnknownError" };
+}
+
 function secretKey(): string {
   const raw = Deno.env.get("SUPABASE_SECRET_KEYS");
   if (raw) {
@@ -364,7 +377,11 @@ async function processNotification(
 }
 
 Deno.serve(async (req: Request) => {
-  if (req.method !== "POST") return json({ error: "method_not_allowed" }, 405);
+  let stage = "method";
+  try {
+    if (req.method !== "POST") return json({ error: "method_not_allowed" }, 405);
+
+    stage = "configuration";
 
   const url = Deno.env.get("SUPABASE_URL") ?? "";
   const adminKey = secretKey();
@@ -373,6 +390,7 @@ Deno.serve(async (req: Request) => {
     return json({ error: "not_configured" }, 503);
   }
 
+  stage = "create_admin_client";
   const adminClient: AdminClient = createClient<AdminDatabase, "public">(
     url,
     adminKey,
@@ -380,34 +398,60 @@ Deno.serve(async (req: Request) => {
       auth: { persistSession: false, autoRefreshToken: false },
     },
   );
+  stage = "verify_dispatch_secret";
   const check = await adminClient.rpc("verify_push_dispatch_secret", {
     p_candidate: dispatchSecret,
   });
-  if (check.error || check.data !== true) {
-    return json({ error: "unauthorized" }, 401);
+  if (check.error) {
+    console.error(JSON.stringify({
+      event: "push_dispatch_secret_verification_failed",
+      error: safeErrorInfo(check.error),
+    }));
+    return json({ error: "secret_verification_unavailable" }, 503);
   }
+  if (check.data !== true) return json({ error: "unauthorized" }, 401);
 
+  stage = "fcm_service_account_configuration";
   const serviceAccountRaw = Deno.env.get("FCM_SERVICE_ACCOUNT_JSON") ?? "";
-  if (!serviceAccountRaw) return json({ error: "fcm_not_configured" }, 503);
+  if (!serviceAccountRaw) {
+    console.error(JSON.stringify({
+      event: "fcm_service_account_missing",
+      hasFcmProjectId: Boolean(Deno.env.get("FCM_PROJECT_ID")),
+    }));
+    return json({ error: "fcm_not_configured" }, 503);
+  }
   let serviceAccount: Json;
   try {
     serviceAccount = JSON.parse(serviceAccountRaw) as Json;
-  } catch (_) {
+  } catch (error) {
+    console.error(JSON.stringify({
+      event: "fcm_service_account_json_invalid",
+      error: safeErrorInfo(error),
+    }));
     return json({ error: "fcm_service_account_invalid" }, 503);
   }
 
   const projectId = String(
     serviceAccount.project_id ?? Deno.env.get("FCM_PROJECT_ID") ?? "",
   ).trim();
-  if (!projectId) return json({ error: "fcm_project_id_missing" }, 503);
+  if (!projectId) {
+    console.error(JSON.stringify({ event: "fcm_project_id_missing" }));
+    return json({ error: "fcm_project_id_missing" }, 503);
+  }
 
+  stage = "fcm_oauth";
   let accessToken: string;
   try {
     accessToken = await makeAccessToken(serviceAccount);
-  } catch (_) {
+  } catch (error) {
+    console.error(JSON.stringify({
+      event: "fcm_oauth_failed",
+      error: safeErrorInfo(error),
+    }));
     return json({ error: "fcm_auth_failed" }, 503);
   }
 
+  stage = "parse_payload";
   let payload: { notification_id?: string };
   try {
     payload = await req.json();
@@ -416,6 +460,7 @@ Deno.serve(async (req: Request) => {
   }
 
   if (payload.notification_id) {
+    stage = "process_single_notification";
     const result = await processNotification(
       adminClient,
       accessToken,
@@ -425,6 +470,7 @@ Deno.serve(async (req: Request) => {
     return json(result);
   }
 
+  stage = "fetch_pending_notifications";
   const pending = await adminClient
     .from("notifications")
     .select("id")
@@ -436,8 +482,15 @@ Deno.serve(async (req: Request) => {
     )
     .order("created_at", { ascending: true })
     .limit(50);
-  if (pending.error) return json({ error: "notifications_fetch_failed" }, 500);
+  if (pending.error) {
+    console.error(JSON.stringify({
+      event: "push_pending_fetch_failed",
+      error: safeErrorInfo(pending.error),
+    }));
+    return json({ error: "notifications_fetch_failed" }, 500);
+  }
 
+  stage = "process_pending_notifications";
   const ids = ((pending.data ?? []) as Json[]).map((row) => String(row.id));
   const results = await Promise.all(
     ids.map((id) =>
@@ -445,4 +498,12 @@ Deno.serve(async (req: Request) => {
     ),
   );
   return json({ processed: results.length, results });
+  } catch (error) {
+    console.error(JSON.stringify({
+      event: "push_dispatch_unhandled_error",
+      stage,
+      error: safeErrorInfo(error),
+    }));
+    return json({ error: "push_dispatch_internal_error", stage }, 500);
+  }
 });
