@@ -35,22 +35,24 @@ Les mesures de quantité ne prouvent pas la qualité fonctionnelle. Les 54 asser
 
 ## 2. Registre des anomalies — ordre de correction proposé
 
-### P0 — Critique : à traiter avant tout essai public
+### P1 — Risque d'intégrité et de disponibilité à traiter avant l'ouverture publique
 
-#### AUD-01 — Table PostGIS `public.spatial_ref_sys` non protégée par RLS
-**État : confirmé.**
+#### AUD-01 — PostGIS installé dans `public` : métadonnées spatiales modifiables via la Data API
+**État : confirmé. Correction sûre identifiée ; intervention Support requise.**
 
-- RLS est désactivé sur `public.spatial_ref_sys`.
-- La table appartient à `supabase_admin`, contient 8 500 lignes et les rôles `anon` et `authenticated` disposent des privilèges SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES et TRIGGER.
-- C'est une table d'extension PostGIS ; la correction ne doit pas casser l'extension ni être contournée par une modification des catalogues.
+- PostGIS 3.3.7 est installé dans `public` et appartient à `supabase_admin`.
+- `public.spatial_ref_sys` contient 8 500 définitions de systèmes de coordonnées. `anon` et `authenticated` ont des privilèges INSERT, UPDATE, DELETE et TRUNCATE, hérités des privilèges par défaut du propriétaire de l'extension.
+- Ce constat ne signifie pas que les données personnelles ou les coordonnées de livraison sont lisibles dans `spatial_ref_sys`. Le risque principal est l'intégrité : une modification ou suppression d'un SRID peut faire échouer les calculs géographiques et donc dégrader la livraison/localisation.
+- Le rôle de projet ne peut ni activer RLS ni retirer les privilèges accordés par `supabase_admin`. Un `ALTER TABLE ... ENABLE ROW LEVEL SECURITY`, un `REVOKE` ou un trigger de blocage n'est pas une correction valable.
+- Trois colonnes `geography` existent : `courier_locations.location`, `provider_locations.location` et `shops.location`. Elles contiennent actuellement zéro ligne. Deux index GiST ont été recensés (`courier_locations`, `shops`). Il faut préserver tables, types, index et vues.
+- Deux fonctions applicatives utilisent explicitement les noms de schéma actuels `public.st_*` et `public.geography` : `calculate_delivery_fee(uuid,jsonb)` et `record_courier_location(double precision,double precision,numeric)`. Elles devront être adaptées au schéma `extensions` après le déplacement.
+- Aucun autre appel applicatif direct à une RPC PostGIS ni vue métier dépendante de PostGIS n'a été identifié dans les contrôles effectués. Aucune extension supplémentaire dépendant de PostGIS n'a été détectée.
 
-**Risque :** les rôles clients disposent de privilèges d'écriture sur une table de métadonnées spatiales. Si le schéma `public` est exposé à la Data API (configuration Supabase habituelle), cela constitue une surface d'altération indésirable.
+**Risque :** altération possible des définitions SRID, pouvant rendre les calculs spatiaux indisponibles. Ce n'est pas une fuite de données métier. Les statistiques PostgreSQL consultées indiquent zéro UPDATE et zéro DELETE depuis la dernière remise à zéro des statistiques ; aucune tentative POST/PATCH/PUT/DELETE vers `/spatial_ref_sys` n'a été trouvée dans les journaux Data API du 6 au 7 novembre 2026. Cette vérification ne prouve pas l'absence d'activité antérieure à la période de journaux consultée.
 
-**Correction à concevoir :** réduire d'abord l'exposition et les privilèges API inutiles, puis appliquer une procédure compatible avec le propriétaire PostGIS/Supabase. SQL proposé par l'advisor, à examiner par le propriétaire avant exécution :
-```sql
-ALTER TABLE "public"."spatial_ref_sys" ENABLE ROW LEVEL SECURITY;
-```
-Cette commande n'a pas été exécutée ; le rôle de connexion utilisé par l'audit n'est pas propriétaire de la table. Ne pas ajouter une policy permissive pour faire disparaître l'alerte.
+**Correction retenue :** déplacer l'extension PostGIS existante de `public` vers `extensions` par l'intervention non destructive de Supabase Support. Supabase documente que cette méthode préserve les colonnes PostGIS, données, index et vues et s'exécute dans une transaction. Ne pas supprimer/recréer PostGIS soi-même : cette base possède des colonnes `geography` et la procédure DROP CASCADE les supprimerait.
+
+**Préparation :** voir `docs/runbooks/aud-01-postgis-schema-move.md`. Le dossier contient le message à transmettre à Supabase Support, les deux définitions SQL corrigées à appliquer après le déplacement et les contrôles de validation. Aucun changement SQL de production n'a été appliqué à ce stade.
 
 ### P1 — Bloquants métier, financiers et opérationnels
 
@@ -244,7 +246,7 @@ L'advisor rapporte 80 fonctions SECURITY DEFINER exécutables par `authenticated
 
 ## 4. Ordre de correction recommandé
 
-1. AUD-01 — réduire l'exposition de `spatial_ref_sys` sans casser PostGIS.
+1. AUD-01 — demander à Supabase Support le déplacement non destructif de PostGIS vers `extensions`, puis adapter les deux RPC métier.
 2. AUD-02 et AUD-03 — définir puis corriger ensemble le calcul comptable des remboursements et les transitions de commande/colis.
 3. AUD-07 — rendre l'état de base reproductible et réconcilier les migrations.
 4. AUD-04 — déployer/tester la lecture sécurisée du stock par variante après validation locale.
