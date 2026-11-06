@@ -49,7 +49,8 @@ Le problème était donc la mutation directe de l'état commercial par le client
 
 - renvoie uniquement les demandes associées aux services dont le prestataire appartient à \`auth.uid()\` ;
 - exige un compte actif ;
-- n'autorise pas le prestataire à consulter les réservations d'un autre prestataire.
+- n'autorise pas le prestataire à consulter les réservations d'un autre prestataire ;
+- ne renvoie pas l'identifiant du compte client dans le résultat prestataire.
 
 ### Décision prestataire — \`respond_creative_booking(uuid, text, numeric)\`
 
