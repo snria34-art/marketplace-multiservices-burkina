@@ -151,6 +151,45 @@ Pour un groupe entièrement annulé avant règlement vendeur, l'inversion compl�
 
 **Important :** il faut d'abord choisir une seule convention de comptabilisation et confirmer laquelle est utilisée par les appels backend réels. Ne pas mélanger le modèle `SALE` brut + `COMMISSION` négative avec le modèle `SALE` déjà net.
 
+### 3.6 Contraintes réelles du registre et risque de conflit multi-boutiques
+
+La contrainte unique active sur `public.seller_ledger` est un index :
+
+```sql
+CREATE UNIQUE INDEX uq_seller_ledger_ref_type
+ON public.seller_ledger(seller_id, entry_type, reference_id);
+```
+
+La fonction actuelle `complete_refund` écrit une ligne `REFUND` par `order_group`, avec :
+- le même `reference_id = refunds.id` ;
+- le même `entry_type = 'REFUND'` ;
+- le `seller_id` du groupe concerné.
+
+Si un vendeur possède deux boutiques (ou deux groupes) dans la même commande, le remboursement d'une commande complète ou partielle peut produire deux écritures portant le même triplet `seller_id + REFUND + refund_id`. La seconde insertion viole `uq_seller_ledger_ref_type` et fait échouer la transaction de `complete_refund`.
+
+Conséquence supplémentaire : la fonction Edge `execute-payment-refund` contacte Wave **avant** l'appel à `complete_refund`. Si Wave confirme le remboursement mais que l'écriture du ledger échoue ensuite sur cette unicité, l'Edge Function renvoie `refund_completion_failed` avec `refund_provider_confirmed=true`, tandis que la transaction SQL est annulée. Le remboursement fournisseur est alors réel mais la base locale peut laisser la demande en `PROCESSING`. La correction future doit traiter explicitement cette situation de rapprochement et ne jamais relancer aveuglément le remboursement fournisseur.
+
+**Règle de conception pour les futures écritures :**
+- chaque ligne comptable issue d'une allocation doit avoir une référence unique `refund_allocation_id`, et non le seul `refund_id`, si plusieurs lignes d'allocation sont créées pour un même vendeur ;
+- l'agrégation vendeur/groupe doit être déterminée avant insertion ;
+- l'écriture doit être idempotente par allocation et distinguer l'état du remboursement externe (Wave/CinetPay) de la comptabilisation interne ;
+- un échec de comptabilisation après confirmation du prestataire doit déclencher un état de rapprochement/retry interne, pas un nouvel appel au prestataire.
+
+Cette contrainte n'a pas été provoquée sur la production : il n'existe actuellement aucune commande, aucun remboursement et aucune écriture de ledger.
+
+### 3.7 Appelants réellement observés
+
+Vérifications de catalogue et recherche de code le 7 novembre 2026 :
+- aucune fonction SQL applicative ni aucun trigger ne référence `finalize_seller_group`, `finalize_seller_group_financials` ou `reverse_seller_group` ;
+- aucun job `pg_cron` du projet n'appelle ces routines ou n'écrit dans `seller_ledger` ;
+- la recherche de code dans la branche `main` ne trouve leurs références que dans les migrations qui les définissent, les runbooks et le rapport d'audit, pas dans les sources Flutter/Edge Function.
+
+Cela ne prouve pas qu'aucun appel externe hors dépôt n'existe, mais l'intégration de finalisation des ventes ne peut pas encore être attribuée avec certitude à l'une des deux conventions. Il faut la tracer dans le service serveur qui orchestrera le passage à `DELIVERED` avant de choisir le ledger canonique.
+
+### 3.8 Portée actuelle de la demande côté client
+
+L'écran `OrderDetailsPage` permet au client de saisir uniquement un montant XOF et un motif ; il appelle `request_refund(order_id, amount, reason)`. Il ne propose pas de choisir une boutique, un article ou une quantité. La demande client actuelle est donc un montant global sur une commande, et toute possibilité de remboursement ciblé par article doit être conçue de bout en bout (écran, RPC, retour, allocations, validation admin et appel prestataire).
+
 ### 3.6 Coupons, livraison et financement plateforme — décision métier requise
 
 Les règles suivantes doivent être écrites avant d'implémenter le calcul :
