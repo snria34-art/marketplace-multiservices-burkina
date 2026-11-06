@@ -26,6 +26,8 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
   String _paymentProvider = 'CINETPAY';
   final TextEditingController _couponController = TextEditingController();
   bool _loading = false;
+  bool _quoteLoading = false;
+  bool _quoteError = false;
   int _quoteRequestId = 0;
 
   late final String _idempotencyKey;
@@ -58,6 +60,8 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
       final requestId = ++_quoteRequestId;
       _selectedAddressId = addressId;
       _selectedAddress = first;
+      _quoteLoading = true;
+      _quoteError = false;
 
       try {
         final quote = await _calculateQuote(first);
@@ -67,8 +71,15 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
           _quote = quote;
         }
       } catch (_) {
-        // The screen remains usable; the user can select the address again
-        // to request a fresh quote. Never attach a stale quote to another address.
+        if (mounted &&
+            requestId == _quoteRequestId &&
+            _selectedAddressId == addressId) {
+          _quoteError = true;
+        }
+      } finally {
+        if (mounted && requestId == _quoteRequestId) {
+          _quoteLoading = false;
+        }
       }
     }
 
@@ -97,6 +108,8 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
       _selectedAddressId = addressId;
       _selectedAddress = address;
       _quote = null;
+      _quoteLoading = true;
+      _quoteError = false;
     });
 
     try {
@@ -114,6 +127,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
         return;
       }
 
+      setState(() => _quoteError = true);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
@@ -121,7 +135,17 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
           ),
         ),
       );
+    } finally {
+      if (mounted && requestId == _quoteRequestId) {
+        setState(() => _quoteLoading = false);
+      }
     }
+  }
+
+  Future<void> _retryQuote() async {
+    final address = _selectedAddress;
+    if (address == null || _quoteLoading || _loading) return;
+    await _selectAddress(address);
   }
 
   Future<void> _addAddress() async {
@@ -336,11 +360,32 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
                             (stops ?? '1') +
                             ' point(s)',
                   ),
-                  trailing: _quote == null
-                      ? const Icon(Icons.calculate_outlined)
-                      : const Icon(Icons.check_circle_outline),
+                  trailing: _quoteLoading
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : _quote == null
+                          ? const Icon(Icons.calculate_outlined)
+                          : const Icon(Icons.check_circle_outline),
                 ),
               ),
+              if (address != null && _quote == null)
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton.icon(
+                    onPressed: _quoteLoading || _loading ? null : _retryQuote,
+                    icon: const Icon(Icons.refresh),
+                    label: Text(
+                      _quoteLoading
+                          ? 'Calcul du devis…'
+                          : _quoteError
+                              ? 'Réessayer le calcul de livraison'
+                              : 'Calculer la livraison',
+                    ),
+                  ),
+                ),
               const SizedBox(height: 18),
               Text(
                 'Code promotionnel',
