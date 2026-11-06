@@ -15,3 +15,8 @@ verify_jwt = false
 # Payment providers redirect the customer back without a Supabase JWT.
 [functions.payment-return]
 verify_jwt = false
+
+# Customers must have a valid Supabase session to check whether a payment provider
+# is configured. The function returns only a boolean and never exposes secrets.
+[functions.check-payment-provider-config]
+verify_jwt = true
