@@ -187,12 +187,22 @@ Runbook : `docs/runbooks/aud-07-reconcile-toy-weapon-migration-history.md`.
 
 ### P2 — Fonctionnalités, autorisations et fiabilité à compléter
 
-#### AUD-10 — Cinq verticales sont consultables mais sans action métier
-**État : confirmé dans `vertical_discovery_page.dart`.**
+#### AUD-10 — Cinq verticales sont consultables mais leurs parcours restent incomplets
+**État : AUD-10.1 — réservation créative sécurisée côté backend et raccordée à Flutter ; quatre verticales et les scénarios d'intégration restent à faire.**
 
-Les modules immobilier, professionnels, agriculture, santé et créatifs n'appartiennent pas à `_hasAction`. Ils peuvent afficher des annonces, mais la page ne fournit pas le bouton de demande, réservation, commande ou candidature correspondant.
+Les modules immobilier, professionnels, agriculture, santé et créatifs avaient été exclus de `_hasAction`. Une correction ciblée est maintenant appliquée à la verticale Créatifs :
+- migrations Supabase `20261106235154_secure_creative_booking_workflow` et `20261106235226_fix_creative_booking_decision_normalization` ;
+- retrait des écritures directes client sur `creative_bookings` ; lecture limitée aux réservations du client, avec maintien de `active_account_guard` en RESTRICTIVE ;
+- RPC serveur pour demander, annuler une demande en attente, lister les demandes des services détenus par le prestataire, confirmer avec montant ou refuser ;
+- les quatre RPC vérifient la session/compte actif, l'identité propriétaire et l'état attendu ; aucun EXECUTE anon ;
+- interface Flutter raccordée : demande, liste client, annulation d'une demande en attente, liste prestataire et décision avec montant ;
+- lien public `service_providers(display_name)` retiré de la requête catalogue créatif car anon n'a pas le droit de lire cette table.
 
-**Correction :** définir pour chaque verticale son parcours métier, les contrôles de disponibilité/propriété, les RPC de création et les statuts, puis ajouter l'interface et les tests.
+**Vérification :** dix contrôles SQL live équivalents aux assertions du nouveau fichier pgTAP sont vrais (10/10), les quatre corps PL/pgSQL ont été compilés par appels sans session contrôlés, et les droits/RLS ont été relus après migration.
+
+**Limites :** pgTAP n'a pas été exécuté (extension absente de la base hébergée), aucun test Flutter/Dart n'a été exécuté et aucun utilisateur réel n'existe pour les essais croisés. Devis/communication, créneaux et chevauchements, annulation après confirmation, notifications, journal de transitions et paiement restent à concevoir. Les verticales immobilier, professionnels, agriculture et santé n'ont pas encore de parcours d'action complet.
+
+Runbook : `docs/runbooks/aud-10-creative-bookings-security.md`.
 
 #### AUD-11 — Les routes protégées ne contrôlaient pas la session ou le rôle
 **État : gardes Flutter ajoutés sur main ; parcours administrateur/modérateur séparé ; tests unitaires écrits mais non exécutés.**
@@ -452,7 +462,7 @@ Runbook : `docs/runbooks/aud-22-security-definer-search-path-review.md`.
 6. AUD-05 et AUD-06 — configurer les fournisseurs et Firebase, puis tester les parcours réels contrôlés.
 7. AUD-11 à AUD-16 — compléter les autorisations UI, RBAC, déconnexion, GPS et synchronisation des fonctions Edge.
 8. AUD-09 et AUD-18 — achever la publication native, la capacité et la restauration.
-9. AUD-10 et AUD-19 — terminer les fonctionnalités et parcours d'authentification prévus par le produit.
+9. AUD-10 — terminer les verticales immobilier, professionnels, agriculture et santé ; compléter les parcours créatifs avancés et les tests. AUD-19 — terminer la récupération de compte en production.
 
 ## 5. Limites de l'audit
 
