@@ -1,5 +1,5 @@
 begin;
-select plan(43);
+select plan(44);
 
 select ok(
   not has_table_privilege('anon','private.catalog_moderation_findings','SELECT')
@@ -354,6 +354,15 @@ select ok(
   and position('released_coupon_usage' in pg_get_functiondef('public.cancel_unpaid_order(uuid)'::regprocedure)) > 0
   and position('customer_cancelled_before_payment' in pg_get_functiondef('public.cancel_unpaid_order(uuid)'::regprocedure)) > 0,
   'unpaid cancellation protects paid/dispatched/consumed orders, cancels pre-dispatch assignments, releases coupon usage, and logs the event'
+);
+
+
+select ok(
+  position('v_is_admin := private.is_admin()' in pg_get_functiondef('public.cancel_unpaid_order(uuid)'::regprocedure)) > 0
+  and position('(customer_id = v_user or v_is_admin)' in pg_get_functiondef('public.cancel_unpaid_order(uuid)'::regprocedure)) > 0
+  and position('v_order.status <> ''PENDING_PAYMENT''' in pg_get_functiondef('public.cancel_unpaid_order(uuid)'::regprocedure)) > 0
+  and position('order_payment_already_settled' in pg_get_functiondef('public.cancel_unpaid_order(uuid)'::regprocedure)) > 0,
+  'active admins may cancel unpaid orders, but the workflow still rejects paid orders'
 );
 
 select * from finish();
