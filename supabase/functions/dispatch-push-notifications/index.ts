@@ -1,17 +1,67 @@
-import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { createClient } from "jsr:@supabase/supabase-js@2";
+import "jsr:@supabase/functions-js@^2.116.0/edge-runtime.d.ts";
+import { createClient, type SupabaseClient } from "jsr:@supabase/supabase-js@2";
 
 type Json = Record<string, unknown>;
 
-const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), {
-  status,
-  headers: { "content-type": "application/json" },
-});
+type AdminSchema = {
+  Tables: Record<
+    string,
+    {
+      Row: Record<string, unknown>;
+      Insert: Record<string, unknown>;
+      Update: Record<string, unknown>;
+      Relationships: [];
+    }
+  >;
+  Views: Record<
+    string,
+    {
+      Row: Record<string, unknown>;
+      Relationships: [];
+    }
+  >;
+  Functions: Record<
+    string,
+    {
+      Args: Record<string, unknown>;
+      Returns: unknown;
+    }
+  >;
+  Enums: Record<string, string>;
+  CompositeTypes: Record<string, Record<string, unknown>>;
+};
+
+type AdminDatabase = { public: AdminSchema };
+type AdminClient = SupabaseClient<AdminDatabase, "public">;
+
+const json = (body: unknown, status = 200) =>
+  new Response(JSON.stringify(body), {
+    status,
+    headers: { "content-type": "application/json" },
+  });
+
+function safeErrorInfo(error: unknown): Record<string, string | number> {
+  if (error && typeof error === "object") {
+    const value = error as Record<string, unknown>;
+    const info: Record<string, string | number> = {
+      name: typeof value.name === "string" ? value.name : "UnknownError",
+    };
+    if (typeof value.code === "string") info.code = value.code;
+    if (typeof value.status === "number") info.status = value.status;
+    return info;
+  }
+  return { name: "UnknownError" };
+}
 
 function secretKey(): string {
   const raw = Deno.env.get("SUPABASE_SECRET_KEYS");
   if (raw) {
-    try { const parsed = JSON.parse(raw); if (parsed.default) return parsed.default; } catch (_) {}
+    try {
+      const parsed = JSON.parse(raw);
+      if (parsed.default) return parsed.default;
+    } catch (_) {
+      // Ignore malformed secret container and fall back to the standard key.
+    }
   }
   return Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 }
@@ -19,7 +69,10 @@ function secretKey(): string {
 function base64Url(bytes: Uint8Array): string {
   let binary = "";
   for (const byte of bytes) binary += String.fromCharCode(byte);
-  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(
+    /=+$/g,
+    "",
+  );
 }
 
 function textBase64Url(value: string): string {
@@ -39,8 +92,13 @@ function pemToArrayBuffer(pem: string): ArrayBuffer {
 
 async function makeAccessToken(serviceAccount: Json): Promise<string> {
   const clientEmail = String(serviceAccount.client_email ?? "").trim();
-  const privateKeyPem = String(serviceAccount.private_key ?? "").replace(/\\n/g, "\n");
-  if (!clientEmail || !privateKeyPem) throw new Error("FCM_SERVICE_ACCOUNT_INVALID");
+  const privateKeyPem = String(serviceAccount.private_key ?? "").replace(
+    /\\n/g,
+    "\n",
+  );
+  if (!clientEmail || !privateKeyPem) {
+    throw new Error("FCM_SERVICE_ACCOUNT_INVALID");
+  }
 
   const now = Math.floor(Date.now() / 1000);
   const header = textBase64Url(JSON.stringify({ alg: "RS256", typ: "JWT" }));
@@ -60,7 +118,11 @@ async function makeAccessToken(serviceAccount: Json): Promise<string> {
     ["sign"],
   );
   const signature = new Uint8Array(
-    await crypto.subtle.sign("RSASSA-PKCS1-v1_5", key, new TextEncoder().encode(unsigned)),
+    await crypto.subtle.sign(
+      "RSASSA-PKCS1-v1_5",
+      key,
+      new TextEncoder().encode(unsigned),
+    ),
   );
   const assertion = unsigned + "." + base64Url(signature);
 
@@ -81,20 +143,34 @@ async function makeAccessToken(serviceAccount: Json): Promise<string> {
 
 function preferenceEnabled(type: string, prefs: Json): boolean {
   const normalized = type.toLowerCase();
-  if (normalized.includes("order") || normalized.includes("payment") || normalized.includes("commande")) return prefs.orders !== false;
-  if (normalized.includes("delivery") || normalized.includes("courier") || normalized.includes("livraison")) return prefs.delivery !== false;
-  if (normalized.includes("message") || normalized.includes("chat")) return prefs.messages !== false;
-  if (normalized.includes("promotion") || normalized.includes("coupon") || normalized.includes("promo")) return prefs.promotions !== false;
-  if (normalized.includes("service") || normalized.includes("mechanic") || normalized.includes("transport")) return prefs.services !== false;
+  if (
+    normalized.includes("order") || normalized.includes("payment") ||
+    normalized.includes("commande")
+  ) return prefs.orders !== false;
+  if (
+    normalized.includes("delivery") || normalized.includes("courier") ||
+    normalized.includes("livraison")
+  ) return prefs.delivery !== false;
+  if (normalized.includes("message") || normalized.includes("chat")) {
+    return prefs.messages !== false;
+  }
+  if (
+    normalized.includes("promotion") || normalized.includes("coupon") ||
+    normalized.includes("promo")
+  ) return prefs.promotions !== false;
+  if (
+    normalized.includes("service") || normalized.includes("mechanic") ||
+    normalized.includes("transport")
+  ) return prefs.services !== false;
   return true;
 }
+
 
 async function mapWithConcurrency<T, R>(
   items: T[],
   limit: number,
   worker: (item: T) => Promise<R>,
 ): Promise<R[]> {
-  if (items.length === 0) return [];
   const results = new Array<R>(items.length);
   let nextIndex = 0;
   const workerCount = Math.min(items.length, Math.max(1, Math.floor(limit)));
@@ -128,7 +204,8 @@ async function sendToToken(
   data: Record<string, string>,
 ) {
   const response = await fetch(
-    "https://fcm.googleapis.com/v1/projects/" + encodeURIComponent(projectId) + "/messages:send",
+    "https://fcm.googleapis.com/v1/projects/" + encodeURIComponent(projectId) +
+      "/messages:send",
     {
       method: "POST",
       headers: {
@@ -163,7 +240,7 @@ async function sendToToken(
 }
 
 async function processNotification(
-  adminClient: any,
+  adminClient: AdminClient,
   accessToken: string,
   projectId: string,
   notificationId: string,
@@ -173,7 +250,8 @@ async function processNotification(
   });
 
   if (claimed.error) throw claimed.error;
-  if (!Array.isArray(claimed.data) || claimed.data.length === 0) {
+  const claimedRows = Array.isArray(claimed.data) ? claimed.data : [];
+  if (claimedRows.length === 0) {
     return {
       id: notificationId,
       skipped: true,
@@ -181,13 +259,17 @@ async function processNotification(
     };
   }
 
-  const notification = claimed.data[0] as Json;
+  const notification = claimedRows[0] as Json;
+  const userId = String(notification.user_id ?? "").trim();
+  if (!userId) {
+    throw new Error("NOTIFICATION_USER_INVALID");
+  }
 
   try {
     const prefResult = await adminClient
       .from("notification_preferences")
       .select("orders,promotions,messages,delivery,services")
-      .eq("user_id", notification.user_id)
+      .eq("user_id", userId)
       .maybeSingle();
 
     if (prefResult.error) throw prefResult.error;
@@ -213,7 +295,7 @@ async function processNotification(
     const deviceResult = await adminClient
       .from("notification_devices")
       .select("id,push_token,platform")
-      .eq("user_id", notification.user_id)
+      .eq("user_id", userId)
       .eq("active", true);
 
     if (deviceResult.error) throw deviceResult.error;
@@ -258,24 +340,30 @@ async function processNotification(
         const fcmError = details.find(
           (detail: Json) =>
             detail["@type"] ===
-            "type.googleapis.com/google.firebase.fcm.v1.FcmError",
+              "type.googleapis.com/google.firebase.fcm.v1.FcmError",
         ) as Json | undefined;
         const errorCode = fcmError?.errorCode;
 
-        if (!result.ok && (errorCode === "UNREGISTERED" || result.status === 404)) {
+        if (
+          !result.ok && (errorCode === "UNREGISTERED" || result.status === 404)
+        ) {
           await adminClient
             .from("notification_devices")
             .update({ active: false, last_seen_at: new Date().toISOString() })
-            .eq("id", device.id);
+            .eq("id", String(device.id ?? ""));
         }
 
         return { token, ...result };
-      } catch (_) {
+      } catch (error) {
+        console.error(JSON.stringify({
+          event: "fcm_device_send_failed",
+          error: safeErrorInfo(error),
+        }));
         return {
           token,
           ok: false,
           status: 0,
-          body: { error: { message: "FCM_NETWORK_ERROR" } },
+          body: { error: { message: "FCM_SEND_FAILED" } },
         };
       }
     });
@@ -283,7 +371,7 @@ async function processNotification(
     const sent = results.filter((item) => item.ok).length;
     const errors = results
       .filter((item) => !item.ok)
-      .map((item) => item.body?.error?.message ?? "FCM_SEND_FAILED")
+      .map(() => "FCM_SEND_FAILED")
       .slice(0, 5);
 
     await adminClient
@@ -292,12 +380,9 @@ async function processNotification(
         push_sent_at: sent > 0 ? new Date().toISOString() : null,
         push_processing_at: null,
         push_attempts: Number(notification.push_attempts ?? 0) + 1,
-        push_error:
-          sent > 0
-            ? errors.length
-              ? errors.join(" | ")
-              : null
-            : errors.join(" | ") || "FCM_SEND_FAILED",
+        push_error: sent > 0
+          ? errors.length ? "FCM_SEND_FAILED" : null
+          : "FCM_SEND_FAILED",
       })
       .eq("id", notificationId);
 
@@ -313,10 +398,7 @@ async function processNotification(
       .update({
         push_processing_at: null,
         push_attempts: Number(notification.push_attempts ?? 0) + 1,
-        push_error:
-          error instanceof Error
-            ? error.message
-            : "PUSH_PROCESSING_FAILED",
+        push_error: "PUSH_PROCESSING_FAILED",
       })
       .eq("id", notificationId);
 
@@ -325,59 +407,140 @@ async function processNotification(
 }
 
 Deno.serve(async (req: Request) => {
-  if (req.method !== "POST") return json({ error: "method_not_allowed" }, 405);
+  let stage = "method";
+  try {
+    if (req.method !== "POST") return json({ error: "method_not_allowed" }, 405);
+
+    stage = "configuration";
 
   const url = Deno.env.get("SUPABASE_URL") ?? "";
   const adminKey = secretKey();
   const dispatchSecret = req.headers.get("x-push-dispatch-secret") ?? "";
-  if (!url || !adminKey || !dispatchSecret) return json({ error: "not_configured" }, 503);
-
-  const adminClient: any = createClient<any>(url, adminKey, { auth: { persistSession: false, autoRefreshToken: false } });
-  const check = await adminClient.rpc("verify_push_dispatch_secret", { p_candidate: dispatchSecret });
-  if (check.error || check.data !== true) return json({ error: "unauthorized" }, 401);
-
-  const serviceAccountRaw = Deno.env.get("FCM_SERVICE_ACCOUNT_JSON") ?? "";
-  if (!serviceAccountRaw) return json({ error: "fcm_not_configured" }, 503);
-  let serviceAccount: Json;
-  try { serviceAccount = JSON.parse(serviceAccountRaw) as Json; } catch (_) { return json({ error: "fcm_service_account_invalid" }, 503); }
-
-  const projectId = String(serviceAccount.project_id ?? Deno.env.get("FCM_PROJECT_ID") ?? "").trim();
-  if (!projectId) return json({ error: "fcm_project_id_missing" }, 503);
-
-  let accessToken: string;
-  try { accessToken = await makeAccessToken(serviceAccount); } catch (error) {
-    return json({ error: error instanceof Error ? error.message : "fcm_auth_failed" }, 503);
+  if (!url || !adminKey || !dispatchSecret) {
+    return json({ error: "not_configured" }, 503);
   }
 
+  stage = "create_admin_client";
+  const adminClient: AdminClient = createClient<AdminDatabase, "public">(
+    url,
+    adminKey,
+    {
+      auth: { persistSession: false, autoRefreshToken: false },
+    },
+  );
+  stage = "verify_dispatch_secret";
+  const check = await adminClient.rpc("verify_push_dispatch_secret", {
+    p_candidate: dispatchSecret,
+  });
+  if (check.error) {
+    console.error(JSON.stringify({
+      event: "push_dispatch_secret_verification_failed",
+      error: safeErrorInfo(check.error),
+    }));
+    return json({ error: "secret_verification_unavailable" }, 503);
+  }
+  if (check.data !== true) return json({ error: "unauthorized" }, 401);
+
+  stage = "fcm_service_account_configuration";
+  const serviceAccountRaw = Deno.env.get("FCM_SERVICE_ACCOUNT_JSON") ?? "";
+  if (!serviceAccountRaw) {
+    console.error(JSON.stringify({
+      event: "fcm_service_account_missing",
+      hasFcmProjectId: Boolean(Deno.env.get("FCM_PROJECT_ID")),
+    }));
+    return json({ error: "fcm_not_configured" }, 503);
+  }
+  let serviceAccount: Json;
+  try {
+    serviceAccount = JSON.parse(serviceAccountRaw) as Json;
+  } catch (error) {
+    console.error(JSON.stringify({
+      event: "fcm_service_account_json_invalid",
+      error: safeErrorInfo(error),
+    }));
+    return json({ error: "fcm_service_account_invalid" }, 503);
+  }
+
+  const projectId = String(
+    serviceAccount.project_id ?? Deno.env.get("FCM_PROJECT_ID") ?? "",
+  ).trim();
+  if (!projectId) {
+    console.error(JSON.stringify({ event: "fcm_project_id_missing" }));
+    return json({ error: "fcm_project_id_missing" }, 503);
+  }
+
+  stage = "fcm_oauth";
+  let accessToken: string;
+  try {
+    accessToken = await makeAccessToken(serviceAccount);
+  } catch (error) {
+    console.error(JSON.stringify({
+      event: "fcm_oauth_failed",
+      error: safeErrorInfo(error),
+    }));
+    return json({ error: "fcm_auth_failed" }, 503);
+  }
+
+  stage = "parse_payload";
   let payload: { notification_id?: string };
-  try { payload = await req.json(); } catch (_) { payload = {}; }
+  try {
+    payload = await req.json();
+  } catch (_) {
+    payload = {};
+  }
 
   if (payload.notification_id) {
-    try {
-      const result = await processNotification(adminClient, accessToken, projectId, payload.notification_id);
-      return json(result);
-    } catch (_) {
-      return json({ id: payload.notification_id, error: "PUSH_PROCESSING_FAILED" }, 500);
-    }
+    stage = "process_single_notification";
+    const result = await processNotification(
+      adminClient,
+      accessToken,
+      projectId,
+      payload.notification_id,
+    );
+    return json(result);
   }
 
+  stage = "fetch_pending_notifications";
   const pending = await adminClient
     .from("notifications")
     .select("id")
     .is("push_sent_at", null)
     .lt("push_attempts", 20)
-    .gte("created_at", new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString())
+    .gte(
+      "created_at",
+      new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+    )
     .order("created_at", { ascending: true })
     .limit(50);
-  if (pending.error) return json({ error: pending.error.message }, 500);
+  if (pending.error) {
+    console.error(JSON.stringify({
+      event: "push_pending_fetch_failed",
+      error: safeErrorInfo(pending.error),
+    }));
+    return json({ error: "notifications_fetch_failed" }, 500);
+  }
 
+  stage = "process_pending_notifications";
   const ids = ((pending.data ?? []) as Json[]).map((row) => String(row.id));
   const results = await mapWithConcurrency(ids, 5, async (id) => {
     try {
       return await processNotification(adminClient, accessToken, projectId, id);
-    } catch (_) {
+    } catch (error) {
+      console.error(JSON.stringify({
+        event: "push_notification_processing_failed",
+        notificationId: id,
+        error: safeErrorInfo(error),
+      }));
       return { id, error: "PUSH_PROCESSING_FAILED" };
     }
   });
   return json({ processed: results.length, results });
+  } catch (error) {
+    console.error(JSON.stringify({
+      event: "push_dispatch_unhandled_error",
+      stage,
+      error: safeErrorInfo(error),
+    }));
+    return json({ error: "push_dispatch_internal_error", stage }, 500);
+  }
 });
