@@ -20,7 +20,7 @@ Les Edge Functions de paiement sont actives :
 | `create-cinetpay-payment-session-v3` | 6 | `CINETPAY_API_KEY`, `CINETPAY_SITE_ID` |
 | `cinetpay-webhook-v3` | 6 | `CINETPAY_API_KEY`, `CINETPAY_SITE_ID`, `CINETPAY_SECRET_KEY` |
 | `dispatch-push-notifications` | 10 | `FCM_SERVICE_ACCOUNT_JSON`, `FCM_PROJECT_ID` (si absent du JSON) |
-| `platform-health-monitor` | 6 | Secrets Supabase du projet déjà utilisés par le moniteur |
+| `platform-health-monitor` | 7 | Secrets Supabase du projet déjà utilisés par le moniteur |
 
 Aucune clé de paiement n'est présente dans les lignes ciblées de `public.platform_settings`. Les valeurs des secrets Edge Function ne sont pas accessibles via les outils de lecture utilisés et n'ont pas été consultées.
 
@@ -79,7 +79,7 @@ Un appel transactionnel de validation avec `service_role` a retourné une insert
 
 ### Moniteur Edge Function
 
-`platform-health-monitor` a été déployé en version 6.
+`platform-health-monitor` a été déployé en version 7.
 
 Le nouveau contrôle FCM :
 
@@ -112,3 +112,17 @@ La partie code et surveillance est en place, mais les secrets et identifiants de
 - FCM : en attente de `FCM_SERVICE_ACCOUNT_JSON` et, si absent du JSON, `FCM_PROJECT_ID`.
 
 Aucune de ces valeurs n'a été inventée, demandée par message ou exposée dans le dépôt.
+
+
+## 6. Vérification réelle de l'état — 6 novembre 2026
+
+Un appel manuel identique à la tâche Cron active a été exécuté sans modifier aucun paiement ni envoyer de push :
+
+- Requête HTTP vers `platform-health-monitor` : HTTP 200.
+- `FCM` enregistré en `NOT_CONFIGURED`, car `FCM_SERVICE_ACCOUNT_JSON` manque et `FCM_PROJECT_ID` est absent.
+- `WAVE` et `CINETPAY` enregistrés `NOT_CONFIGURED` pour les variables d'accès marchandes manquantes.
+- Auth, REST, réseau, Edge Functions, OpenAI : `UP`.
+- Les cinq buckets Storage (`avatars`, `documents`, `order-feedback-media`, `product-media`, `shop-media`) : `UP`, HTTP 200.
+
+Le contrôle des cinq buckets a été ajouté à la version 7. Il vérifie l'existence et la réponse HTTP du bucket avec la clé serveur ; il ne remplace pas un test upload/download ni la validation des policies d'accès selon les rôles.
+
