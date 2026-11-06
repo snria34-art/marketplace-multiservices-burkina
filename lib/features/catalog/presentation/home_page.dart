@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/providers/repository_providers.dart';
 import '../../../core/widgets/app_error_view.dart';
+import '../../../core/widgets/account_session_action_button.dart';
 import '../../modules/presentation/service_module_sliver.dart';
 
 class HomePage extends ConsumerStatefulWidget {
@@ -185,15 +186,7 @@ class _HomePageState extends ConsumerState<HomePage> {
             onPressed: () => context.push('/cart'),
             icon: const Icon(Icons.shopping_cart_outlined),
           ),
-          IconButton(
-            tooltip: 'Compte',
-            onPressed: () => context.push('/auth'),
-            icon: Icon(
-              client?.auth.currentUser == null
-                  ? Icons.account_circle_outlined
-                  : Icons.account_circle,
-            ),
-          ),
+          const AccountSessionActionButton(),
         ],
       ),
       body: FutureBuilder<_CatalogMetadata>(
