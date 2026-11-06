@@ -594,9 +594,8 @@ class _NewProductDialogState extends State<_NewProductDialog> {
           _expiryDate ?? DateTime.now().add(const Duration(days: 30)),
     );
 
-    if (picked != null) {
-      setState(() => _expiryDate = picked);
-    }
+    if (!mounted || picked == null) return;
+    setState(() => _expiryDate = picked);
   }
 
   @override
