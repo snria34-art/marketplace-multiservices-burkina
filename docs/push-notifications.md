@@ -49,3 +49,22 @@ Si l'envoi échoue, push_attempts et push_error sont conservés. Cron relance le
 ## Limitation actuelle
 
 Le code serveur et Flutter sont prêts, mais l'activation réelle sur les téléphones dépend encore du projet Firebase, des fichiers de configuration Android/iOS et du compte de service Firebase. Ces éléments ne peuvent pas être inventés sans créer le projet Firebase réel.
+
+## État opérationnel vérifié — 6 novembre 2026
+
+- La fonction Supabase `dispatch-push-notifications` a été synchronisée depuis `supabase/functions/dispatch-push-notifications/index.ts` et est maintenant déployée en **version 8**.
+- Cette version inclut une limite de concurrence de cinq notifications simultanées et une gestion plus robuste des erreurs par appareil.
+- Le paramètre `verify_jwt=false` est conservé : l'endpoint est appelé par le trigger serveur et vérifie son secret dédié dans le corps de la fonction. Ne pas retirer ce contrôle.
+- Les journaux du 6 novembre montrent encore des réponses HTTP 503 de l'ancienne version 7 avant la synchronisation. Le contrôle Health Supabase continue de signaler un taux d'échec élevé après le déploiement ; aucun envoi réel n'a été provoqué pour tester la nouvelle version.
+- Le blocage de configuration confirmé dans l'audit précédent reste à lever : le secret `FCM_SERVICE_ACCOUNT_JSON` et les paramètres du projet Firebase doivent être renseignés dans le gestionnaire de secrets Supabase. Le JSON du compte de service ne doit jamais être ajouté à GitHub.
+- Les fichiers Firebase natifs Android/iOS doivent également être générés depuis le véritable projet Firebase. Ne pas fabriquer de faux fichiers ou de faux identifiants.
+
+### Étapes de finalisation (sans déclencher de campagne)
+
+1. Configurer le projet Firebase réel et les applications Android/iOS.
+2. Ajouter le secret `FCM_SERVICE_ACCOUNT_JSON` dans Supabase Edge Function Secrets.
+3. Ajouter la clé APNs à Firebase pour iOS et vérifier les configurations natives.
+4. Lorsqu'un appareil de test sera prêt et que l'utilisateur autorisera une vérification, envoyer une seule notification de test contrôlée.
+5. Vérifier la réception, puis confirmer que le taux d'erreur Health revient à la normale.
+
+**Important :** le déploiement version 8 synchronise le code, mais ne peut pas remplacer les secrets Firebase manquants et ne prouve pas encore la réception d'une notification sur un téléphone.
