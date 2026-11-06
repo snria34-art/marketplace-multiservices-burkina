@@ -401,3 +401,12 @@ Dans le détail de commande, les parcours de demande de remboursement, d'ouvertu
 La logique financière SQL n'a pas été modifiée. RIA-25 confirme que la fonction de finalisation répartit encore les montants sur tous les groupes de la commande sans allocation explicite. La correction de ce calcul reste bloquée par la règle métier d'allocation et des tests isolés obligatoires ; aucune fonction de remboursement, écriture ledger ou transaction fournisseur n'a été exécutée.
 
 Commit : fbc477e2d482e5414e9bc73c4c03f29e69564ad0.
+
+### 25. Sécurisation des derniers sélecteurs média et date produit
+
+- Le sélecteur de date d'expiration d'un produit vérifie désormais que le formulaire est encore monté avant setState après le DatePicker.
+- Les sélecteurs photo et vidéo d'un avis client gèrent désormais les exceptions de galerie, de sélection et d'initialisation du lecteur. Ils arrêtent l'opération si le dialogue a été fermé pendant l'attente, et le contrôleur vidéo est toujours libéré dans finally.
+
+Commits :
+- 0ea83371cef3f9da61ef1cadce45186d5b44e44b — date d'expiration produit.
+- f9bea997a02e7f7f78e9765ce07922be7c59391c — sélection photo/vidéo des avis.
