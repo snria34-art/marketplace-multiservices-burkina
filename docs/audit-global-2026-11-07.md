@@ -21,7 +21,7 @@ Les constats ci-dessous sont classés par gravité et par dépendance. « Confir
 | Fichiers Dart sous `lib/` | 72 |
 | Fichiers de tests Dart | 3 |
 | Tests SQL dans `supabase/tests/database` | 2 |
-| Assertions pgTAP prévues dans ces deux fichiers | 60 (47 + 13) |
+| Assertions pgTAP prévues dans ces deux fichiers | 61 (48 + 13) |
 | Tables Supabase `public` et `private` | 182 |
 | Tables publiques avec RLS | 166/167 |
 | Tables privées avec RLS | 15/15 |
@@ -207,12 +207,22 @@ Les tables `admin_roles` et la colonne `admin_users.admin_role_id` existent, mai
 
 **Correction :** décider des profils ADMIN/SUPER_ADMIN/finance/modération/logistique, créer une matrice de permissions serveur et tester les refus négatifs. Le compte propriétaire initial n'est pas encore provisionné et aucune création n'a été réalisée pendant cet audit.
 
-#### AUD-13 — Le cycle de déconnexion et de désactivation des tokens n'est pas intégré
-**État : confirmé. Lié à Linear RIA-26.**
+#### AUD-13 — Le cycle de déconnexion et de désactivation des tokens n'était pas intégré
+**État : parcours centralisé ajouté ; RPC serveur durcie et vérifiée ; tests runtime encore requis. Lié à Linear RIA-26.**
 
-La méthode `signOutAndDeactivateCurrentDevice()` existe, mais aucune interface de déconnexion ni aucun appel de déconnexion n'a été retrouvé dans le code Flutter. En outre, la RPC `deactivate_notification_device` renvoie toujours `true`, même si aucune ligne n'a été désactivée ; côté Flutter, la RPC n'est appelée que si le token courant est en cache.
+Avant correction, `PushNotificationService.signOutAndDeactivateCurrentDevice()` existait mais aucune interface ne l'appelait. Les utilisateurs pouvaient donc fermer une session sans désactiver le token FCM.
 
-**Correction :** intégrer un seul service de déconnexion à tous les rôles, vérifier le nombre de lignes réellement désactivées, gérer token absent/rotation/session expirée et tester la reprise si le réseau échoue.
+**Corrections ajoutées :**
+- Nouveau composant réutilisable `AccountSessionActionButton` ajouté à l'accueil, aux tableaux de bord vendeur, administrateur et livreur.
+- L'écran de compte suspendu/bloqué utilise aussi le même service de déconnexion sécurisée.
+- Les appels directs `auth.signOut()` ont été retirés des écrans ; l'appel n'est désormais présent que dans `PushNotificationService`.
+- Avant la déconnexion, le service utilise le token en cache ou récupère le token courant Firebase lorsque le service est initialisé. Il attend la réponse serveur et exige le booléen `true` avant de vider le cache et de signer l'utilisateur.
+- Si Firebase est initialisé mais que la récupération du token échoue, la déconnexion est interrompue afin de permettre une nouvelle tentative. Si aucun token n'est disponible, la déconnexion peut se poursuivre sans appel RPC.
+- Migration Supabase `20261106203915_secure_notification_device_deactivation_for_blocked_accounts.sql` : la RPC devient `SECURITY DEFINER`, vérifie `auth.uid()`, ne modifie que le token appartenant à cet utilisateur, valide le token et retourne vrai seulement lorsqu'aucune ligne active correspondante ne subsiste.
+- Le privilège EXECUTE reste absent de `anon` et disponible à `authenticated` / `service_role`. La RPC peut maintenant désactiver le token d'un utilisateur suspendu/bloqué, car elle doit être utilisable pour quitter sa session même si le guard RLS ordinaire est fermé. Elle ne peut toujours pas désactiver le token d'un autre utilisateur.
+- Une assertion pgTAP supplémentaire vérifie `SECURITY DEFINER`, l'identité utilisateur, le périmètre du token, l'idempotence et l'absence d'exigence `require_active_account()`. Le fichier `security_regression_test.sql` contient maintenant 48 assertions ; elles restent à exécuter.
+
+**Limites :** aucun compte ou token réel n'existe encore sur le projet pour tester le cycle complet. La réception effective des push et l'absence de push après déconnexion doivent être testées sur un appareil Android/iOS avec Firebase configuré. Les tests Flutter/pgTAP n'ont pas été exécutés, GitHub Actions n'ayant pas encore démarré un runner.
 
 #### AUD-14 — Le suivi GPS ne fonctionne pas en arrière-plan
 **État : confirmé dans les manifests natifs et le code coursier.**
