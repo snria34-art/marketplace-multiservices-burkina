@@ -72,3 +72,16 @@ Une fois les éléments Firebase fournis et installés par le propriétaire :
 5. Vérifier que les erreurs de santé de la fonction disparaissent.
 
 La version 10 corrige la concurrence et l'isolation des erreurs serveur ; elle ne remplace pas la configuration Firebase et ne prouve pas la réception sur appareil.
+
+
+## Déconnexion et propriété du token — contrôle du 6 novembre 2026
+
+L'événement Supabase `signedOut` est émis après la suppression de la session. Une RPC qui filtre le token par `auth.uid()` ne peut donc pas être appelée à ce moment avec l'identité de l'utilisateur.
+
+Le service Flutter expose maintenant `signOutAndDeactivateCurrentDevice()` :
+
+1. Appeler `deactivate_notification_device` pendant que la session est toujours active.
+2. Interrompre la déconnexion si le serveur ne confirme pas la désactivation, afin de permettre une nouvelle tentative.
+3. Appeler `auth.signOut()` seulement après la désactivation.
+
+Le listener `signedOut` ne tente plus une RPC tardive. Les futurs boutons et menus de déconnexion doivent utiliser cette méthode. L'intégration des interfaces et les scénarios de session expirée/perte réseau sont suivis dans Linear **RIA-26**. Aucun parcours complet de déconnexion n'a encore été testé sur appareil.
