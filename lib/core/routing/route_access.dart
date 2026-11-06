@@ -4,6 +4,11 @@ bool _matchesRoute(String path, String base) {
 
 bool isAdminRoute(String path) => _matchesRoute(path, '/admin');
 
+bool isModerationRoute(String path) {
+  return path == '/admin/catalog-moderation' ||
+      path == '/admin/reviews';
+}
+
 bool isSellerRoute(String path) => _matchesRoute(path, '/seller');
 
 bool isCourierRoute(String path) => path == '/courier';
