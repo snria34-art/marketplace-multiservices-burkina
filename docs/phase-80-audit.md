@@ -579,3 +579,14 @@ Relecture en lecture seule des définitions SQL actuellement déployées (`compl
 - Le workflow Deno CI s'est déclenché mais les jobs n'ont retourné aucune étape/journal accessible. Le code live a été vérifié, mais `deno check` reste non confirmé.
 - Runbook : `docs/runbooks/aud-15-edge-function-source-parity.md`.
 
+
+
+### AUD-17 — couverture des tests commande/livraison renforcée — 7 novembre 2026
+
+- Inventaire sur main : 6 fichiers de tests Flutter, 3 fichiers SQL pgTAP et 77 assertions déclarées au total (13 comptes de démo, 13 contrats commande/livraison, 51 sécurité).
+- Nouveau fichier `supabase/tests/database/order_delivery_contract_test.sql`, 13 assertions : garde d'annulation impayée et refus paiement/expédition, libération stock/coupon, synchronisation colis/affectations/groupes/commande, propriétaire vendeur, checkout idempotent et adresse utilisateur, frais serveur/expiration/réservation stock, accès coursier, photo/code retrait, démarrage et confirmation livraison, preuve et synchro, ACL de remboursement service-role-only.
+- Les 13 prédicats du nouveau fichier ont été évalués sur le schéma Supabase actif en lecture seule ; 13/13 étaient vrais au moment de la vérification.
+- Cette vérification de prédicats n'est pas une exécution pgTAP. Les tests Flutter, pgTAP et les workflows CI ne sont pas encore validés par un runner avec étapes/journaux accessibles.
+- Les tests complets d'intégration des paiements/webhooks, remboursement multi-vendeurs, retours, transport, mécaniciens, réservations et parcours GPS réels restent absents. Ne pas les simuler avec des écritures en production.
+- Suivi Linear RIA-27 remis en cours ; critères de sortie production inchangés.
+
