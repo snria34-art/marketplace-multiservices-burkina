@@ -174,8 +174,10 @@ class _SellerProductsPageState
         return;
       }
     } catch (_) {
-      _show('Impossible de charger les variantes et leurs stocks. Réessayez.');
-      return;
+      // Keep the existing parent-stock flow available until the secure
+      // variant-inventory read migration is deployed. The server-side stock
+      // RPC still rejects parent edits for products using variant stock.
+      _show('Lecture des variantes indisponible. Le stock classique reste accessible.');
     }
 
     final rawInventory = product['inventory'];
@@ -330,6 +332,8 @@ class _SellerProductsPageState
       );
       if (!mounted) return;
       _show('Stock de la variante mis à jour.');
+      // Close the variant list so it is reopened with fresh server values.
+      Navigator.of(context).pop();
       setState(() => _future = _loadProducts());
     } catch (error) {
       final message = error.toString().contains('stock_below_reserved')
