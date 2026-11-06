@@ -175,8 +175,6 @@ class _HomePageState extends ConsumerState<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    final client = ref.watch(supabaseProvider);
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('Marketplace Burkina'),
