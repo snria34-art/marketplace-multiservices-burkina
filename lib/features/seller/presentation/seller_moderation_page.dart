@@ -69,7 +69,7 @@ class _SellerModerationPageState extends ConsumerState<SellerModerationPage> {
                         imageQuality: 75,
                         maxWidth: 1600,
                       );
-                      if (picked != null) {
+                      if (picked != null && context.mounted) {
                         setDialogState(() {
                           media = picked;
                           mediaType = 'IMAGE';
@@ -99,6 +99,7 @@ class _SellerModerationPageState extends ConsumerState<SellerModerationPage> {
                           }
                           return;
                         }
+                        if (!context.mounted) return;
                         setDialogState(() {
                           media = picked;
                           mediaType = 'VIDEO';
@@ -133,7 +134,7 @@ class _SellerModerationPageState extends ConsumerState<SellerModerationPage> {
     );
     final message = controller.text.trim();
     controller.dispose();
-    if (result != true) return;
+    if (!mounted || result != true) return;
 
     String? mediaPath;
     SupabaseClient? uploadClient;
