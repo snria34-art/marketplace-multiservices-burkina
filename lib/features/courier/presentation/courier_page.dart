@@ -235,7 +235,7 @@ class _CourierPageState extends ConsumerState<CourierPage> {
           imageQuality: 75,
           maxWidth: 1600,
         );
-        if (photo == null) return;
+        if (!mounted || photo == null) return;
         if (!mounted) return;
         final privacy = await _confirmPhotoPrivacy();
         if (!mounted || privacy == null) return;
