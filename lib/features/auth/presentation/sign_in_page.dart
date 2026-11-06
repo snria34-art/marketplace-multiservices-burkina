@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/providers/repository_providers.dart';
+import '../../../core/routing/route_access.dart';
 
 class SignInPage extends ConsumerStatefulWidget {
   const SignInPage({super.key});
@@ -56,7 +57,12 @@ class _SignInPageState extends ConsumerState<SignInPage> {
           email: email,
           password: password,
         );
-        if (mounted) context.pop();
+        if (mounted) {
+          final returnTo = sanitizeInternalLocation(
+            GoRouterState.of(context).uri.queryParameters['from'],
+          );
+          context.go(returnTo ?? '/');
+        }
       }
     } catch (error) {
       _show('Échec de l’authentification : $error');
