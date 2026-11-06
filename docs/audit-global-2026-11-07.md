@@ -5,7 +5,7 @@
 **Branche :** `main`  
 **Supabase :** `dzhhsoikzxibmngjzcch` — PostgreSQL 17.6 — `eu-west-1`  
 **Nature :** audit statique du dépôt + contrôles Supabase + examen des workflows et journaux.  
-**Mises à jour AUD-01/AUD-03/AUD-04/AUD-06/AUD-11/AUD-12/AUD-13/AUD-14/AUD-15/AUD-16/AUD-17/AUD-18/AUD-19/AUD-20 :** protections commandes, accès et GPS renforcées, parité Edge Functions restaurée, récupération email ajoutée côté app, tests de contrats et diagnostics capacité/index approfondis. Aucun paiement réel, test de charge ou restore production, compte propriétaire ou associé n'a été réalisé.
+**Mises à jour AUD-01/AUD-03/AUD-04/AUD-06/AUD-11/AUD-12/AUD-13/AUD-14/AUD-15/AUD-16/AUD-17/AUD-18/AUD-19/AUD-20/AUD-21 :** protections commandes, accès et GPS renforcées, parité Edge Functions restaurée, récupération email, tests de contrats et diagnostics capacité/index/RLS approfondis. Aucun paiement réel, test de charge ou restore production, compte propriétaire ou associé n'a été réalisé.
 
 ## 1. Conclusion
 
@@ -21,7 +21,7 @@ Les constats ci-dessous sont classés par gravité et par dépendance. « Confir
 | Fichiers Dart sous `lib/` | 72 |
 | Fichiers de tests Dart | 7 |
 | Tests SQL dans `supabase/tests/database` | 3 |
-| Assertions pgTAP prévues dans ces trois fichiers | 77 (51 + 13 + 13) |
+| Assertions pgTAP prévues dans ces trois fichiers | 79 (53 + 13 + 13) |
 | Tables Supabase `public` et `private` | 182 |
 | Tables publiques avec RLS | 166/167 |
 | Tables privées avec RLS | 15/15 |
@@ -370,9 +370,27 @@ Plusieurs index sans scan protègent des parcours critiques qui ne sont simpleme
 Runbook : `docs/runbooks/aud-20-unused-index-review.md`.
 
 #### AUD-21 — 17 tables RLS sans policy
-**État : contrôlé, non retenu comme vulnérabilité directe.**
+**État : vérifié ; état intentionnel et verrouillé en régression.**
 
-Les 17 tables sont des tables privées ou des tables médias protégées ; les privilèges directs SELECT des rôles `anon` et `authenticated` sont absents. Ne pas ajouter des policies permissives pour faire disparaître l'avis de l'advisor.
+Le relevé Supabase confirme 17 tables RLS activées sans policy :
+- 15 tables `private` de diagnostics, audit, modération, réparations plateforme, règles de retour et délégations vendeurs ; leur ACL est limitée à `postgres`.
+- 2 tables publiques de médias (`delivery_evidence`, `review_media`) ; leur ACL permet le rôle serveur `service_role`, mais pas `anon` ni `authenticated`.
+
+Vérification live avec `has_table_privilege` sur SELECT/INSERT/UPDATE/DELETE :
+- tables présentes : 17/17 ;
+- privilège direct anon : 0/17 ;
+- privilège direct authenticated : 0/17.
+
+Les fonctions métier utilisent des chemins contrôlés :
+- lecture des médias d'avis publics via `private.get_public_review_media(uuid)` SECURITY DEFINER, qui ne retourne que les avis `PUBLISHED`, appelé par la fonction publique autorisée en lecture anonyme ;
+- lecture des preuves de livraison via `private.get_customer_delivery_evidence(uuid)` SECURITY DEFINER, qui exige un compte actif et vérifie `orders.customer_id = auth.uid()`, appelé par une RPC authentifiée ;
+- pièces jointes créées via des RPC qui valident identité, chemin Storage, propriété, état métier et type de preuve.
+
+**Décision :** ne pas ajouter de policies permissives ni de privilèges table directs pour effacer cet avertissement. L'absence de policy entraîne le refus d'accès direct et protège ces tables internes. Si une nouvelle lecture métier est nécessaire, ajouter une RPC limitée et des tests négatifs, pas une policy générique.
+
+Deux assertions pgTAP supplémentaires sont ajoutées à `security_regression_test.sql` : accès direct refusé sur les 17 tables et accès média limité aux fonctions publiées/propriétaires. Le plan de ce fichier passe à 53 assertions ; le total des trois suites est maintenant 79. Les tests pgTAP restent à exécuter par CI.
+
+Runbook : `docs/runbooks/aud-21-rls-no-policy-tables.md`.
 
 #### AUD-22 — Avertissements génériques SECURITY DEFINER et extensions PostGIS
 **État : à suivre, pas une preuve de 80 vulnérabilités.**
