@@ -31,17 +31,41 @@ class _OrderDetailsPageState extends ConsumerState<OrderDetailsPage> {
     _startRealtime();
   }
 
-  void _startRealtime() {
+  Future<void> _startRealtime() async {
     final client = ref.read(supabaseProvider);
-    final user = client?.auth.currentUser;
-    if (client == null || user == null) return;
+    if (client == null || client.auth.currentUser == null) return;
 
-    _orderChannel = client
+    // Packages are linked to an order through order_groups. Resolve the group
+    // IDs once so package events can be scoped to this order, not every order
+    // visible to the current customer.
+    final orderGroupIds = <String>[];
+    try {
+      final rows = await client
+          .from('order_groups')
+          .select('id')
+          .eq('order_id', widget.orderId);
+      for (final row in rows as List) {
+        final id = (row as Map)['id']?.toString();
+        if (id != null && id.isNotEmpty) orderGroupIds.add(id);
+      }
+    } catch (_) {
+      // The order and payment subscriptions below remain useful even if the
+      // optional package subscription cannot be prepared.
+    }
+
+    if (!mounted) return;
+
+    var channel = client
         .channel('order-payment-' + widget.orderId)
         .onPostgresChanges(
           event: PostgresChangeEvent.all,
           schema: 'public',
           table: 'payments',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'order_id',
+            value: widget.orderId,
+          ),
           callback: (_) {
             if (!mounted) return;
             setState(() => _future = _load());
@@ -51,6 +75,11 @@ class _OrderDetailsPageState extends ConsumerState<OrderDetailsPage> {
           event: PostgresChangeEvent.all,
           schema: 'public',
           table: 'orders',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'id',
+            value: widget.orderId,
+          ),
           callback: (_) {
             if (!mounted) return;
             setState(() => _future = _load());
@@ -69,31 +98,26 @@ class _OrderDetailsPageState extends ConsumerState<OrderDetailsPage> {
             if (!mounted) return;
             setState(() => _future = _load());
           },
-        )
-        .onPostgresChanges(
-          event: PostgresChangeEvent.all,
-          schema: 'public',
-          table: 'order_packages',
-          callback: (_) {
-            if (!mounted) return;
-            setState(() => _future = _load());
-          },
-        )
-        .onPostgresChanges(
-          event: PostgresChangeEvent.insert,
-          schema: 'public',
-          table: 'notifications',
-          filter: PostgresChangeFilter(
-            type: PostgresChangeFilterType.eq,
-            column: 'user_id',
-            value: user.id,
-          ),
-          callback: (_) {
-            if (!mounted) return;
-            setState(() => _future = _load());
-          },
-        )
-        .subscribe();
+        );
+
+    for (final groupId in orderGroupIds) {
+      channel = channel.onPostgresChanges(
+        event: PostgresChangeEvent.all,
+        schema: 'public',
+        table: 'order_packages',
+        filter: PostgresChangeFilter(
+          type: PostgresChangeFilterType.eq,
+          column: 'order_group_id',
+          value: groupId,
+        ),
+        callback: (_) {
+          if (!mounted) return;
+          setState(() => _future = _load());
+        },
+      );
+    }
+
+    _orderChannel = channel.subscribe();
   }
 
   @override
