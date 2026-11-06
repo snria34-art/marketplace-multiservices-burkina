@@ -644,3 +644,11 @@ L'annulation globale par `transition_order_status` reste le défaut SQL ouvert, 
 
 - Total Flutter test files : 8. `payment_provider_availability_test.dart` apporte 4 assertions Flutter pour les réponses valides, non configurées, incohérentes et invalides.
 - Suite CI toujours non exécutée : GitHub Actions a échoué avant ses étapes. Le test source est présent sur main mais pas certifié exécuté.
+
+### AUD-07 — workflow sécurisé pour réparer l'historique — 7 novembre 2026
+
+- Revalidation live : GitHub 333 migrations, Supabase 332 ; seul numéro manquant au remote `20261104020500`.
+- La fonction private.scan_toy_weapon_products() et le cron toy-weapon-classifier sont présents et cohérents avec la migration. Le job reste actif, id 5, */10 * * * * ; aucune exécution manuelle lancée.
+- Ajout du workflow manuel `.github/workflows/repair-aud-07-migration-history.yml`. Garde sur main, texte de confirmation exact, Supabase CLI 2.122.1, secrets requis via GitHub actions seulement. Il appelle `supabase migration repair ... --status applied`, aucune instruction SQL et aucun cron reconfiguré.
+- Workflow non exécuté ; `SUPABASE_ACCESS_TOKEN` et `SUPABASE_DB_PASSWORD` doivent être configurés par le propriétaire dans les secrets du dépôt puis déclenchés depuis Actions. L'historique reste 333/332 pour le moment.
+- Runbook mis à jour à 333 migrations locales et 332 distantes.
