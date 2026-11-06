@@ -20,6 +20,8 @@ class AuthRecoveryState {
       (data) {
         if (data.event == AuthChangeEvent.passwordRecovery) {
           activate();
+        } else if (data.event == AuthChangeEvent.signedOut) {
+          clear();
         }
       },
       onError: (Object error, StackTrace stackTrace) {
