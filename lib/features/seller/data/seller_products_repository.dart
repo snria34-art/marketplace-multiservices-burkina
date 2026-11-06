@@ -197,6 +197,29 @@ class SellerProductsRepository {
     );
   }
 
+  Future<List<Map<String, dynamic>>> variantInventory(
+    String productId,
+  ) async {
+    final rows = await client.rpc(
+      'get_seller_product_variant_inventory',
+      params: {'p_product_id': productId},
+    );
+    return _maps(rows);
+  }
+
+  Future<void> setVariantStock({
+    required String variantId,
+    required int quantity,
+  }) async {
+    await client.rpc(
+      'set_seller_variant_stock',
+      params: {
+        'p_variant_id': variantId,
+        'p_quantity': quantity,
+      },
+    );
+  }
+
   List<Map<String, dynamic>> _maps(dynamic rows) {
     if (rows is! List) return const [];
 
