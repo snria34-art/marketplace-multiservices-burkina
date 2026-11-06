@@ -71,7 +71,7 @@ class _VerticalDiscoveryPageState
           break;
         case VerticalModule.events:
           final quantity = await _quantityDialog('Nombre de billets');
-          if (quantity == null) return;
+          if (!mounted || quantity == null) return;
           final id = await repo.reserveEvent(
             eventId: item['id'].toString(),
             quantity: quantity,
@@ -80,7 +80,7 @@ class _VerticalDiscoveryPageState
           break;
         case VerticalModule.rentals:
           final range = await _dateRangeDialog();
-          if (range == null) return;
+          if (!mounted || range == null) return;
           final id = await repo.bookRental(
             rentalId: item['id'].toString(),
             startsAt: range.start,
@@ -98,11 +98,11 @@ class _VerticalDiscoveryPageState
               .map((e) => Map<String, dynamic>.from(e as Map))
               .toList();
           final selected = await _unitDialog(units);
-          if (selected == null) return;
+          if (!mounted || selected == null) return;
           final stay = await _stayDialog();
-          if (stay == null) return;
+          if (!mounted || stay == null) return;
           final guests = await _quantityDialog('Nombre de personnes');
-          if (guests == null) return;
+          if (!mounted || guests == null) return;
           final id = await repo.bookAccommodation(
             unitId: selected['id'].toString(),
             checkIn: stay.start,
@@ -134,9 +134,9 @@ class _VerticalDiscoveryPageState
           break;
         case VerticalModule.homeServices:
           final dateTime = await _pickDateTime();
-          if (dateTime == null) return;
+          if (!mounted || dateTime == null) return;
           final address = await _addressDialog();
-          if (address == null) return;
+          if (!mounted || address == null) return;
           final id = await repo.requestHomeService(
             serviceId: item['id'].toString(),
             scheduledAt: dateTime,
