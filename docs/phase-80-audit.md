@@ -617,3 +617,17 @@ Relecture en lecture seule des définitions SQL actuellement déployées (`compl
 - Le SMTP intégré peut être limité/best-effort ; aucun SMTP payant n'a été ajouté. Aucun email réel ni compte utilisateur n'a été créé. Aucun fournisseur SMS n'a été configuré.
 - OTP téléphone reporté : nécessite Twilio/MessageBird/Vonage ou autre fournisseur SMS et des frais par message ; aucune activation sans validation du coût.
 - Tests réels email/lien sur Android/iOS et exécution CI restent à faire. Runbook : docs/runbooks/aud-19-email-password-recovery.md.
+
+### AUD-20 — vérification des index non scannés — 7 novembre 2026
+
+- Performance Advisor signale 366 unused indexes. La lecture pg_stat_user_indexes / pg_index confirme 366 index non uniques et non primaires sans scan dans public/private ; les 232 autres index public/private non scannés sont primaires/uniques et exclus des candidats.
+- Les 366 candidats représentent environ 3,0 MiB ; tous les index public/private sans scan représentent 5,4 MiB. La base a environ 80 MB et la plupart des tables métier ont 0 ligne.
+- Stats reset : 25 août 2026 ; dernier autoanalyze : 6 novembre. Des index sur commandes, produits, colis, GPS, messagerie, payouts, paiements et remboursements sont sans scan, parce que leurs tables sont encore vides.
+- Aucun index n'a été supprimé et aucune migration DDL créée. Revoir après données staging/production et EXPLAIN ANALYZE. Runbook docs/runbooks/aud-20-unused-index-review.md.
+
+### AUD-21 — vérification des tables RLS sans policy — 7 novembre 2026
+
+- 17 tables sont RLS-enabled sans policy : 15 privées (ACL postgres seule) et 2 publiques médias (delivery_evidence et review_media, service_role seulement).
+- has_table_privilege confirme zéro privilège direct CRUD pour anon et authenticated sur les 17 objets. Les fonctions média exposent seulement les avis PUBLISHED à l'anonyme et les preuves DELIVERY de la commande du client authentifié.
+- Deux assertions pgTAP ajoutées dans security_regression_test.sql ; ce fichier contient 53 assertions. Total des 3 suites : 79 assertions.
+- Aucune policy permissive ou ACL directe n'a été ajoutée ; runbook docs/runbooks/aud-21-rls-no-policy-tables.md.
