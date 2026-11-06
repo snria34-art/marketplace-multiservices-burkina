@@ -21,12 +21,12 @@ Les constats ci-dessous sont classés par gravité et par dépendance. « Confir
 | Fichiers Dart sous `lib/` | 72 |
 | Fichiers de tests Dart | 3 |
 | Tests SQL dans `supabase/tests/database` | 2 |
-| Assertions pgTAP prévues dans ces deux fichiers | 56 (43 + 13) |
+| Assertions pgTAP prévues dans ces deux fichiers | 57 (44 + 13) |
 | Tables Supabase `public` et `private` | 182 |
 | Tables publiques avec RLS | 166/167 |
 | Tables privées avec RLS | 15/15 |
-| Migrations SQL présentes dans GitHub | 325 |
-| Migrations consignées dans Supabase | 323 |
+| Migrations SQL présentes dans GitHub | 326 |
+| Migrations consignées dans Supabase | 324 |
 | Fonctions Edge actives dans Supabase | 21 |
 | Dossiers sources Edge avec `index.ts` dans GitHub | 18 |
 | Buckets Storage | 5 |
@@ -83,17 +83,17 @@ Suivi : https://linear.app/faso/issue/RIA-25/bloquant-finance-corriger-lallocati
 
 Avant correction, `public.transition_order_status(uuid,order_status,text)` pouvait annuler directement une commande payée, libérer les stocks et ne pas fermer tous les colis/affectations ni lancer un remboursement cohérent.
 
-**Correction appliquée sur Supabase :** migration `20261106200419_block_global_order_cancel_and_harden_unpaid_cancellation.sql`.
+**Corrections appliquées sur Supabase :** migrations `20261106200419_block_global_order_cancel_and_harden_unpaid_cancellation.sql` et `20261106201500_aud03_allow_admin_to_cancel_unpaid_orders_safely.sql`.
 
 - La transition globale `CANCELLED` délègue maintenant à `public.cancel_unpaid_order(uuid)`. Elle ne marque plus directement une commande payée comme annulée et ne libère plus le stock elle-même.
-- Le parcours impayé exige une commande `PENDING_PAYMENT` appartenant au client, un compte actif et l'absence de paiement réglé.
+- Le parcours impayé exige un compte actif et une commande `PENDING_PAYMENT` ; l'appelant doit être le client propriétaire ou un administrateur actif enregistré (`private.is_admin()`). Un administrateur ne peut donc pas utiliser ce chemin pour annuler une commande payée.
 - Il refuse toute commande ayant un colis/une affectation déjà ramassé(e), en transit, livré(e), retourné(e), endommagé(e) ou perdu(e), ainsi qu'une consommation de stock déjà enregistrée.
 - Il libère le stock par produit et variante, annule les affectations pré-départ et écrit `delivery_assignment_events`, annule les colis/groupes, libère les utilisations de coupons et journalise l'annulation dans `order_events`.
 - Les privilèges `EXECUTE` restent limités à `authenticated` et `service_role`, pas à `anon`.
 
 **Vérification SQL après migration :** propriétaire PostgreSQL et `SECURITY DEFINER` conservés ; délégation vers le flux impayé confirmée ; absence de libération de stock directe dans la fonction globale confirmée ; gardes paiement/dispatch/consommation confirmées dans le flux impayé ; aucun accès anon. La base ne contient actuellement aucune commande, paiement, réservation de livraison, remboursement ou utilisation de coupon : aucun flux métier réel n'a été exécuté.
 
-**Limites restantes :** les deux nouveaux tests pgTAP sont ajoutés, mais non exécutés ; les parcours Flutter/Edge doivent être testés sur un runner et une base isolée. L'annulation d'une commande déjà payée reste volontairement bloquée par cette RPC tant qu'un workflow de remboursement/retour complet n'est pas défini (voir AUD-02). Cette correction ne déclare pas le ticket RIA-29 entièrement terminé.
+**Limites restantes :** trois assertions de régression supplémentaires sont maintenant présentes dans `security_regression_test.sql` (plan du fichier : 44), mais elles ne sont pas exécutées ; les parcours Flutter/Edge doivent être testés sur un runner et une base isolée. L'annulation d'une commande déjà payée reste volontairement bloquée par cette RPC tant qu'un workflow de remboursement/retour complet n'est pas défini (voir AUD-02). Cette correction ne déclare pas le ticket RIA-29 entièrement terminé.
 
 Suivi : https://linear.app/faso/issue/RIA-29/commande-securiser-lannulation-globale-et-synchroniser-colis
 
@@ -135,7 +135,7 @@ Suivi complémentaire : https://linear.app/faso/issue/RIA-26/notifications-integ
 - `20261104020500_add_toy_weapon_product_classification.sql` est locale mais absente de l'historique distant ; pourtant la fonction `private.scan_toy_weapon_products()` et son cron actif existent déjà dans la base. Cela indique une dérive d'historique ou une opération manuelle à réconcilier.
 - `20261106180000_add_secure_seller_variant_inventory_read.sql` est locale et sa fonction n'existe pas sur le serveur.
 - Les migrations `20261106195420_aud01_prepare_postgis_functions_schema_fallback.sql` et `20261106200419_block_global_order_cancel_and_harden_unpaid_cancellation.sql` sont maintenant présentes dans l'historique GitHub et dans l'historique Supabase.
-- La migration `20261106195420_aud01_prepare_postgis_functions_schema_fallback.sql` a été ajoutée à GitHub et appliquée à Supabase ; les versions comptent désormais 324 contre 322, l'écart de deux migrations restant à réconcilier.
+- Les migrations `20261106195420_aud01_prepare_postgis_functions_schema_fallback.sql`, `20261106200419_block_global_order_cancel_and_harden_unpaid_cancellation.sql` et `20261106201500_aud03_allow_admin_to_cancel_unpaid_orders_safely.sql` ont été ajoutées à GitHub et appliquées à Supabase ; les versions comptent désormais 326 contre 324, l'écart historique de deux migrations restant à réconcilier.
 - La documentation du dépôt indique également que l'ancien historique SQL n'est pas encore entièrement reproductible sur une base vide.
 
 **Correction :** établir un état de référence entre les migrations locales, l'historique distant et le schéma réel ; reconstruire une base locale vide ; résoudre les migrations appliquées manuellement et les versions manquantes avant d'utiliser `db reset` comme preuve de déploiement. Ne pas appliquer automatiquement les deux migrations.
