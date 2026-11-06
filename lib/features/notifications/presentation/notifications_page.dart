@@ -32,23 +32,29 @@ class _NotificationsPageState
     final user = client?.auth.currentUser;
     if (client == null || user == null) return;
 
-    _notificationsChannel = client
-        .channel('notifications-' + user.id)
-        .onPostgresChanges(
-          event: PostgresChangeEvent.all,
-          schema: 'public',
-          table: 'notifications',
-          filter: PostgresChangeFilter(
-            type: PostgresChangeFilterType.eq,
-            column: 'user_id',
-            value: user.id,
-          ),
-          callback: (_) {
-            if (!mounted) return;
-            setState(() => _future = _load());
-          },
-        )
-        .subscribe();
+    try {
+      _notificationsChannel = client
+          .channel('notifications-' + user.id)
+          .onPostgresChanges(
+            event: PostgresChangeEvent.all,
+            schema: 'public',
+            table: 'notifications',
+            filter: PostgresChangeFilter(
+              type: PostgresChangeFilterType.eq,
+              column: 'user_id',
+              value: user.id,
+            ),
+            callback: (_) {
+              if (!mounted) return;
+              setState(() => _future = _load());
+            },
+          )
+          .subscribe();
+    } catch (_) {
+      // The user can still refresh notifications manually if Realtime setup
+      // fails; initialization must not break the screen.
+      _notificationsChannel = null;
+    }
   }
 
   Future<void> _removeChannelSafely(
