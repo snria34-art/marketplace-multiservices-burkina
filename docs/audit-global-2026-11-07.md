@@ -19,16 +19,16 @@ Les constats ci-dessous sont classés par gravité et par dépendance. « Confir
 |---|---:|
 | Entrées dans l'arbre GitHub | 657 |
 | Fichiers Dart sous `lib/` | 72 |
-| Fichiers de tests Dart | 3 |
-| Tests SQL dans `supabase/tests/database` | 2 |
-| Assertions pgTAP prévues dans ces deux fichiers | 64 (51 + 13) |
+| Fichiers de tests Dart | 6 |
+| Tests SQL dans `supabase/tests/database` | 3 |
+| Assertions pgTAP prévues dans ces trois fichiers | 77 (51 + 13 + 13) |
 | Tables Supabase `public` et `private` | 182 |
 | Tables publiques avec RLS | 166/167 |
 | Tables privées avec RLS | 15/15 |
 | Migrations SQL présentes dans GitHub | 331 |
-| Migrations consignées dans Supabase | 329 |
+| Migrations consignées dans Supabase | 330 |
 | Fonctions Edge actives dans Supabase | 21 |
-| Dossiers sources Edge avec `index.ts` dans GitHub | 18 |
+| Dossiers sources Edge avec `index.ts` dans GitHub | 21 |
 | Buckets Storage | 5 |
 
 Les mesures de quantité ne prouvent pas la qualité fonctionnelle. Les 60 assertions SQL couvrent notamment des permissions et des contrôles de sécurité, mais ne constituent pas une suite de tests de bout en bout pour les parcours commerciaux.
@@ -291,11 +291,20 @@ Le contrôle manuel du 6 novembre 2026 à 20:19:02 UTC a renvoyé HTTP 200 et le
 **Limite :** ce probe confirme que le bucket existe et répond au point d'accès Storage privilégié ; il ne démontre pas un upload, un téléchargement, une URL signée, ni l'application des règles RLS/Storage par rôle. Les tests de fichiers factices et les accès positifs/négatifs pour client, vendeur et administrateur restent requis. Les buckets `documents`, `shop-media`, `product-media` et `order-feedback-media` sont privés ; `avatars` est public selon sa configuration actuelle.
 
 #### AUD-17 — Couverture des tests métier insuffisante
-**État : confirmé par l'inventaire, niveau de risque à mesurer.**
+**État : couverture structurelle renforcée ; exécution CI et scénarios end-to-end toujours bloquants.**
 
-Trois fichiers de tests Dart couvrent le démarrage, le routage des notifications et la configuration du dépôt des verticales. Deux suites pgTAP contiennent 41 et 13 assertions, surtout sur permissions/sécurité. Il manque encore une preuve automatisée de bout en bout pour panier/checkout, concurrence du stock, remboursements, annulations globales, paiement/webhooks simulés, transport, mécaniciens, réservation et GPS.
+Inventaire actuel :
+- 6 fichiers de tests Dart : routage/guards, bouton de session, refus de GPS sans mission, routage des notifications, démarrage app et configuration des verticales.
+- 3 fichiers SQL pgTAP : comptes de démo locaux (13 assertions), contrats checkout/commande/livraison/remboursement (13 assertions) et sécurité/RLS/RPC (51 assertions), soit 77 assertions prévues.
+- Les 13 nouvelles conditions du fichier `order_delivery_contract_test.sql` ont été évaluées en lecture seule sur les fonctions SQL et ACL réellement déployées : 13/13 sont vraies.
 
-**Correction :** ajouter tests unitaires de calcul, tests de repositories, tests Widget des parcours, tests SQL positifs/négatifs et tests d'intégration des webhooks avec signatures/faux fournisseurs.
+**Tests de contrat ajoutés :** annulation uniquement des commandes impayées, refus des commandes déjà payées/expédiées, libération du stock et des coupons, synchronisation commandes/colis/affectations, garde de propriété vendeur, idempotence checkout et adresse appartenant au client, calcul des frais côté serveur, vérification expiration/stock, acceptation d'affectation coursier, preuve photo/code de retrait, progression de livraison et preuve/code de livraison, accès service-role-only à `complete_refund`.
+
+**Limite :** l'évaluation SQL précédente est une vérification de prédicats en lecture seule sur les fonctions actives ; elle ne signifie pas que le script pgTAP a été exécuté. Aucun test Flutter, pgTAP, Edge/Deno, scénario paiement fournisseur, scénario multi-vendeur réel, transport, mécanicien ou test appareil GPS n'a encore terminé avec un résultat CI lisible. Les derniers jobs GitHub Actions s'arrêtent sans étapes ou logs récupérables.
+
+**Correction restante :** exécuter les trois suites pgTAP sur la base locale reconstruite par `supabase db reset`, puis `supabase test db`; exécuter `flutter analyze` et `flutter test` ; ajouter de vrais scénarios d'intégration pour webhooks avec fournisseurs simulés, allocations partielles, retours multi-boutiques, courses, réservations et accès croisés ; exécuter les tests Android/iOS. Ne pas utiliser de paiement réel ou données de production pour ces tests.
+
+Suivi : Linear RIA-27 — https://linear.app/faso/issue/RIA-27/qualite-production-construire-une-validation-des-parcours.
 
 #### AUD-18 — Capacité, sauvegarde et restauration non certifiées
 **État : non testé.**
