@@ -220,6 +220,76 @@ Deno.serve(async (req: Request) => {
     }
   }
 
+  const fcmServiceAccountRaw = Deno.env.get("FCM_SERVICE_ACCOUNT_JSON") ?? "";
+  const fcmProjectIdEnv = Deno.env.get("FCM_PROJECT_ID") ?? "";
+  if (!fcmServiceAccountRaw.trim()) {
+    results.push({
+      component: "FCM",
+      status: "NOT_CONFIGURED",
+      response_ms: null,
+      details: {
+        reason: "FCM_SERVICE_ACCOUNT_JSON_missing",
+        has_fcm_project_id: Boolean(fcmProjectIdEnv.trim()),
+      },
+    });
+  } else {
+    try {
+      const parsedServiceAccount = JSON.parse(fcmServiceAccountRaw);
+      const serviceAccount =
+        parsedServiceAccount && typeof parsedServiceAccount === "object" &&
+          !Array.isArray(parsedServiceAccount)
+          ? parsedServiceAccount as Record<string, unknown>
+          : {};
+      const fcmProjectId = String(
+        serviceAccount.project_id ?? fcmProjectIdEnv,
+      ).trim();
+      const hasClientEmail =
+        typeof serviceAccount.client_email === "string" &&
+        serviceAccount.client_email.trim().length > 0;
+      const hasPrivateKey =
+        typeof serviceAccount.private_key === "string" &&
+        serviceAccount.private_key.trim().length > 0;
+
+      if (!hasClientEmail || !hasPrivateKey) {
+        results.push({
+          component: "FCM",
+          status: "DEGRADED",
+          response_ms: null,
+          details: {
+            reason: "FCM_SERVICE_ACCOUNT_JSON_INVALID",
+            has_project_id: Boolean(fcmProjectId),
+            has_client_email: hasClientEmail,
+            has_private_key: hasPrivateKey,
+          },
+        });
+      } else if (!fcmProjectId) {
+        results.push({
+          component: "FCM",
+          status: "NOT_CONFIGURED",
+          response_ms: null,
+          details: { reason: "FCM_PROJECT_ID_missing" },
+        });
+      } else {
+        results.push({
+          component: "FCM",
+          status: "NOT_TESTED",
+          response_ms: null,
+          details: {
+            configuration_fields_present: true,
+            live_delivery_tested: false,
+          },
+        });
+      }
+    } catch (_) {
+      results.push({
+        component: "FCM",
+        status: "DEGRADED",
+        response_ms: null,
+        details: { reason: "FCM_SERVICE_ACCOUNT_JSON_invalid_json" },
+      });
+    }
+  }
+
   const openAiKey = Deno.env.get("OPENAI_API_KEY") ?? "";
   if (!openAiKey) {
     results.push({ component: "OPENAI", status: "NOT_CONFIGURED", response_ms: null, details: { reason: "OPENAI_API_KEY_missing" } });
