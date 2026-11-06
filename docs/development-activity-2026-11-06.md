@@ -416,3 +416,11 @@ Commits :
 L'action « Reprendre le paiement » dans le détail de commande ouvrait auparavant l'URL retournée par la session de paiement sans refaire les contrôles appliqués par le checkout initial. Elle valide maintenant l'URL avant ouverture : syntaxe analysable, schéma HTTPS, hôte présent et absence d'identifiants utilisateur intégrés. La reprise du paiement s'arrête aussi si le dialogue de sélection du fournisseur revient après fermeture de l'écran.
 
 Commit : b28667823294af5d8025a17b8a06f53b29cd9d49.
+
+### 27. Arrêt du lancement du guichet si l'écran de paiement a été fermé
+
+Le checkout initial et la reprise du paiement depuis le détail d'une commande vérifient maintenant le cycle de vie de l'écran immédiatement après la création asynchrone de la session de paiement. Si l'utilisateur a quitté l'écran pendant l'appel réseau, le client n'ouvre plus le navigateur externe au retour de la réponse. Les commandes déjà créées restent consultables depuis l'historique ; aucune transaction fournisseur n'est lancée par cette vérification.
+
+Commits :
+- 1e8ba491e5621f94e93bcdd0f880531d7a381e40 — checkout initial.
+- 5de2cbf62195762d124eaa4558bd17a552ba1aff — reprise depuis le détail de commande.
