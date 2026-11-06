@@ -539,3 +539,16 @@ L'annulation globale par `transition_order_status` reste le défaut SQL ouvert, 
 - La table `courier_locations` reste vide. Aucune purge/retention n'a été imposée sans validation du métier ; Linear RIA-31 fixe cette décision comme prérequis de production.
 - Runbook publié : `docs/runbooks/aud-14-courier-background-location.md`. Ticket de livraison/GPS RIA-11 passe en In Progress.
 
+
+
+### AUD-15 — restauration des sources et synchronisation Edge Functions — 7 novembre 2026
+
+- Sources GitHub ajoutées pour `expire-products`, `admin-health-check` et `payment-webhook-gateway`.
+- Les deux fonctions admin exigent maintenant un JWT valide, un enregistrement `admin_users.active=true` et un profil `ACTIVE`. Les erreurs de lecture de droits renvoient une erreur serveur et ne donnent jamais accès.
+- Le gateway reste un tombstone 410 sans exécution métier.
+- Déploiements live vérifiés avec lecture de contenu : `expire-products` v3, `admin-health-check` v3, `payment-webhook-gateway` v4. Le contenu exact confirme les gardes de profil actif et le 410.
+- Parité de 21 Edge Functions actives / 21 dossiers sources désormais restaurée.
+- CI Deno non confirmé : les runs sont apparus failed mais sans étapes ni journaux exploitables. Aucune preuve de compilation Deno ; relancer lorsque le runner Actions sera opérationnel.
+- Pas de suppression de fonction, aucun secret lu/commité, aucun paiement ou produit réel modifié.
+- Runbook publié : `docs/runbooks/aud-15-edge-function-source-parity.md`.
+
