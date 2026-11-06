@@ -197,3 +197,17 @@ Correction :
 Commit : `7472cdc366a3f7faa89b1ff28b0341847605b36a`.
 
 Le fichier a été relu depuis `main`. Aucun test automatisé ou build Flutter n'a été exécuté.
+
+### 12. Rafraîchissement de la sélection initiale du checkout
+
+Fichier : `lib/features/checkout/presentation/checkout_page.dart`
+
+Les valeurs locales de l'adresse sélectionnée et du devis étaient calculées avant la construction du `FutureBuilder`. Quand le chargement automatique des adresses se terminait, le `FutureBuilder` pouvait reconstruire sa propre zone avec les anciennes valeurs capturées, alors que l'état interne contenait déjà une adresse. Le bouton de commande pouvait donc rester désactivé.
+
+Correction :
+- lecture de l'adresse sélectionnée, du montant, de la distance et du nombre d'arrêts à l'intérieur du callback `builder` ;
+- chaque reconstruction du `FutureBuilder` relit maintenant l'état courant au lieu d'utiliser des valeurs capturées avant le chargement.
+
+Commit : `cec45abff5a772b3c0cae067b01be0d61dbdc715`.
+
+Le changement a été relu sur `main`. Le comportement reste à valider par test Flutter sur appareil ou émulateur.
