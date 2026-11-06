@@ -86,7 +86,7 @@ class _AdminReviewModerationPageState
       ),
     );
     controller.dispose();
-    if (note == null) return;
+    if (!mounted || note == null) return;
     try {
       final client = ref.read(supabaseProvider);
       if (client == null) throw StateError('Service indisponible.');
