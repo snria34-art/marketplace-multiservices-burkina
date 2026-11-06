@@ -6,10 +6,13 @@
 
 ## 1. État vérifié
 
-Le registre `private.platform_health_checks` indique au dernier contrôle conservé (6 novembre 2026 à 20:15:05 UTC) :
+Le registre `private.platform_health_checks` indique au dernier contrôle conservé (6 novembre 2026 à 22:20:04 UTC) :
 
 - `WAVE = NOT_CONFIGURED` — `WAVE_API_KEY_missing`
 - `CINETPAY = NOT_CONFIGURED` — `CINETPAY_API_KEY_or_SITE_ID_missing`
+- `FCM = NOT_CONFIGURED` — `FCM_SERVICE_ACCOUNT_JSON_missing`, `has_fcm_project_id=false`
+
+Un relevé des logs des dernières 24 h au moment du contrôle a compté 450 événements `fcm_service_account_missing` dans `function_logs`. C'est un compteur de la fenêtre de logs observée, pas un nombre d'utilisateurs ou d'appareils affectés.
 
 Les Edge Functions de paiement sont actives :
 
@@ -26,7 +29,20 @@ Aucune clé de paiement n'est présente dans les lignes ciblées de `public.plat
 
 Les fonctions de création de session renvoient HTTP 503 si leurs clés nécessaires manquent. Le système ne crée donc pas de faux checkout lorsque le fournisseur n'est pas configuré.
 
-## 2. Secrets à saisir dans Supabase — jamais dans GitHub
+### 2 bis. Précontrôle du fournisseur avant création de commande
+
+Une fonction Edge Function authentifiée a été ajoutée pour éviter de créer une commande et de réserver le stock lorsque le moyen de paiement sélectionné n'est pas configuré :
+
+- Fonction : `check-payment-provider-config` v1, `verify_jwt=true`.
+- Wave : le contrôle exige la présence de `WAVE_API_KEY` et `WAVE_WEBHOOK_SECRET`.
+- CinetPay : le contrôle exige `CINETPAY_API_KEY`, `CINETPAY_SITE_ID` et `CINETPAY_SECRET_KEY`.
+- La réponse ne contient que `provider`, `configured` et `status` ; aucune valeur ou liste de secrets manquants n'est renvoyée au mobile.
+- Flutter appelle ce précontrôle avant `checkout_cart`. Si le fournisseur n'est pas configuré, l'application refuse la création de commande et le stock n'est pas réservé.
+- Le contrôle vérifie uniquement la présence des identifiants serveur ; il ne vérifie pas la validation KYC, le solde marchand, les limites, les URLs configurées sur le portail fournisseur ou le bon fonctionnement du webhook. Un test sandbox reste nécessaire.
+
+La protection réduit le cas connu de commande `PENDING_PAYMENT` créée juste avant un 503 de configuration. Si la configuration change entre le précontrôle et l'appel de création de session ou si un timeout réseau survient, une commande peut encore rester en attente ; les expirations de commande et les tests d'intégration doivent couvrir ce cas.
+
+# 2. Secrets à saisir dans Supabase — jamais dans GitHub
 
 Ouvrir **Supabase Dashboard → Edge Functions → Secrets** pour le projet `dzhhsoikzxibmngjzcch` :
 
@@ -88,7 +104,7 @@ Le nouveau contrôle FCM :
 - signale `NOT_CONFIGURED` si l'identifiant de projet manque ;
 - signale `NOT_TESTED` lorsque les champs de configuration sont présents, sans prétendre qu'un push a été envoyé.
 
-Les journaux consultés dans la fenêtre par défaut de l'outil de logs contenaient 324 événements `fcm_service_account_missing`, avec `hasFcmProjectId=false`. Cela confirme que le worker push était bloqué par la configuration manquante. Aucune notification n'a été envoyée à titre de test.
+Le relevé des logs sur les dernières 24 h au moment du contrôle contenait 450 événements `fcm_service_account_missing`, avec `hasFcmProjectId=false`. Le dernier état du moniteur (6 novembre 2026 à 22:20:04 UTC) reste `NOT_CONFIGURED`. Cela confirme que le worker push est toujours bloqué par la configuration manquante. Aucune notification n'a été envoyée à titre de test.
 
 ## 4. Procédure de validation après configuration
 
