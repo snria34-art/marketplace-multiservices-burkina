@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'app.dart';
-import 'core/config/supabase_config.dart';
-import 'core/providers/repository_providers.dart';
-import 'core/notifications/push_notification_service.dart';
 import 'core/auth/auth_recovery_state.dart';
+import 'core/config/supabase_config.dart';
+import 'core/notifications/push_notification_service.dart';
+import 'core/providers/repository_providers.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
