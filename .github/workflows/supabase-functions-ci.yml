@@ -1,0 +1,54 @@
+name: Supabase Edge Functions CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'supabase/functions/**'
+      - '.github/workflows/supabase-functions-ci.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'supabase/functions/**'
+      - '.github/workflows/supabase-functions-ci.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: supabase-functions-ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  edge-functions:
+    name: Type-check Supabase Edge Functions
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Check Deno version
+        run: deno --version
+
+      - name: Type-check every Edge Function entrypoint
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t files < <(find supabase/functions -type f -name 'index.ts' -print | sort)
+          if [[ ${#files[@]} -eq 0 ]]; then
+            echo "No Edge Function entrypoints were found."
+            exit 1
+          fi
+          for file in "${files[@]}"; do
+            echo "Checking ${file}"
+            deno check "${file}"
+          done
