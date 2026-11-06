@@ -424,3 +424,5 @@ Le checkout initial et la reprise du paiement depuis le détail d'une commande v
 Commits :
 - 1e8ba491e5621f94e93bcdd0f880531d7a381e40 — checkout initial.
 - 5de2cbf62195762d124eaa4558bd17a552ba1aff — reprise depuis le détail de commande.
+
+- Garde complémentaire dans le checkout : après la création de la commande, le client vérifie désormais que l'écran existe toujours avant de créer la session de paiement. Cela évite de poursuivre le flux externe après une navigation pendant l'enregistrement de la commande. Commit : 814e5dbc0d78bd01514b4b1d3bbf86d69721f692.
