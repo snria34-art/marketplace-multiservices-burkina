@@ -31,7 +31,7 @@ Les opérations suivantes exigent maintenant `private.is_admin()`, donc une lign
 Les actions de modération du catalogue et des avis conservent `public.is_admin_actor()`, afin que le rôle `MODERATOR` puisse toujours traiter ces deux files.
 
 Le routeur Flutter suit la même limite :
-- administrateur enregistré : accès aux routes `/admin/*) ;
+- administrateur enregistré : accès aux routes `/admin/*` ;
 - modérateur sans entrée `admin_users` : seulement `/admin/catalog-moderation` et `/admin/reviews` ;
 - autres chemins admin refusés.
 
