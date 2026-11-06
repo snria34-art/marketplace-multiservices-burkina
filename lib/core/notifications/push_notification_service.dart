@@ -67,18 +67,42 @@ class PushNotificationService {
     _messaging = FirebaseMessaging.instance;
     _initialized = true;
 
-    await _initializeLocalNotifications();
-    await _requestPermission();
-    await _configureForegroundPresentation();
+    try {
+      await _initializeLocalNotifications();
+    } catch (error, stackTrace) {
+      _logPushFailure('initialisation des notifications locales', error, stackTrace);
+    }
+    try {
+      await _requestPermission();
+    } catch (error, stackTrace) {
+      _logPushFailure('demande de permission', error, stackTrace);
+    }
+    try {
+      await _configureForegroundPresentation();
+    } catch (error, stackTrace) {
+      _logPushFailure('configuration de l’affichage', error, stackTrace);
+    }
 
-    FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+    try {
+      FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+    } catch (error, stackTrace) {
+      _logPushFailure('handler en arrière-plan', error, stackTrace);
+    }
 
-    _messageSubscription = FirebaseMessaging.onMessage.listen(
-      _showForegroundNotification,
-    );
-    _openedSubscription = FirebaseMessaging.onMessageOpenedApp.listen(
-      (message) => openNotificationRoute(message.data),
-    );
+    _messageSubscription = FirebaseMessaging.onMessage.listen((message) async {
+      try {
+        await _showForegroundNotification(message);
+      } catch (error, stackTrace) {
+        _logPushFailure('notification au premier plan', error, stackTrace);
+      }
+    });
+    _openedSubscription = FirebaseMessaging.onMessageOpenedApp.listen((message) {
+      try {
+        openNotificationRoute(message.data);
+      } catch (error, stackTrace) {
+        _logPushFailure('ouverture depuis une notification', error, stackTrace);
+      }
+    });
     _tokenSubscription = _messaging.onTokenRefresh.listen((token) async {
       try {
         await _registerToken(token);
@@ -132,11 +156,19 @@ class PushNotificationService {
 
     await _registerCurrentToken();
 
-    final initial = await _messaging.getInitialMessage();
-    if (initial != null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        openNotificationRoute(initial.data);
-      });
+    try {
+      final initial = await _messaging.getInitialMessage();
+      if (initial != null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          try {
+            openNotificationRoute(initial.data);
+          } catch (error, stackTrace) {
+            _logPushFailure('ouverture de la notification initiale', error, stackTrace);
+          }
+        });
+      }
+    } catch (error, stackTrace) {
+      _logPushFailure('lecture de la notification initiale', error, stackTrace);
     }
   }
 
@@ -162,6 +194,17 @@ class PushNotificationService {
 
     _currentToken = null;
     await client.auth.signOut();
+  }
+
+
+  void _logPushFailure(
+    String operation,
+    Object error,
+    StackTrace stackTrace,
+  ) {
+    if (!kDebugMode) return;
+    debugPrint('Push $operation indisponible : $error');
+    debugPrintStack(stackTrace: stackTrace);
   }
 
   Future<void> openSystemNotificationSettings() async {
