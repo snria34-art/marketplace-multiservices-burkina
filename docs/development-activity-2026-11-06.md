@@ -437,3 +437,14 @@ Commits :
 - 6ff4812db44f3991c47a46d04058dc48ba87c616 — GPS livreur.
 - f7c022732b8a214271bd96c5cc619ca9ace55472 — canal Realtime du suivi livraison.
 - f2c832d61065fb74bf36a9aab9de39f92a40103d — chargement du catalogue.
+
+### 29. Gestion des erreurs de messagerie et notifications, nettoyage Realtime
+
+- La messagerie ferme l'ancien canal Realtime de façon protégée avant d'ouvrir une nouvelle conversation. Les erreurs de `markRead` sont maintenant affichées à l'utilisateur plutôt que de devenir des futures non gérées depuis le callback de navigation.
+- Le nettoyage du canal de messagerie lors de `dispose()` est asynchrone, best-effort et encapsulé ; aucune Future de `removeChannel` n'est abandonnée sans gestion d'erreur.
+- L'envoi d'un message vérifie désormais `mounted` juste après l'appel réseau avant de toucher au contrôleur de texte ou à `setState`.
+- La page de notifications protège aussi le retrait du canal Realtime et affiche un état d'erreur avec action de reprise lorsque le chargement échoue. Le marquage comme lu est protégé et présente une erreur lisible au lieu de laisser échapper une exception.
+
+Commits :
+- 076348276e109dfa05e089ea2a03d647e0c04b8e — messagerie.
+- c7a9e0ffe1f49cba68b39d40d487fd79bf42bf55 — notifications.
