@@ -1,5 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../models/payment_provider_availability.dart';
+
 class CheckoutRepository {
   const CheckoutRepository(this.client);
 
@@ -78,6 +80,33 @@ class CheckoutRepository {
     }
 
     throw StateError('Le devis de livraison est invalide.');
+  }
+
+  /// Checks provider credentials before creating an order or reserving stock.
+  ///
+  /// The Edge Function returns only a boolean; provider secrets never reach
+  /// the mobile client.
+  Future<void> ensurePaymentProviderConfigured({
+    required String provider,
+  }) async {
+    final normalized = provider.trim().toUpperCase();
+    if (normalized != 'WAVE' && normalized != 'CINETPAY') {
+      throw StateError('Mode de paiement non pris en charge.');
+    }
+
+    final response = await client.functions.invoke(
+      'check-payment-provider-config',
+      body: {'provider': normalized},
+    );
+
+    final availability =
+        PaymentProviderAvailability.fromResponse(response.data);
+    if (availability.provider != normalized) {
+      throw StateError('La réponse du fournisseur de paiement est incohérente.');
+    }
+    if (!availability.configured) {
+      throw StateError(availability.unavailableMessage);
+    }
   }
 
   Future<String> checkout({
