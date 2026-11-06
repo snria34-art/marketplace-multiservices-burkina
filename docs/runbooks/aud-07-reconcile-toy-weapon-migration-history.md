@@ -7,7 +7,7 @@
 
 ## 1. Diagnostic comparatif
 
-GitHub contient 328 fichiers de migration et Supabase en consigne 327. Le seul numéro GitHub absent de l'historique distant est `20261104020500`.
+GitHub contient 333 fichiers de migration et Supabase en consigne 332. Le seul numéro GitHub absent de l'historique distant est `20261104020500`.
 
 ### Fonction active
 
@@ -55,16 +55,39 @@ supabase migration repair 20261104020500 --status applied
 supabase migration list
 ```
 
-Résultat attendu : les listes locale et distante présentent désormais le numéro `20261104020500` des deux côtés ; le total doit être de 328 migrations.
+Résultat attendu : les listes locale et distante présentent désormais le numéro `20261104020500` des deux côtés ; le total doit être de 333 migrations.
 
 **Important :** cette commande ne doit être exécutée qu'après authentification CLI et liaison explicite au bon projet. Elle ne crée/rejoue pas la fonction, ne modifie aucune ligne de produit et ne touche pas au cron. Elle marque uniquement la version déjà présente sur la base comme appliquée.
 
 Documentation Supabase :
 https://supabase.com/docs/reference/cli/supabase-migration-repair
 
+### Exécution manuelle via GitHub Actions (workflow préparé)
+
+Un workflow dédié, limité à cette réparation, est maintenant versionné :
+`.github/workflows/repair-aud-07-migration-history.yml`.
+
+Avant de le lancer, le propriétaire doit enregistrer ces deux secrets dans **GitHub → Settings → Secrets and variables → Actions → Repository secrets** :
+
+- `SUPABASE_ACCESS_TOKEN` : Personal Access Token Supabase autorisé à accéder au projet.
+- `SUPABASE_DB_PASSWORD` : mot de passe de base PostgreSQL du projet.
+
+Ces deux valeurs doivent être saisies directement dans les secrets GitHub. Ne pas les envoyer dans le chat ni les écrire dans le dépôt.
+
+Puis :
+1. Ouvrir l'onglet **Actions** du dépôt GitHub.
+2. Sélectionner **Repair AUD-07 migration history (history only)**.
+3. Cliquer sur **Run workflow**, branche `main`.
+4. Saisir exactement `REPAIR-HISTORY-20261104020500` dans le champ de confirmation.
+5. Examiner les logs avant et après la réparation ; le workflow exécute uniquement `supabase migration repair 20261104020500 --status applied`, puis affiche `supabase migration list`.
+
+Le workflow utilise Supabase CLI `2.122.1`, comme le workflow de tests DB du dépôt. Il refuse l'exécution hors de `main`, exige une chaîne de confirmation exacte et ne contient aucune commande `db push`, aucune commande SQL de la migration, aucun `cron.unschedule` ni `cron.schedule`.
+
+**État :** workflow préparé et commité ; il n'a pas été lancé par l'agent. L'entrée d'historique distante reste absente jusqu'à ce qu'un propriétaire fournisse les deux secrets et déclenche le workflow dans GitHub Actions.
+
 ## 3. Vérifications après réparation
 
-1. Relancer `supabase migration list` et confirmer l'alignement local/distant à 328.
+1. Relancer `supabase migration list` et confirmer l'alignement local/distant à 333.
 2. Re-vérifier `private.scan_toy_weapon_products()` : propriétaire postgres, `SECURITY DEFINER`, `search_path = ''`, ACL sans EXECUTE pour les rôles client.
 3. Re-vérifier le job `toy-weapon-classifier` : un job actif, calendrier `*/10 * * * *`, commande inchangée.
 4. Re-vérifier les relations dépendantes.
