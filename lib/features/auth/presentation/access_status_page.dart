@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/providers/repository_providers.dart';
+import '../../../core/notifications/push_notification_service.dart';
 
 class AccessStatusPage extends ConsumerWidget {
   const AccessStatusPage({super.key, this.reason});
@@ -47,13 +48,20 @@ class AccessStatusPage extends ConsumerWidget {
                 const SizedBox(height: 24),
                 FilledButton.icon(
                   onPressed: () async {
+                    if (client == null) {
+                      if (context.mounted) context.go('/auth');
+                      return;
+                    }
                     try {
-                      await client?.auth.signOut();
+                      await PushNotificationService.instance
+                          .signOutAndDeactivateCurrentDevice(client: client);
                     } catch (_) {
                       if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
-                            content: Text('Déconnexion impossible. Vérifiez votre connexion.'),
+                            content: Text(
+                              'Déconnexion non effectuée : la désactivation de cet appareil n’a pas été confirmée.',
+                            ),
                           ),
                         );
                       }
