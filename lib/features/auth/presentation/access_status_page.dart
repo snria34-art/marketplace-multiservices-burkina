@@ -50,8 +50,14 @@ class AccessStatusPage extends ConsumerWidget {
                     try {
                       await client?.auth.signOut();
                     } catch (_) {
-                      // The route guard will still deny protected pages if
-                      // the network cannot complete the sign-out request.
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Déconnexion impossible. Vérifiez votre connexion.'),
+                          ),
+                        );
+                      }
+                      return;
                     }
                     if (context.mounted) context.go('/auth');
                   },
