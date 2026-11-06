@@ -450,7 +450,7 @@ class _OrderDetailsPageState extends ConsumerState<OrderDetailsPage> {
       context: context,
       builder: (_) => const _ReviewDialog(),
     );
-    if (form == null) return;
+    if (!mounted || form == null) return;
 
     final client = ref.read(supabaseProvider);
     final user = client?.auth.currentUser;
