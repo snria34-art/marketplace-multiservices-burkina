@@ -16,6 +16,8 @@ class AccessStatusPage extends ConsumerWidget {
         return 'Votre compte est suspendu ou bloqué. Contactez l’assistance pour demander une vérification.';
       case 'admin_required':
         return 'Cette page est réservée aux administrateurs actifs.';
+      case 'moderator_required':
+        return 'Cette page est réservée aux modérateurs autorisés du catalogue et des avis.';
       case 'seller_required':
         return 'Cette page est réservée aux comptes vendeurs autorisés.';
       case 'courier_required':
