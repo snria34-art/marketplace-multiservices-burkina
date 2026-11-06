@@ -539,3 +539,17 @@ Relecture en lecture seule des définitions SQL actuellement déployées (`compl
 - ACL vérifiée : `anon` sans EXECUTE ; `authenticated` et `service_role` autorisés. Propriétaire postgres et `search_path = pg_catalog, public` conservés.
 - Un test pgTAP structurel supplémentaire est ajouté : `security_regression_test.sql` comporte 48 assertions. Un test Flutter vérifie le bouton lorsque Supabase n'est pas configuré.
 - Pas de token ou compte réel dans la base ; les tests Flutter/pgTAP ne sont pas exécutés. Le test final sur appareil Android/iOS (push reçu, logout, aucun push post-logout, nouvelle connexion et réenregistrement du token) reste requis.
+
+
+### AUD-12 — séparation des permissions ADMIN / MODERATOR — 7 novembre 2026
+
+- Le helper `public.is_admin_actor()` reconnaissait ADMIN, SUPER_ADMIN et MODERATOR ; ce même guard protégeait auparavant plusieurs fonctions globales qui ne relèvent pas de la modération.
+- Migration Supabase appliquée : `20261106204520_restrict_platform_admin_actions_to_registered_admins`.
+- Les fonctions tableau de bord global, état de santé, audit/réparation/rollback plateforme et lecture/modification des règles de retour exigent maintenant `private.is_admin()` (profil actif + `admin_users.active=true`).
+- Les triggers de protection des champs statut/vérification profil et validation des documents vendeur exigent aussi `private.is_admin()`. Un modérateur ne peut donc plus utiliser ces chemins pour modifier les données de sécurité de son propre profil ou les champs de validation vendeur.
+- Les fonctions de file et décision de modération du catalogue et des avis conservent `public.is_admin_actor()`. Le rôle MODERATOR garde donc l'accès à ces deux activités.
+- Le routeur Flutter permet à un modérateur sans ligne `admin_users` d'accéder uniquement à `/admin/catalog-moderation` et `/admin/reviews`. Les routes comptes, remboursement, santé, assistant, retour et tableau de bord exigent un administrateur actif.
+- Vérification SQL après migration : les RPC sensibles référencent maintenant `private.is_admin()`; les helpers de modération continuent d'utiliser `public.is_admin_actor()`. Les ACL n'ont pas été élargies à anon. Pas de comptes/roles créés.
+- Deux assertions pgTAP supplémentaires ajoutées ; `security_regression_test.sql` contient 50 assertions et le total avec l'autre fichier est 63. Les tests n'ont pas été exécutés faute de runner Actions.
+- Limite restante : `admin_roles` et `admin_users.admin_role_id` ne sont toujours pas utilisés par les autorisations ; tous les administrateurs actifs ont les mêmes droits globaux. La matrice OWNER/SUPER_ADMIN, ADMIN, FINANCE, LOGISTICS_ADMIN, SUPPORT et MODERATOR est préparée dans `docs/runbooks/aud-12-admin-rbac-matrix.md`, suivi par Linear RIA-30. Aucun compte propriétaire ni associé n'a été provisionné.
+
