@@ -342,3 +342,19 @@ Commits de cette série :
 - 7939ba264c3b68582129b0a63481c72761ffcc99
 
 Ces modifications limitent les opérations déclenchées après fermeture d'un écran. Elles ne remplacent pas les contrôles d'autorisation et de validité exécutés par les RPC serveur. Les parcours financiers doivent encore être testés sur environnement isolé avant validation.
+
+### 19. Isolation des erreurs de la pile FCM et confirmation du risque de remboursement
+
+Fichier : lib/core/notifications/push_notification_service.dart
+
+Les initialisations des notifications locales, des permissions, de l'affichage au premier plan et du handler d'arrière-plan sont maintenant isolées. Les callbacks des notifications au premier plan, à l'ouverture et au démarrage interceptent aussi leurs propres erreurs. Les détails ne sont écrits qu'en mode debug. Une panne de plugin ne doit donc plus devenir une erreur asynchrone non gérée dans le démarrage de la pile push.
+
+Commit : 819c7d007c118d274ac3a11ec5aca36c7e2f0504.
+
+Contrôle financier en lecture seule :
+- admin_complete_manual_refund appelle public.complete_refund ;
+- execute-payment-refund appelle aussi public.complete_refund après confirmation Wave ;
+- complete_refund répartit chaque remboursement au prorata sur tous les order_groups de la commande ;
+- la table refunds ne permet pas d'identifier le groupe ou l'article réellement remboursé.
+
+Le risque de RIA-25 est donc confirmé dans les deux parcours de finalisation présents dans l'application. Une demande partielle ciblée sur un vendeur peut débiter les autres vendeurs de la même commande. Aucune finalisation de remboursement, aucun paiement fournisseur et aucune écriture de ledger n'ont été exécutés. Les parcours financiers restent non certifiés jusqu'à la correction du modèle d'allocation et aux tests isolés.
