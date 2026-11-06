@@ -5,7 +5,7 @@
 **Branche :** `main`  
 **Supabase :** `dzhhsoikzxibmngjzcch` — PostgreSQL 17.6 — `eu-west-1`  
 **Nature :** audit statique du dépôt + contrôles Supabase + examen des workflows et journaux.  
-**Mises à jour AUD-01/AUD-03/AUD-04/AUD-06/AUD-11/AUD-12/AUD-13/AUD-14/AUD-15/AUD-16 :** préparation PostGIS, annulation impayée sécurisée, RPC stock variante, surveillance FCM/Storage, guards de navigation, séparation admin/modérateur, révocation FCM à la déconnexion, GPS arrière-plan et parité des sources Edge Functions appliqués/documentés. Aucun paiement réel, compte propriétaire ou associé n'a été créé.
+**Mises à jour AUD-01/AUD-03/AUD-04/AUD-06/AUD-11/AUD-12/AUD-13/AUD-14/AUD-15/AUD-16/AUD-17/AUD-18 :** protections commandes, accès et GPS renforcées, parité Edge Functions restaurée, tests de contrats ajoutés, premier relevé capacité/backup et script de charge staging préparés. Aucun paiement réel, test de charge ou restore de production, compte propriétaire ou associé n'a été réalisé.
 
 ## 1. Conclusion
 
@@ -306,12 +306,26 @@ Inventaire actuel :
 
 Suivi : Linear RIA-27 — https://linear.app/faso/issue/RIA-27/qualite-production-construire-une-validation-des-parcours.
 
-#### AUD-18 — Capacité, sauvegarde et restauration non certifiées
-**État : non testé.**
+#### AUD-18 — Capacité, sauvegardes et restauration
+**État : premier relevé disponible ; 1 000–10 000 utilisateurs et reprise après incident non certifiés.**
 
-Aucun résultat probant n'a été trouvé pour une charge de 1 000 à 10 000 connexions simultanées, un test de reprise après panne, une restauration réelle de sauvegarde ou un exercice de continuité.
+Snapshot du projet Supabase en lecture seule :
+- PostgreSQL 17.6.1, projet `ACTIVE_HEALTHY`, base d'environ 80 MB.
+- `max_connections = 60`, 3 connexions réservées ; 11 connexions clients observées au moment de la capture.
+- Logs PgBouncer sur les dernières 24 h : 0 « max client connections reached », 0 « client login timeout », 0 « no more connections allowed », 0 « server login retry ». Les 71 expirations observées étaient des connexions serveur fermées pour inactivité.
+- Aucun deadlock, slot de réplication ou connexion de réplication observé.
+- `pg_stat_archiver` : 33 222 WAL archivés, 0 échec, dernier archivage le 6 novembre 2026 à 21:25:50 UTC. Cet indicateur ne prouve pas que la sauvegarde quotidienne ou PITR est activée et restaurable.
+- Données métier quasiment absentes : 0 compte/profil, 0 produit, 0 objet Storage ; environ 80 MB de base, principalement SRID et tables de diagnostic.
 
-**Correction :** établir les objectifs de charge et latence, tester progressivement les scénarios de concurrence (checkout/stock/notifications), puis exécuter une restauration vérifiée et mesurer RPO/RTO avant lancement.
+**Conclusion de capacité :** la saturation n'est pas visible dans ce snapshot ou dans les logs 24 h, mais cela ne démontre pas une capacité de 1 000 à 10 000 utilisateurs. Le nombre de connexions Postgres n'est pas équivalent au nombre d'utilisateurs ; le compute exact et le plafond client du pooler doivent être vérifiés dans les paramètres Supabase. Les plafonds officiels du pooler varient de 200 clients sur Nano/Micro à 12 000 sur 16XL ; la pool size et le budget doivent être mesurés et approuvés avant une montée en charge. Voir https://supabase.com/docs/guides/platform/compute-and-disk et https://supabase.com/docs/guides/database/connection-management.
+
+**Script préparé :** `tests/load/k6_readonly_supabase_categories.js` simule un profil de lecture uniquement, refuse le ref production, exige `TARGET_ENV=staging` et prépare des paliers 100 → 1 000 → 10 000 VUs. Il n'a pas été exécuté ; aucun trafic de charge n'a été généré.
+
+**Backups / reprise :** la liste des backups et les points de restauration ne sont pas exposés par les outils connectés. Le plan Supabase exact du projet reste à confirmer dans Dashboard > Billing. Supabase indique que les projets Pro/Team/Enterprise reçoivent des backups quotidiens (rétention Pro 7j, Team 14j, Enterprise jusqu'à 30j) ; le Free plan doit exporter les données avec la CLI et garder une copie hors site. Les backups DB n'incluent pas les objets Storage. Aucune restauration réelle n'a été faite. Source : https://supabase.com/docs/guides/platform/backups.
+
+**Correction restante :** confirmer plan/compute/pooler, préparer un dataset staging réaliste, exécuter les paliers k6 et un test de restauration dans un projet isolé, sauvegarder séparément les binaires Storage et mesurer RPO/RTO. Linear RIA-32 suit ce travail. Aucun compute, plan, backup, pool size ou objet métier n'a été modifié.
+
+Runbook : `docs/runbooks/aud-18-capacity-backup-restore.md`.
 
 #### AUD-19 — Authentification utilisateur encore limitée
 **État : confirmé dans l'écran de connexion actuel ; décision produit nécessaire.**
