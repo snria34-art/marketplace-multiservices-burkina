@@ -69,6 +69,14 @@ Le code utilise MOBILE_MONEY comme univers de paiement afin de proposer les opé
 
 Tous les montants envoyés à CinetPay sont en XOF. Le montant est un entier positif et doit être un multiple de 5. Le code refuse le checkout si cette règle n'est pas respectée; il ne modifie jamais silencieusement le total de la commande.
 
+## Précontrôle du moyen de paiement avant commande
+
+Avant de créer la commande ou de réserver le stock, l'application appelle l'Edge Function authentifiée `check-payment-provider-config` (v1, `verify_jwt=true`). Elle retourne uniquement le statut configuré/non configuré :
+- Wave : API key + secret webhook présents ;
+- CinetPay : API key + site ID + secret webhook présents.
+
+Si les secrets nécessaires sont absents, l'application bloque le checkout avant `checkout_cart`. Cette vérification n'expose aucun secret et ne garantit pas l'activation du compte marchand : un test sandbox et une vérification des webhooks restent obligatoires.
+
 ## Remboursements
 
 - Le client peut demander un remboursement partiel ou total depuis une commande livrée.
@@ -76,7 +84,7 @@ Tous les montants envoyés à CinetPay sont en XOF. Le montant est un entier pos
 - Une demande passe par REQUESTED puis une validation admin.
 - Pour Wave, execute-payment-refund appelle le endpoint officiel de remboursement de la session Checkout et ne marque le remboursement local comme terminé qu'après réponse fournisseur.
 - Pour CinetPay, le checkout public actuel ne fournit pas un endpoint de remboursement direct documenté comparable à Wave. L'application conserve donc la demande dans le workflow admin et permet de confirmer manuellement le remboursement après exécution par le canal CinetPay prévu par le contrat.
-- Un remboursement terminé met à jour le paiement en PARTIALLY_REFUNDED ou REFUNDED et répartit le débit du ledger vendeur entre les boutiques de la commande.
+- Un remboursement terminé met à jour le paiement en PARTIALLY_REFUNDED ou REFUNDED. **Attention :** la version actuellement déployée de `complete_refund` répartit encore le débit du ledger au prorata de tous les groupes de la commande ; ce comportement n'est pas une règle comptable approuvée et peut débiter des vendeurs non concernés. Voir `docs/runbooks/aud-02-refund-allocation.md`. Ne pas considérer l'allocation des remboursements partiels comme prête pour la production.
 
 ## Activation production
 
