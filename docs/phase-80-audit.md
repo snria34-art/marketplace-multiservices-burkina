@@ -492,3 +492,7 @@ Relecture en lecture seule des définitions SQL actuellement déployées (`compl
 - **Statut : correction serveur appliquée ; ticket RIA-29 maintenu en cours** jusqu'aux tests d'intégration et à la validation des parcours. L'annulation d'une commande payée reste bloquée par cette RPC tant qu'un workflow de retour/remboursement cohérent n'est pas défini (voir AUD-02).
 - Commit migration GitHub : `53e513c5487ba5c27cf819033edc7d70092766b7`. Commit tests : `8a32c1e1e6994c75d3c0961be68715a1cccc7d2e`.
 
+
+- Relecture complémentaire : le premier durcissement faisait passer aussi les annulations administrateur par le contrôle du propriétaire client. Migration corrective appliquée : `20261106201500_aud03_allow_admin_to_cancel_unpaid_orders_safely`. Un administrateur actif enregistré via `private.is_admin()` peut maintenant annuler une commande appartenant à un client, mais uniquement si elle reste `PENDING_PAYMENT` et si les gardes paiement/colis/stock sont satisfaites.
+- Vérification SQL : le guard admin, le prédicat propriétaire-ou-admin et le statut `PENDING_PAYMENT` sont présents dans la définition déployée ; les privilèges restent réservés à authenticated/service_role, sans anon.
+- Une troisième assertion pgTAP a été ajoutée pour vérifier l'accès admin sur les seules commandes impayées. Le fichier contient 44 assertions, non exécutées à ce stade. Aucune donnée métier n'a été modifiée.
