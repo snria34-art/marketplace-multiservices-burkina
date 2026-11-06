@@ -4,8 +4,8 @@
 **Dépôt :** `adjasanou49-max/marketplace-multiservices-burkina`  
 **Branche :** `main`  
 **Supabase :** `dzhhsoikzxibmngjzcch` — PostgreSQL 17.6 — `eu-west-1`  
-**Nature :** audit statique du dépôt + contrôles Supabase en lecture seule + examen des workflows et journaux.  
-**Aucune migration, donnée métier, clé secrète, transaction, fonction Edge ou configuration de production n'a été modifiée. Aucun compte propriétaire n'a été créé.
+**Nature :** audit statique du dépôt + contrôles Supabase + examen des workflows et journaux.  
+**Mise à jour AUD-01 :** une migration non destructive a été appliquée uniquement aux deux RPC spatiales pour préparer le déplacement PostGIS ; aucune table, donnée métier, colonne, index, clé secrète, fonction Edge, configuration de paiement ou compte propriétaire n'a été modifié/créé.
 
 ## 1. Conclusion
 
@@ -25,8 +25,8 @@ Les constats ci-dessous sont classés par gravité et par dépendance. « Confir
 | Tables Supabase `public` et `private` | 182 |
 | Tables publiques avec RLS | 166/167 |
 | Tables privées avec RLS | 15/15 |
-| Migrations SQL présentes dans GitHub | 323 |
-| Migrations consignées dans Supabase | 321 |
+| Migrations SQL présentes dans GitHub | 324 |
+| Migrations consignées dans Supabase | 322 |
 | Fonctions Edge actives dans Supabase | 21 |
 | Dossiers sources Edge avec `index.ts` dans GitHub | 18 |
 | Buckets Storage | 5 |
@@ -38,21 +38,21 @@ Les mesures de quantité ne prouvent pas la qualité fonctionnelle. Les 54 asser
 ### P1 — Risque d'intégrité et de disponibilité à traiter avant l'ouverture publique
 
 #### AUD-01 — PostGIS installé dans `public` : métadonnées spatiales modifiables via la Data API
-**État : confirmé. Correction sûre identifiée ; intervention Support requise.**
+**État : confirmé. Préparation des RPC terminée et vérifiée ; déplacement de l'extension encore en attente de Supabase Support.**
 
 - PostGIS 3.3.7 est installé dans `public` et appartient à `supabase_admin`.
 - `public.spatial_ref_sys` contient 8 500 définitions de systèmes de coordonnées. `anon` et `authenticated` ont des privilèges INSERT, UPDATE, DELETE et TRUNCATE, hérités des privilèges par défaut du propriétaire de l'extension.
 - Ce constat ne signifie pas que les données personnelles ou les coordonnées de livraison sont lisibles dans `spatial_ref_sys`. Le risque principal est l'intégrité : une modification ou suppression d'un SRID peut faire échouer les calculs géographiques et donc dégrader la livraison/localisation.
 - Le rôle de projet ne peut ni activer RLS ni retirer les privilèges accordés par `supabase_admin`. Un `ALTER TABLE ... ENABLE ROW LEVEL SECURITY`, un `REVOKE` ou un trigger de blocage n'est pas une correction valable.
 - Trois colonnes `geography` existent : `courier_locations.location`, `provider_locations.location` et `shops.location`. Elles contiennent actuellement zéro ligne. Deux index GiST ont été recensés (`courier_locations`, `shops`). Il faut préserver tables, types, index et vues.
-- Deux fonctions applicatives utilisent explicitement les noms de schéma actuels `public.st_*` et `public.geography` : `calculate_delivery_fee(uuid,jsonb)` et `record_courier_location(double precision,double precision,numeric)`. Elles devront être adaptées au schéma `extensions` après le déplacement.
+- Deux fonctions applicatives utilisaient explicitement les noms `public.st_*` et `public.geography` : `calculate_delivery_fee(uuid,jsonb)` et `record_courier_location(double precision,double precision,numeric)`. Elles ont maintenant été préparées dans la migration `20261106195420_aud01_prepare_postgis_functions_schema_fallback.sql` : `search_path = pg_catalog, extensions, public` et références PostGIS non qualifiées. Cette stratégie fonctionne avec PostGIS dans `public` aujourd'hui et résoudra les objets dans `extensions` après le déplacement.
 - Aucun autre appel applicatif direct à une RPC PostGIS ni vue métier dépendante de PostGIS n'a été identifié dans les contrôles effectués. Aucune extension supplémentaire dépendant de PostGIS n'a été détectée.
 
 **Risque :** altération possible des définitions SRID, pouvant rendre les calculs spatiaux indisponibles. Ce n'est pas une fuite de données métier. Les statistiques PostgreSQL consultées indiquent zéro UPDATE et zéro DELETE depuis la dernière remise à zéro des statistiques ; aucune tentative POST/PATCH/PUT/DELETE vers `/spatial_ref_sys` n'a été trouvée dans les journaux Data API du 6 au 7 novembre 2026. Cette vérification ne prouve pas l'absence d'activité antérieure à la période de journaux consultée.
 
-**Correction retenue :** déplacer l'extension PostGIS existante de `public` vers `extensions` par l'intervention non destructive de Supabase Support. Supabase documente que cette méthode préserve les colonnes PostGIS, données, index et vues et s'exécute dans une transaction. Ne pas supprimer/recréer PostGIS soi-même : cette base possède des colonnes `geography` et la procédure DROP CASCADE les supprimerait.
+**Correction restante :** faire déplacer l'extension PostGIS existante de `public` vers `extensions` par l'intervention non destructive de Supabase Support. Supabase documente que cette méthode préserve les colonnes PostGIS, données, index et vues et s'exécute dans une transaction. Ne pas supprimer/recréer PostGIS soi-même : cette base possède des colonnes `geography` et la procédure DROP CASCADE les supprimerait.
 
-**Préparation :** voir `docs/runbooks/aud-01-postgis-schema-move.md`. Le dossier contient le message à transmettre à Supabase Support, les deux définitions SQL corrigées à appliquer après le déplacement et les contrôles de validation. Aucun changement SQL de production n'a été appliqué à ce stade.
+**Préparation déjà appliquée :** la migration `20261106195420_aud01_prepare_postgis_functions_schema_fallback.sql` a été enregistrée dans GitHub et dans Supabase. Elle modifie uniquement le `search_path` et les références PostGIS des deux RPC, sans altérer leurs contrôles métier. Le calcul spatial de test et les permissions ont été vérifiés. Voir `docs/runbooks/aud-01-postgis-schema-move.md` pour la preuve, le message Support et les contrôles restants.
 
 ### P1 — Bloquants métier, financiers et opérationnels
 
@@ -113,6 +113,7 @@ Suivi complémentaire : https://linear.app/faso/issue/RIA-26/notifications-integ
 - GitHub contient 323 migrations, Supabase en consigne 321.
 - `20261104020500_add_toy_weapon_product_classification.sql` est locale mais absente de l'historique distant ; pourtant la fonction `private.scan_toy_weapon_products()` et son cron actif existent déjà dans la base. Cela indique une dérive d'historique ou une opération manuelle à réconcilier.
 - `20261106180000_add_secure_seller_variant_inventory_read.sql` est locale et sa fonction n'existe pas sur le serveur.
+- La migration `20261106195420_aud01_prepare_postgis_functions_schema_fallback.sql` a été ajoutée à GitHub et appliquée à Supabase ; les versions comptent désormais 324 contre 322, l'écart de deux migrations restant à réconcilier.
 - La documentation du dépôt indique également que l'ancien historique SQL n'est pas encore entièrement reproductible sur une base vide.
 
 **Correction :** établir un état de référence entre les migrations locales, l'historique distant et le schéma réel ; reconstruire une base locale vide ; résoudre les migrations appliquées manuellement et les versions manquantes avant d'utiliser `db reset` comme preuve de déploiement. Ne pas appliquer automatiquement les deux migrations.
@@ -246,7 +247,7 @@ L'advisor rapporte 80 fonctions SECURITY DEFINER exécutables par `authenticated
 
 ## 4. Ordre de correction recommandé
 
-1. AUD-01 — demander à Supabase Support le déplacement non destructif de PostGIS vers `extensions`, puis adapter les deux RPC métier.
+1. AUD-01 — demander à Supabase Support le déplacement non destructif de PostGIS vers `extensions`, puis vérifier les RPC déjà préparées dans le `search_path` compatible avant/après migration.
 2. AUD-02 et AUD-03 — définir puis corriger ensemble le calcul comptable des remboursements et les transitions de commande/colis.
 3. AUD-07 — rendre l'état de base reproductible et réconcilier les migrations.
 4. AUD-04 — déployer/tester la lecture sécurisée du stock par variante après validation locale.
