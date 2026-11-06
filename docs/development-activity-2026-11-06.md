@@ -263,3 +263,29 @@ Aucune modification hasardeuse du schéma ou des fonctions SQL n'a été faite. 
 La fonction SQL `set_cart_item_quantity` a été consultée en lecture seule. Elle vérifie que l'article appartient au panier actif du client connecté, exige un compte actif, supprime l'article si la quantité vaut zéro et met à jour `carts.updated_at`. Le client utilise maintenant cette RPC pour retirer un article, plutôt qu'un `DELETE` direct.
 
 Les modifications Flutter ont été relues sur `main`. Aucun test ni build n'a été exécuté.
+
+
+### 16. Édition du stock par variante — code ajouté, migration en attente
+
+Fichiers ajoutés/modifiés :
+- `supabase/migrations/20261106180000_add_secure_seller_variant_inventory_read.sql`
+- `lib/features/seller/data/seller_products_repository.dart`
+- `lib/features/seller/presentation/seller_products_page.dart`
+
+La table `product_variant_inventory` refuse la lecture directe aux rôles clients. Pour ne pas ouvrir cette table, une RPC `get_seller_product_variant_inventory(uuid)` a été ajoutée dans une migration versionnée. Elle :
+- exige un compte actif et une session authentifiée ;
+- vérifie côté serveur que le produit appartient au vendeur connecté ;
+- renvoie uniquement les variantes de ce produit et leurs quantités totale/réservée ;
+- n'accorde l'exécution qu'au rôle `authenticated`, sans accès `anon`.
+
+Le repository Flutter appelle cette RPC pour lire les stocks et appelle la RPC existante `set_seller_variant_stock` pour modifier une variante. L'écran vendeur oriente automatiquement vers l'éditeur par variante lorsque le produit possède des variantes ; le stock parent reste utilisé pour les produits sans variante. Après une modification, la liste est fermée et rechargée depuis le serveur.
+
+**Important :** la migration est seulement enregistrée dans GitHub. Elle n'a pas été appliquée au projet Supabase de production. Tant qu'elle n'est pas appliquée, la lecture des variantes peut échouer ; l'interface conserve alors l'éditeur de stock classique et la RPC serveur continue de refuser une modification parent si le produit utilise le stock par variante. Ne pas déclarer cette fonctionnalité opérationnelle en production avant application contrôlée de la migration et tests avec deux comptes vendeurs.
+
+Commits :
+- `d25595f1188dc8fa50701aabf304e5db1a01d2e0` — migration RPC lecture propriétaire
+- `113cf3b9b3966477d51e5b1b84ee5522d5e8b771` — repository
+- `1d5319e14061e02a00c2e659c2ed2d4673176ac8` — interface
+- `22e9d810c313392810ac6b1fcf367ccb047a411c` — repli sûr avant déploiement de la migration
+
+Aucun changement SQL n'a été appliqué à la base de production et aucun test Flutter/build n'a été exécuté.
