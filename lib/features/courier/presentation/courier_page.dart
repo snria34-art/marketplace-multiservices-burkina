@@ -79,9 +79,10 @@ class _CourierPageState extends ConsumerState<CourierPage> {
             'Pendant une mission active, votre position GPS sera transmise '
             'régulièrement pour permettre au client de suivre la livraison. '
             'Le suivi peut continuer lorsque l’application est en arrière-plan. '
-            'Android affiche une notification persistante. Vous pouvez arrêter '
-            'le partage à tout moment ; il s’arrête aussi quand vous n’avez '
-            'plus de mission active.',
+            'Pour cela, le téléphone demandera l’autorisation de localisation '
+            '« Toujours » ou « Autoriser tout le temps ». Android affiche une '
+            'notification persistante. Vous pouvez arrêter le partage à tout '
+            'moment ; il s’arrête aussi quand vous n’avez plus de mission active.',
           ),
           actions: [
             TextButton(
