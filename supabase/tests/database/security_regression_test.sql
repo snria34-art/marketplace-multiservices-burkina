@@ -1,5 +1,5 @@
 begin;
-select plan(41);
+select plan(43);
 
 select ok(
   not has_table_privilege('anon','private.catalog_moderation_findings','SELECT')
@@ -334,6 +334,26 @@ select ok(
   and position('da.courier_id=v_user' in pg_get_functiondef('public.get_courier_assignments()'::regprocedure)) > 0
   and position('when da.status in (''ACCEPTED'',''PICKED_UP'',''IN_TRANSIT'') then o.delivery_address->>''phone''' in pg_get_functiondef('public.get_courier_assignments()'::regprocedure)) > 0,
   'courier assignment details expose contact only after acceptance and only to the assigned courier'
+);
+
+
+select ok(
+  position('return public.cancel_unpaid_order(p_order_id);' in pg_get_functiondef('public.transition_order_status(uuid,public.order_status,text)'::regprocedure)) > 0
+  and position('release_variant_inventory' in pg_get_functiondef('public.transition_order_status(uuid,public.order_status,text)'::regprocedure)) = 0
+  and not has_function_privilege('anon','public.transition_order_status(uuid,public.order_status,text)','EXECUTE')
+  and has_function_privilege('authenticated','public.transition_order_status(uuid,public.order_status,text)','EXECUTE'),
+  'global order cancellation delegates to the unpaid-only workflow and no longer releases stock directly'
+);
+
+select ok(
+  position('order_payment_already_settled' in pg_get_functiondef('public.cancel_unpaid_order(uuid)'::regprocedure)) > 0
+  and position('unpaid_order_has_dispatched_package' in pg_get_functiondef('public.cancel_unpaid_order(uuid)'::regprocedure)) > 0
+  and position('unpaid_order_has_dispatched_assignment' in pg_get_functiondef('public.cancel_unpaid_order(uuid)'::regprocedure)) > 0
+  and position('unpaid_order_inventory_already_consumed' in pg_get_functiondef('public.cancel_unpaid_order(uuid)'::regprocedure)) > 0
+  and position('CANCELLED_BY_ORDER' in pg_get_functiondef('public.cancel_unpaid_order(uuid)'::regprocedure)) > 0
+  and position('released_coupon_usage' in pg_get_functiondef('public.cancel_unpaid_order(uuid)'::regprocedure)) > 0
+  and position('customer_cancelled_before_payment' in pg_get_functiondef('public.cancel_unpaid_order(uuid)'::regprocedure)) > 0,
+  'unpaid cancellation protects paid/dispatched/consumed orders, cancels pre-dispatch assignments, releases coupon usage, and logs the event'
 );
 
 select * from finish();
