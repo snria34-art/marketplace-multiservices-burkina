@@ -31,6 +31,8 @@ void main() {
     test('keeps public discovery routes browseable', () {
       for (final path in [
         '/',
+        '/auth/forgot-password',
+        '/auth/recovery',
         '/restaurants',
         '/transport',
         '/mechanics',
