@@ -133,8 +133,15 @@ Future<String?> _guardRoute(
           .eq('user_id', user.id);
       final hasSellerRole = rows is List &&
           rows.any((row) => row is Map && row['role'] == 'SELLER');
+      final sellerProfile = await client
+          .from('sellers')
+          .select('id')
+          .eq('user_id', user.id)
+          .maybeSingle();
 
-      if (!hasSellerRole) return '/access-status?reason=seller_required';
+      if (!hasSellerRole || sellerProfile == null) {
+        return '/access-status?reason=seller_required';
+      }
     }
 
     if (isCourierRoute(path)) {
