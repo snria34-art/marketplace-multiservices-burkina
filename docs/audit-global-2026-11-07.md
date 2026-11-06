@@ -149,18 +149,19 @@ Suivi : https://linear.app/faso/issue/RIA-28/catalogue-ajouter-ledition-du-stock
 **Correction restante :** associer Android/iOS au projet Firebase, activer APNs pour iOS, générer un compte de service limité à Firebase Cloud Messaging et saisir `FCM_SERVICE_ACCOUNT_JSON` directement dans Supabase Edge Function Secrets. Configurer `FCM_PROJECT_ID` si absent du JSON. Aucun secret ne doit aller dans GitHub/Flutter/chat. Effectuer ensuite un vrai push de test sur appareil interne autorisé ; aucun push réel n'a encore été testé.
 
 #### AUD-07 — Dérive de l'historique des migrations
-**État : un seul numéro non réconcilié ; effets fonctionnels déjà présents et équivalence vérifiée. Réparation historique CLI préparée.**
+**État : un seul numéro non réconcilié ; effets fonctionnels déjà présents et équivalence vérifiée ; workflow manuel de réparation préparé.**
 
-- GitHub contient 330 migrations, Supabase en consigne 329.
+- GitHub contient 333 migrations SQL ; Supabase en consigne 332.
 - Le seul numéro GitHub absent de l'historique distant est `20261104020500_add_toy_weapon_product_classification.sql`.
 - Le corps de `private.scan_toy_weapon_products()` dans le fichier et dans la base est identique après normalisation des espaces ; propriétaire `postgres`, `SECURITY DEFINER`, `search_path = ''`, ACL n'accordant EXECUTE qu'à postgres.
-- Le cron distant `toy-weapon-classifier` est actif, ID 5, toutes les 10 minutes, commande exacte `select private.scan_toy_weapon_products();`. Les tables dépendantes sont présentes.
-- Les migrations AUD-01/AUD-03/AUD-04/FCM/AUD-12 sont maintenant présentes dans les deux historiques ; seul l'ancien numéro `20261104020500` reste en divergence.
+- Le cron distant `toy-weapon-classifier` est actif, ID 5, toutes les 10 minutes, commande exacte `select private.scan_toy_weapon_products();`. Les trois relations dépendantes sont présentes.
+- Aucun scan métier ni cron n'a été déclenché pendant l'audit ; le contenu de la fonction et le job ont été lus en catalogue.
 
-**Correction restante :** exécuter uniquement la réparation d'historique officielle, sans rejouer le SQL :
-`supabase link --project-ref dzhhsoikzxibmngjzcch`, puis `supabase migration repair 20261104020500 --status applied`, puis `supabase migration list`. La procédure complète figure dans `docs/runbooks/aud-07-reconcile-toy-weapon-migration-history.md`.
+**Correction préparée :** workflow manuel `.github/workflows/repair-aud-07-migration-history.yml`, limité au projet `dzhhsoikzxibmngjzcch` et au seul numéro `20261104020500`. Il exige un texte de confirmation exact, la CLI Supabase 2.122.1 et les secrets GitHub `SUPABASE_ACCESS_TOKEN` + `SUPABASE_DB_PASSWORD`. Le workflow exécute la commande officielle `supabase migration repair 20261104020500 --status applied`, sans rejouer le SQL de la migration, puis liste l'historique.
 
-La commande CLI n'est pas disponible via les connecteurs actuels ; aucune insertion manuelle dans la table d'historique n'a été faite et aucun cron/fonction n'a été réexécuté. Résultat attendu : 330 migrations locales et distantes.
+**Limite actuelle :** le workflow est commité mais pas encore lancé ; les secrets GitHub ne sont pas accessibles à l'agent et aucune insertion manuelle dans `supabase_migrations.schema_migrations` n'a été effectuée. La divergence 333/332 reste donc présente. Après exécution, le total attendu est 333 local et 333 distant.
+
+Runbook : `docs/runbooks/aud-07-reconcile-toy-weapon-migration-history.md`.
 
 #### AUD-08 — CI automatique préparée ; exécution GitHub Actions bloquée avant la première étape
 **État : workflows automatiques ajoutés sur `main`, mais le runner GitHub n'a pas exécuté les étapes lors des premières tentatives.**
