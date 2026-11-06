@@ -65,12 +65,14 @@ Constats complémentaires vérifiés le 7 novembre :
 
 - `public.refunds` n'a pas de référence à un groupe, un article, un retour ou une quantité.
 - `public.returns` peut référencer un seul `order_item_id`, mais n'enregistre pas la quantité demandée/acceptée et ne référence aucun remboursement.
-- `request_refund(order_id, amount, reason)` ne reçoit pas la portée commerciale du remboursement.
+- `request_refund(order_id, amount, reason)` ne reçoit pas la portée commerciale du remboursement ; l'écran client ne permet que saisir un montant global et un motif.
 - `orders.discount_total` conserve la remise globale ; aucune ventilation par `order_item` ou groupe n'est figée au checkout. Les sous-totaux des groupes et les prix des lignes restent bruts.
-- Deux fonctions de finalisation vendeur existent avec des conventions différentes : `finalize_seller_group` crédite le `SALE` brut et débite la `COMMISSION` séparément ; `finalize_seller_group_financials` crédite le `SALE` net et conserve la commission dans une autre convention de statut. Aucun appelant SQL interne ou trigger appelant ces routines n'a été identifié lors des contrôles ; leurs appels serveur réels doivent être confirmés.
+- Deux fonctions de finalisation vendeur existent avec des conventions différentes : `finalize_seller_group` crédite le `SALE` brut et débite la `COMMISSION` séparément ; `finalize_seller_group_financials` crédite le `SALE` net et conserve la commission dans une autre convention de statut. Aucun appelant SQL interne, trigger ou job `pg_cron` n'a été identifié ; la recherche du code de la branche `main` ne trouve pas non plus d'appelant Flutter/Edge. L'existence éventuelle d'un appel externe hors dépôt reste à confirmer.
 - `reverse_seller_group` est une inversion complète du groupe, pas un mécanisme générique de retour partiel d'un article.
+- L'index unique `uq_seller_ledger_ref_type(seller_id, entry_type, reference_id)` peut faire échouer `complete_refund` lorsque le même vendeur possède plusieurs boutiques/groupes dans une commande : la fonction insère alors plusieurs lignes `REFUND` avec le même seller_id, entry_type et refund_id.
+- L'Edge Function `execute-payment-refund` appelle le prestataire Wave avant `complete_refund`. Si le prestataire confirme mais que l'insertion ledger échoue, la transaction SQL est annulée après un remboursement externe déjà exécuté ; l'Edge Function retourne `refund_completion_failed` et peut laisser la demande en `PROCESSING`.
 
-**Risque :** imputation financière erronée entre boutiques, vendeurs, plateforme et frais de livraison ; la quantité retournée et la commission correspondante ne sont pas traçables.
+**Risque :** imputation financière erronée entre boutiques, vendeurs, plateforme et frais de livraison ; la quantité retournée et la commission correspondante ne sont pas traçables. S'y ajoutent un possible conflit d'unicité du ledger pour un même vendeur multi-boutiques et un risque de remboursement externe confirmé mais non comptabilisé localement.
 
 **Correction retenue :** modèle explicite et immuable `refund_allocations` par groupe/article/quantité et type d'allocation, snapshots de remise/funding par ligne au checkout, règles distinctes pour le remboursement client, le débit vendeur, le reversement de commission et les frais de livraison. Les tests doivent garantir que la somme des allocations égale exactement le montant rendu au client et qu'aucun vendeur non concerné n'est débité.
 
