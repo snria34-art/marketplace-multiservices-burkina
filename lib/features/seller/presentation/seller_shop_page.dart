@@ -55,7 +55,7 @@ class _SellerShopPageState extends ConsumerState<SellerShopPage> {
       context: context,
       builder: (_) => _ShopDialog(current: current),
     );
-    if (form == null) return;
+    if (!mounted || form == null) return;
 
     final client = ref.read(supabaseProvider);
     if (client == null) return;
