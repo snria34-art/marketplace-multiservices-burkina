@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/navigation/app_navigation.dart';
+import '../../core/providers/repository_providers.dart';
+import '../../features/auth/presentation/access_status_page.dart';
+import 'route_access.dart';
 
 import '../../features/auth/presentation/sign_in_page.dart';
 import '../../features/cart/presentation/cart_page.dart';
@@ -48,13 +52,126 @@ import '../../features/admin/presentation/admin_review_moderation_page.dart';
 import '../../features/admin/presentation/admin_accounts_page.dart';
 import '../../features/admin/presentation/admin_refunds_page.dart';
 
+class _AuthRefreshListenable extends ChangeNotifier {
+  _AuthRefreshListenable(SupabaseClient? client) {
+    _subscription = client?.auth.onAuthStateChange.listen((_) {
+      notifyListeners();
+    });
+  }
+
+  StreamSubscription<dynamic>? _subscription;
+
+  @override
+  void dispose() {
+    _subscription?.cancel();
+    super.dispose();
+  }
+}
+
+String _loginLocation(GoRouterState state) {
+  return Uri(
+    path: '/auth',
+    queryParameters: {'from': state.uri.toString()},
+  ).toString();
+}
+
+Future<String?> _guardRoute(
+  SupabaseClient? client,
+  GoRouterState state,
+) async {
+  final path = state.matchedLocation;
+
+  if (path == '/access-status') return null;
+
+  final user = client?.auth.currentUser;
+  final requiresAuth = routeRequiresAuthentication(path);
+
+  if (user == null) {
+    return requiresAuth ? _loginLocation(state) : null;
+  }
+
+  if (client == null) {
+    return requiresAuth ? '/access-status?reason=verification_unavailable' : null;
+  }
+
+  // Public catalogue pages remain browseable without extra profile requests.
+  // Session and role checks apply to protected routes and the login page.
+  if (!requiresAuth && path != '/auth') return null;
+
+  try {
+    final profile = await client
+        .from('profiles')
+        .select('status')
+        .eq('id', user.id)
+        .maybeSingle();
+
+    if (profile == null || profile['status'] != 'ACTIVE') {
+      return '/access-status?reason=account_inactive';
+    }
+
+    if (path == '/auth') {
+      return sanitizeInternalLocation(state.uri.queryParameters['from']) ?? '/';
+    }
+
+    if (isAdminRoute(path)) {
+      final admin = await client
+          .from('admin_users')
+          .select('user_id')
+          .eq('user_id', user.id)
+          .eq('active', true)
+          .maybeSingle();
+
+      if (admin == null) return '/access-status?reason=admin_required';
+    }
+
+    if (isSellerRoute(path)) {
+      final rows = await client
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', user.id);
+      final hasSellerRole = rows is List &&
+          rows.any((row) => row is Map && row['role'] == 'SELLER');
+
+      if (!hasSellerRole) return '/access-status?reason=seller_required';
+    }
+
+    if (isCourierRoute(path)) {
+      final rows = await client
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', user.id);
+      final hasCourierRole = rows is List &&
+          rows.any((row) => row is Map && row['role'] == 'COURIER');
+
+      if (!hasCourierRole) return '/access-status?reason=courier_required';
+    }
+
+    return null;
+  } catch (_) {
+    // Fail closed: never open a protected route when role checks cannot run.
+    return '/access-status?reason=verification_unavailable';
+  }
+}
+
 final appRouterProvider = Provider<GoRouter>((ref) {
+  final client = ref.watch(supabaseProvider);
+  final authRefresh = _AuthRefreshListenable(client);
+  ref.onDispose(authRefresh.dispose);
+
   return GoRouter(
+    refreshListenable: authRefresh,
+    redirect: (context, state) => _guardRoute(client, state),
     navigatorKey: appNavigatorKey,
     initialLocation: '/',
     routes: [
       GoRoute(path: '/', builder: (_, __) => const HomePage()),
       GoRoute(path: '/auth', builder: (_, __) => const SignInPage()),
+      GoRoute(
+        path: '/access-status',
+        builder: (_, state) => AccessStatusPage(
+          reason: state.uri.queryParameters['reason'],
+        ),
+      ),
       GoRoute(path: '/cart', builder: (_, __) => const CartPage()),
       GoRoute(
         path: '/checkout/:cartId',
