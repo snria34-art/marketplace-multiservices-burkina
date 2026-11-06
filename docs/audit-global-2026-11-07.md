@@ -139,26 +139,30 @@ Suivi : https://linear.app/faso/issue/RIA-28/catalogue-ajouter-ledition-du-stock
 **Correction restante :** associer Android/iOS à un projet Firebase, activer APNs pour iOS, créer un compte de service autorisé pour Firebase Cloud Messaging et saisir le JSON directement dans Supabase Edge Function Secrets. Configurer `FCM_PROJECT_ID` seulement si le champ `project_id` n'est pas fourni dans le JSON. Ne jamais placer la clé privée dans GitHub, Flutter ou la conversation. Effectuer ensuite un vrai push sur un appareil de test, avec consentement et vérification du token.
 
 #### AUD-07 — Dérive de l'historique des migrations
-**État : écart réduit ; une divergence historique reste à réconcilier.**
+**État : un seul numéro non réconcilié ; effets fonctionnels déjà présents et équivalence vérifiée. Réparation historique CLI préparée.**
 
-- GitHub contient 328 migrations, Supabase en consigne 327 (mise à jour du 6 novembre 2026 à 20:19 UTC).
-- Les migrations AUD-01, AUD-03, AUD-04 et les deux migrations de surveillance FCM sont maintenant présentes dans les deux historiques.
-- `20261104020500_add_toy_weapon_product_classification.sql` reste présente dans GitHub mais absente de l'historique Supabase ; pourtant la fonction `private.scan_toy_weapon_products()` et son cron actif existent déjà dans la base. Cette dérive semble provenir d'une application manuelle ou d'une histoire de déploiement incomplète.
-- L'ancienne migration locale de stock par variante a été remplacée par la version déployée `20261106201211_add_secure_seller_variant_inventory_read.sql`, afin que le fichier versionné corresponde exactement à l'historique Supabase.
-- La migration AUD-03 administrateur impayé est versionnée dans GitHub sous le numéro exact `20261106201034_aud03_allow_admin_to_cancel_unpaid_orders_safely.sql`, qui correspond à l'historique Supabase.
-- La documentation du dépôt indique également que l'ancien historique SQL n'est pas encore entièrement reproductible sur une base vide.
+- GitHub contient 328 migrations, Supabase en consigne 327. Le seul numéro GitHub absent de l'historique distant est `20261104020500_add_toy_weapon_product_classification.sql`.
+- Le corps de `private.scan_toy_weapon_products()` dans le fichier et dans la base est identique après normalisation des espaces ; propriétaire `postgres`, `SECURITY DEFINER`, `search_path = ''`, ACL n'accordant EXECUTE qu'à postgres.
+- Le cron distant `toy-weapon-classifier` est actif, ID 5, toutes les 10 minutes, commande exacte `select private.scan_toy_weapon_products();`. Les tables dépendantes sont présentes.
+- Les dernières migrations AUD-01/AUD-03/AUD-04/FCM sont présentes dans les deux historiques. Le fichier de stock variante et la migration AUD-03 admin ont été alignés sur leur timestamp exact.
 
-**Correction restante :** l'écart actuel est d'une migration. Établir un état de référence entre migrations GitHub, historique distant et schéma réel ; la migration `20261104020500_add_toy_weapon_product_classification.sql` est le seul numéro GitHub non présent dans l'historique distant, alors que sa fonction et son cron existent déjà. Vérifier les effets complets de cette migration et réconcilier l'historique de façon contrôlée avant de reconstruire une base vide. Ne pas l'appliquer aveuglément ni supprimer ses objets existants.
+**Correction restante :** exécuter uniquement la réparation d'historique officielle, sans rejouer le SQL :
+`supabase link --project-ref dzhhsoikzxibmngjzcch`, puis `supabase migration repair 20261104020500 --status applied`, puis `supabase migration list`. La procédure complète figure dans `docs/runbooks/aud-07-reconcile-toy-weapon-migration-history.md`.
 
-#### AUD-08 — Validation CI non démontrée sur le dernier commit de `main`
-**État : confirmé dans la configuration et les exécutions consultées.**
+La commande CLI n'est pas disponible via les connecteurs actuels ; aucune insertion manuelle dans la table d'historique n'a été faite et aucun cron/fonction n'a été réexécuté. Résultat attendu : 328 migrations locales et distantes.
 
-- Les workflows Flutter, base Supabase et build natif sont déclenchés par `workflow_dispatch` uniquement ; ils ne se déclenchent pas automatiquement sur push ou pull request.
-- Les dernières exécutions consultées sur `main` (5 novembre 2026) se sont terminées en échec avant attribution d'un runner : `runner_id=0`, aucune étape exécutée.
-- Cela ne prouve pas une erreur de compilation ou de code ; les commandes n'ont pas été lancées.
-- Le workflow Flutter utilise `flutter analyze --no-fatal-warnings --no-fatal-infos`, ce qui ne rend pas les avertissements bloquants.
+#### AUD-08 — CI automatique préparée ; exécution GitHub Actions bloquée avant la première étape
+**État : workflows automatiques ajoutés sur `main`, mais le runner GitHub n'a pas exécuté les étapes lors des premières tentatives.**
 
-**Correction :** réactiver une CI automatique sur push/PR, obtenir un runner opérationnel, faire exécuter `flutter pub get`, `flutter analyze`, `flutter test`, `deno check`, `supabase db reset` et `supabase test db`. Garder les échecs visibles et corriger leur cause réelle.
+- Les anciens workflows Flutter/DB étaient déclenchés seulement manuellement.
+- Deux workflows ciblés ont été ajoutés sur `main` :
+  - `.github/workflows/flutter-ci.yml` : déclenchement sur push/PR des fichiers Flutter ; vérifie format sans modifier les sources, dépendances, analyse Flutter et tests.
+  - `.github/workflows/supabase-functions-ci.yml` : déclenchement sur push/PR des fonctions Edge ; lance `deno check` sur chaque `index.ts`.
+- Le build Android/iOS de publication reste distinct et manuel ; les workflows automatiques ne demandent pas les secrets de signature et ne déclenchent pas de paiements.
+- Les premiers runs sur `main` ont été créés le 6 novembre 2026 à 20:24:11 UTC (Flutter run `42288045950`, Edge run `42288049924`). Les deux se sont terminés en échec en quelques secondes ; la lecture des jobs retourne `steps=[]` et aucun journal de job n'est disponible. Aucune commande `flutter`, `dart` ou `deno` n'a donc été exécutée par ces jobs. Ce n'est pas une preuve d'échec de compilation.
+- La PR brouillon `#1` (`codex/bootstrap`) contient aussi des workflows automatiques, mais comporte 584 fichiers modifiés, est non fusionnée et n'est pas mergeable actuellement. Elle n'a pas été fusionnée ni utilisée comme source unique de vérité.
+
+**Correction restante :** vérifier les paramètres Actions du dépôt (Actions activées, politique d'exécution, minutes/quota, runner hébergé ou runner group, éventuelle limite de facturation), puis relancer les runs. Ne pas désactiver les validations en réponse à l'absence de runner. Une fois qu'un runner démarre, corriger les vrais échecs de format, analyse, tests ou type-check observés.
 
 #### AUD-09 — Publication Android/iOS non prête
 **État : confirmé par les fichiers de configuration.**
