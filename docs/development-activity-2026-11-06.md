@@ -448,3 +448,14 @@ Commits :
 Commits :
 - 076348276e109dfa05e089ea2a03d647e0c04b8e — messagerie.
 - c7a9e0ffe1f49cba68b39d40d487fd79bf42bf55 — notifications.
+
+### 30. Fin de vie des canaux Realtime des commandes, messages et notifications
+
+- Le détail de commande retire désormais son canal Realtime de façon asynchrone protégée pendant dispose(). Les erreurs de souscription initiale sont interceptées et affichées, sans casser le détail de commande ni interrompre les autres éléments de l'écran.
+- La messagerie protège la création des abonnements Realtime, coupe le timer et retire le canal lorsqu'on revient à la liste des conversations. Les erreurs de marquage « lu » et de nettoyage ne deviennent plus des Futures non gérées.
+- La page de notifications intercepte désormais les erreurs de création de son abonnement Realtime. En cas d'échec, la liste reste utilisable avec l'actualisation manuelle et les erreurs de marquage sont affichées.
+
+Commits :
+- b274d10bbda9dc50dc11d990b763a9e85bc36a4a — canal du détail de commande.
+- 2e157e0346f9df875504ac936e4f82d014af3d5b — canal de messagerie et retour à la liste.
+- 03450f394a47b404fd8263de374b006059a19f71 — initialisation Realtime des notifications.
