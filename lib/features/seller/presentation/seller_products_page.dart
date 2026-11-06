@@ -55,6 +55,8 @@ class _SellerProductsPageState
       return;
     }
 
+    if (!mounted) return;
+
     if (shops.isEmpty) {
       _show('Aucune boutique disponible pour ce compte.');
       return;
@@ -68,7 +70,7 @@ class _SellerProductsPageState
       ),
     );
 
-    if (result == null) return;
+    if (!mounted || result == null) return;
 
     try {
       final id = await repo.createProduct(
@@ -83,12 +85,15 @@ class _SellerProductsPageState
         expiryDate: result['expiry_date'] as DateTime?,
       );
 
+      if (!mounted) return;
+
       var submissionMessage = 'Produit créé en brouillon : ajoutez au moins une photo.';
       final productPhotos = await ImagePicker().pickMultiImage(
         limit: 5,
         imageQuality: 75,
         maxWidth: 1600,
       );
+      if (!mounted) return;
       if (productPhotos.isNotEmpty) {
         for (final photo in productPhotos) {
           await repo.uploadProductImage(
@@ -97,6 +102,7 @@ class _SellerProductsPageState
             imageRole: 'PRODUCT',
           );
         }
+        if (!mounted) return;
         final addPackaging = await showDialog<bool>(
           context: context,
           builder: (dialogContext) => AlertDialog(
@@ -114,12 +120,14 @@ class _SellerProductsPageState
             ],
           ),
         );
+        if (!mounted) return;
         if (addPackaging == true) {
           final packaging = await ImagePicker().pickImage(
             source: ImageSource.gallery,
             imageQuality: 75,
             maxWidth: 1600,
           );
+          if (!mounted) return;
           if (packaging != null) {
             await repo.uploadProductImage(
               productId: id,
@@ -187,7 +195,7 @@ class _SellerProductsPageState
 
     controller.dispose();
 
-    if (value == null) return;
+    if (!mounted || value == null) return;
 
     final repo = ref.read(sellerProductsRepositoryProvider);
     if (repo == null) return;
@@ -214,7 +222,7 @@ class _SellerProductsPageState
         imageQuality: 75,
         maxWidth: 1600,
       );
-      if (photos.isEmpty) return;
+      if (!mounted || photos.isEmpty) return;
       for (final photo in photos) {
         await repo.uploadProductImage(
           productId: productId,
@@ -222,6 +230,7 @@ class _SellerProductsPageState
           imageRole: 'PRODUCT',
         );
       }
+      if (!mounted) return;
       final addPackaging = await showDialog<bool>(
         context: context,
         builder: (dialogContext) => AlertDialog(
@@ -239,12 +248,14 @@ class _SellerProductsPageState
           ],
         ),
       );
+      if (!mounted) return;
       if (addPackaging == true) {
         final packaging = await ImagePicker().pickImage(
           source: ImageSource.gallery,
           imageQuality: 75,
           maxWidth: 1600,
         );
+        if (!mounted) return;
         if (packaging != null) {
           await repo.uploadProductImage(
             productId: productId,
