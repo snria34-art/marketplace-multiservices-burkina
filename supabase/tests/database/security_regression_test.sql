@@ -1,5 +1,5 @@
 begin;
-select plan(50);
+select plan(51);
 
 select ok(
   not has_table_privilege('anon','private.catalog_moderation_findings','SELECT')
@@ -429,6 +429,18 @@ select ok(
   and position('private.is_admin()' in pg_get_functiondef('public.enforce_profile_security_fields()'::regprocedure)) > 0
   and position('private.is_admin()' in pg_get_functiondef('public.enforce_seller_document_review_fields()'::regprocedure)) > 0,
   'moderators retain catalog/review moderation but cannot change account or seller-document verification fields'
+);
+
+
+select ok(
+  position('private.has_role(''COURIER''::public.user_role)' in pg_get_functiondef('public.record_courier_location(double precision,double precision,numeric)'::regprocedure)) > 0
+  and position('active_courier_assignment_required' in pg_get_functiondef('public.record_courier_location(double precision,double precision,numeric)'::regprocedure)) > 0
+  and position('from public.delivery_assignments da' in pg_get_functiondef('public.record_courier_location(double precision,double precision,numeric)'::regprocedure)) > 0
+  and position('join public.order_packages op' in pg_get_functiondef('public.record_courier_location(double precision,double precision,numeric)'::regprocedure)) > 0
+  and position('join public.orders o' in pg_get_functiondef('public.record_courier_location(double precision,double precision,numeric)'::regprocedure)) > 0
+  and position('o.status not in' in pg_get_functiondef('public.record_courier_location(double precision,double precision,numeric)'::regprocedure)) > 0
+  and not has_function_privilege('anon','public.record_courier_location(double precision,double precision,numeric)','EXECUTE'),
+  'courier GPS writes require an active non-terminal delivery assignment and cannot be called by anon'
 );
 
 select * from finish();
