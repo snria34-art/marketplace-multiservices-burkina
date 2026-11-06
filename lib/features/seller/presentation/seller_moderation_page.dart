@@ -64,17 +64,29 @@ class _SellerModerationPageState extends ConsumerState<SellerModerationPage> {
                 children: [
                   OutlinedButton.icon(
                     onPressed: () async {
-                      final picked = await ImagePicker().pickImage(
-                        source: ImageSource.camera,
-                        imageQuality: 75,
-                        maxWidth: 1600,
-                      );
-                      if (picked != null && context.mounted) {
-                        setDialogState(() {
-                          media = picked;
-                          mediaType = 'IMAGE';
-                          durationSeconds = null;
-                        });
+                      try {
+                        final picked = await ImagePicker().pickImage(
+                          source: ImageSource.camera,
+                          imageQuality: 75,
+                          maxWidth: 1600,
+                        );
+                        if (picked != null && context.mounted) {
+                          setDialogState(() {
+                            media = picked;
+                            mediaType = 'IMAGE';
+                            durationSeconds = null;
+                          });
+                        }
+                      } catch (error) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                'Capture photo impossible : $error',
+                              ),
+                            ),
+                          );
+                        }
                       }
                     },
                     icon: const Icon(Icons.camera_alt_outlined),
@@ -82,31 +94,51 @@ class _SellerModerationPageState extends ConsumerState<SellerModerationPage> {
                   ),
                   OutlinedButton.icon(
                     onPressed: () async {
-                      final picked = await ImagePicker().pickVideo(
-                        source: ImageSource.gallery,
-                        maxDuration: const Duration(seconds: 10),
-                      );
-                      if (picked == null) return;
-                      final controller = VideoPlayerController.file(File(picked.path));
                       try {
-                        await controller.initialize();
-                        final seconds = controller.value.duration.inMilliseconds / 1000;
-                        if (seconds <= 0 || seconds > 10) {
-                          if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('La vidéo doit durer 10 secondes maximum.')),
-                            );
+                        final picked = await ImagePicker().pickVideo(
+                          source: ImageSource.gallery,
+                          maxDuration: const Duration(seconds: 10),
+                        );
+                        if (picked == null || !context.mounted) return;
+
+                        final videoController =
+                            VideoPlayerController.file(File(picked.path));
+                        try {
+                          await videoController.initialize();
+                          final seconds =
+                              videoController.value.duration.inMilliseconds /
+                                  1000;
+                          if (seconds <= 0 || seconds > 10) {
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'La vidéo doit durer 10 secondes maximum.',
+                                  ),
+                                ),
+                              );
+                            }
+                            return;
                           }
-                          return;
+                          if (!context.mounted) return;
+                          setDialogState(() {
+                            media = picked;
+                            mediaType = 'VIDEO';
+                            durationSeconds = seconds;
+                          });
+                        } finally {
+                          await videoController.dispose();
                         }
-                        if (!context.mounted) return;
-                        setDialogState(() {
-                          media = picked;
-                          mediaType = 'VIDEO';
-                          durationSeconds = seconds;
-                        });
-                      } finally {
-                        await controller.dispose();
+                      } catch (error) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                'Lecture de la vidéo impossible : $error',
+                              ),
+                            ),
+                          );
+                        }
                       }
                     },
                     icon: const Icon(Icons.videocam_outlined),
