@@ -102,7 +102,7 @@ Le compte connecté ne peut donc pas appliquer `ALTER TABLE ... ENABLE ROW LEVEL
 
 ### Conseillers Supabase
 
-- Sécurité : 1 ERROR (`spatial_ref_sys` sans RLS), 5 WARN (extensions en `public` et fonctions PostGIS exécutables par anon/authenticated), 17 INFO (RLS activé sans policy ; ne pas ajouter de policies permissives pour faire disparaître les alertes).
+- Sécurité : 1 ERROR (`spatial_ref_sys` sans RLS) ; 5 extensions dans `public` signalées en WARN ; 3 signatures PostGIS `st_estimatedextent` exécutables par `anon` ; 80 fonctions `SECURITY DEFINER` exécutables par `authenticated` (avertissement générique à revoir fonction par fonction) ; 17 INFO (RLS activé sans policy ; ne pas ajouter de policies permissives pour faire disparaître les alertes).
 - Performance : 368 index signalés inutilisés. Aucun index supprimé : le signal est non concluant avant trafic représentatif.
 - Health : la fonction push continue de renvoyer 503 tant que le compte de service FCM est absent.
 
