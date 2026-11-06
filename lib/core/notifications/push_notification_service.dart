@@ -119,6 +119,13 @@ class PushNotificationService {
           debugPrintStack(stackTrace: stackTrace);
         }
       }
+    }, onError: (Object error, StackTrace stackTrace) {
+      // Supabase emits refresh/network failures on this stream. Handle them
+      // explicitly so they cannot become unhandled zone exceptions.
+      if (kDebugMode) {
+        debugPrint('Push auth-state stream failed: $error');
+        debugPrintStack(stackTrace: stackTrace);
+      }
     });
 
     await _registerCurrentToken();
