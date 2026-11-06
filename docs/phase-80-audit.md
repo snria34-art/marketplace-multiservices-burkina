@@ -496,3 +496,15 @@ Relecture en lecture seule des définitions SQL actuellement déployées (`compl
 - Relecture complémentaire : le premier durcissement faisait passer aussi les annulations administrateur par le contrôle du propriétaire client. Migration corrective appliquée : `20261106201500_aud03_allow_admin_to_cancel_unpaid_orders_safely`. Un administrateur actif enregistré via `private.is_admin()` peut maintenant annuler une commande appartenant à un client, mais uniquement si elle reste `PENDING_PAYMENT` et si les gardes paiement/colis/stock sont satisfaites.
 - Vérification SQL : le guard admin, le prédicat propriétaire-ou-admin et le statut `PENDING_PAYMENT` sont présents dans la définition déployée ; les privilèges restent réservés à authenticated/service_role, sans anon.
 - Une troisième assertion pgTAP a été ajoutée pour vérifier l'accès admin sur les seules commandes impayées. Le fichier contient 44 assertions, non exécutées à ce stade. Aucune donnée métier n'a été modifiée.
+
+
+### AUD-04 — RPC de lecture sécurisée du stock par variante déployée — 7 novembre 2026
+
+- La base active ne disposait pas de `public.get_seller_product_variant_inventory(uuid)`, alors que le dépôt Flutter appelait déjà cette RPC.
+- Migration Supabase appliquée : `20261106201211_add_secure_seller_variant_inventory_read`. Le fichier GitHub porte maintenant le même numéro que l'historique de migration distant.
+- La fonction vérifie le compte actif, la session authentifiée et la propriété du produit à travers boutique/vendeur. Elle retourne les variantes avec `quantity` et `reserved_quantity`, en retournant zéro si aucune ligne d'inventaire n'existe.
+- Vérification SQL : `authenticated` peut exécuter la fonction ; `anon` ne le peut pas ; la table `product_variant_inventory` ne donne toujours aucun droit direct SELECT aux rôles clients et sa policy de refus reste active.
+- Le dépôt Flutter avait déjà les méthodes de lecture et de modification par variante. Le fallback vers l'éditeur de stock parent est désormais supprimé si la lecture des variantes échoue : l'écran affiche une erreur et ne modifie pas le stock.
+- Ajout d'une assertion pgTAP ; le fichier `security_regression_test.sql` contient désormais 45 assertions. Les assertions restent à exécuter ; aucun test Flutter ou compte vendeur réel n'a pu être lancé ici.
+- Aucune quantité de stock n'a été changée. Le ticket RIA-28 reste ouvert jusqu'à un test UI sur un compte vendeur de validation.
+
