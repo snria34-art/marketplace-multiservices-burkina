@@ -524,3 +524,18 @@ L'annulation globale par `transition_order_status` reste le défaut SQL ouvert, 
 - Documentation et matrice de permissions créées dans `docs/runbooks/aud-12-admin-rbac-matrix.md`; ticket Linear RIA-30 créé pour la prochaine phase de RBAC.
 - Aucun compte propriétaire/administrateur/associé, rôle ni permission n'a été créé dans la base hébergée.
 
+
+
+### AUD-14 — implementation du suivi GPS arrière-plan — 7 novembre 2026
+
+- Remplacement de `Timer.periodic(15s)` par le flux natif `Geolocator.getPositionStream()`.
+- Dépendances Android/iOS de Geolocator rendues explicites dans `pubspec.yaml` et lockfile : `geolocator_android 5.2.1`, `geolocator_apple 2.4.3`.
+- Android : notification persistante de service de premier plan, cadence visée 15 secondes, filtre de déplacement 25 mètres, permissions de localisation précise/approximative et background/foreground service.
+- iOS : `AppleSettings.allowBackgroundLocationUpdates=true`, `pauseLocationUpdatesAutomatically=false`, indicateur système actif ; ajout du mode `location` dans `UIBackgroundModes` et description Always qui explique la limitation aux missions de livraison.
+- Écran de consentement en app avant le flux GPS. Vérification de mission via `CourierRepository.assignments()` avant la demande d'autorisation. Le flux s'arrête après fin/annulation de la dernière mission, refus serveur, déconnexion ou arrêt manuel. Un indicateur d'attente évite les doubles démarrages.
+- Sécurisation serveur précédente consolidée : migration `20261106205236_require_active_courier_assignment_for_location_updates` exige une affectation active liée à un colis et une commande non terminés avant toute insertion GPS.
+- Test widget ajouté : `test/features/courier/courier_location_tracking_test.dart` confirme qu'aucun prompt de permission ne s'ouvre si le livreur n'a aucune mission.
+- Le fichier pgTAP `security_regression_test.sql` est à 51 assertions. Tests non exécutés faute de runner GitHub ; aucun build mobile ni test en appareil réel n'a été effectué.
+- La table `courier_locations` reste vide. Aucune purge/retention n'a été imposée sans validation du métier ; Linear RIA-31 fixe cette décision comme prérequis de production.
+- Runbook publié : `docs/runbooks/aud-14-courier-background-location.md`. Ticket de livraison/GPS RIA-11 passe en In Progress.
+
