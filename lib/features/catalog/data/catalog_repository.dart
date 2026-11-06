@@ -1,10 +1,17 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+class _CachedSignedUrl {
+  const _CachedSignedUrl(this.value, this.expiresAt);
+
+  final Future<String?> value;
+  final DateTime expiresAt;
+}
+
 class CatalogRepository {
   const CatalogRepository(this.client);
 
   final SupabaseClient client;
-  final Map<String, Future<String?>> _imageUrlCache = {};
+  final Map<String, _CachedSignedUrl> _imageUrlCache = {};
 
   Future<List<Map<String, dynamic>>> categoryTypes() async {
     final rows = await client
@@ -61,22 +68,51 @@ class CatalogRepository {
     return _maps(rows);
   }
 
-  Future<String?> productImageUrl(String storagePath) {
+  Future<String?> productImageUrl(String storagePath) async {
     final path = storagePath.trim();
-    if (path.isEmpty) return Future.value(null);
+    if (path.isEmpty) return null;
     if (path.startsWith('http://') || path.startsWith('https://')) {
-      return Future.value(path);
+      return path;
     }
 
-    return _imageUrlCache.putIfAbsent(path, () async {
-      try {
-        return await client.storage
-            .from('product-media')
-            .createSignedUrl(path, 60 * 60);
-      } on StorageException {
-        return null;
+    final now = DateTime.now();
+    final cached = _imageUrlCache[path];
+    if (cached != null &&
+        cached.expiresAt.isAfter(now.add(const Duration(minutes: 5)))) {
+      return cached.value;
+    }
+
+    // The signed URL lasts 60 minutes. Stop reusing it after 55 minutes so
+    // images are refreshed before the URL expires in a long-lived app session.
+    final pending = _createSignedImageUrl(path);
+    final entry = _CachedSignedUrl(
+      pending,
+      now.add(const Duration(minutes: 55)),
+    );
+    _imageUrlCache[path] = entry;
+
+    try {
+      final url = await pending;
+      if (url == null && identical(_imageUrlCache[path], entry)) {
+        _imageUrlCache.remove(path);
       }
-    });
+      return url;
+    } catch (_) {
+      if (identical(_imageUrlCache[path], entry)) {
+        _imageUrlCache.remove(path);
+      }
+      rethrow;
+    }
+  }
+
+  Future<String?> _createSignedImageUrl(String path) async {
+    try {
+      return await client.storage
+          .from('product-media')
+          .createSignedUrl(path, 60 * 60);
+    } on StorageException {
+      return null;
+    }
   }
 
   List<Map<String, dynamic>> _maps(dynamic rows) {
