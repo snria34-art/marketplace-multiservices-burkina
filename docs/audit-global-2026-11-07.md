@@ -5,7 +5,7 @@
 **Branche :** `main`  
 **Supabase :** `dzhhsoikzxibmngjzcch` — PostgreSQL 17.6 — `eu-west-1`  
 **Nature :** audit statique du dépôt + contrôles Supabase + examen des workflows et journaux.  
-**Mises à jour AUD-01/AUD-03 :** préparation non destructive des deux RPC PostGIS et durcissement des RPC d'annulation impayée appliqués sur Supabase. Aucun paiement, remboursement, solde vendeur, ligne métier ou compte propriétaire n'a été créé/modifié.
+**Mises à jour AUD-01/AUD-03/AUD-04/AUD-06/AUD-16 :** préparation PostGIS, durcissement des annulations impayées, lecteur sécurisé du stock par variante, surveillance FCM et contrôle des cinq buckets appliqués/déployés. Seules les fonctions de santé et les tables de diagnostic ont été modifiées ; aucun paiement, remboursement, stock, solde vendeur ou compte utilisateur n'a été créé/modifié.
 
 ## 1. Conclusion
 
@@ -21,17 +21,17 @@ Les constats ci-dessous sont classés par gravité et par dépendance. « Confir
 | Fichiers Dart sous `lib/` | 72 |
 | Fichiers de tests Dart | 3 |
 | Tests SQL dans `supabase/tests/database` | 2 |
-| Assertions pgTAP prévues dans ces deux fichiers | 58 (45 + 13) |
+| Assertions pgTAP prévues dans ces deux fichiers | 60 (47 + 13) |
 | Tables Supabase `public` et `private` | 182 |
 | Tables publiques avec RLS | 166/167 |
 | Tables privées avec RLS | 15/15 |
-| Migrations SQL présentes dans GitHub | 326 |
-| Migrations consignées dans Supabase | 325 |
+| Migrations SQL présentes dans GitHub | 328 |
+| Migrations consignées dans Supabase | 327 |
 | Fonctions Edge actives dans Supabase | 21 |
 | Dossiers sources Edge avec `index.ts` dans GitHub | 18 |
 | Buckets Storage | 5 |
 
-Les mesures de quantité ne prouvent pas la qualité fonctionnelle. Les 54 assertions SQL couvrent notamment des permissions et des contrôles de sécurité, mais ne constituent pas une suite de tests de bout en bout pour les parcours commerciaux.
+Les mesures de quantité ne prouvent pas la qualité fonctionnelle. Les 60 assertions SQL couvrent notamment des permissions et des contrôles de sécurité, mais ne constituent pas une suite de tests de bout en bout pour les parcours commerciaux.
 
 ## 2. Registre des anomalies — ordre de correction proposé
 
@@ -116,30 +116,33 @@ La RPC `public.get_seller_product_variant_inventory(uuid)` manquait sur Supabase
 Suivi : https://linear.app/faso/issue/RIA-28/catalogue-ajouter-ledition-du-stock-par-variante-dans-lespace-vendeur
 
 #### AUD-05 — Wave et CinetPay ne sont pas configurés
-**État : confirmé par les derniers contrôles de santé enregistrés le 6 novembre 2026.**
+**État : confirmé par une exécution réelle du moniteur de santé le 6 novembre 2026 à 20:19:04 UTC. Code et webhooks actifs ; comptes marchands/secrets manquants.**
 
-- Wave : `NOT_CONFIGURED`, motif `WAVE_API_KEY_missing`.
-- CinetPay : `NOT_CONFIGURED`, motif `CINETPAY_API_KEY_or_SITE_ID_missing`.
-- Les fonctions de création de session v3 renvoient volontairement HTTP 503 quand les clés nécessaires manquent.
+- Wave : `NOT_CONFIGURED`, motif `WAVE_API_KEY_missing`. `create-wave-payment-session-v3` v4 exige `WAVE_API_KEY`; le webhook `wave-payment-webhook-v3` v4 exige `WAVE_WEBHOOK_SECRET`. `WAVE_SIGNING_SECRET` est optionnel pour signer les appels sortants.
+- CinetPay : `NOT_CONFIGURED`, motif `CINETPAY_API_KEY_or_SITE_ID_missing`. `create-cinetpay-payment-session-v3` v6 exige `CINETPAY_API_KEY` et `CINETPAY_SITE_ID`; `cinetpay-webhook-v3` v6 exige aussi `CINETPAY_SECRET_KEY`.
+- Les fonctions de création renvoient HTTP 503 quand les clés nécessaires manquent ; elles ne simulent pas une session de paiement.
+- Les webhooks sont configurés avec `verify_jwt=false` par conception : Wave vérifie une signature HMAC sur le corps brut et une fenêtre temporelle de cinq minutes ; CinetPay vérifie le HMAC de `x-token`, le site marchand et le statut auprès de l'API fournisseur avant `process_payment_event`. Ne pas retirer ces vérifications ni imposer le JWT Supabase sur les callbacks fournisseurs.
 
-**Impact :** aucun parcours de paiement réel ne peut être certifié. Orange Money et Moov Money sont proposés via CinetPay dans l'architecture, mais restent soumis à la configuration marchande CinetPay.
+**Impact :** aucun parcours de paiement réel ne peut être certifié. Orange Money et Moov Money restent soumis à l'activation marchande CinetPay et aux méthodes activées par le compte.
 
-**Correction :** terminer KYC/activation marchande, configurer les secrets côté Supabase, puis tester avec les environnements de test et des webhooks signés. Aucun secret ne doit être copié dans Flutter, GitHub ou un ticket.
+**Correction restante :** terminer le KYC/activation marchande, obtenir les clés directement depuis les portails marchands et les configurer via Supabase Edge Function Secrets. Le runbook `docs/runbooks/aud-05-06-payment-and-fcm-configuration.md` détaille les noms exacts requis et la séquence de validation. Aucun secret ne doit être copié dans Flutter, GitHub ou un ticket. Aucun paiement réel n'a été effectué.
 
 #### AUD-06 — Notifications push FCM bloquées par l'absence de configuration Firebase serveur
-**État : confirmé dans les journaux de la fonction `dispatch-push-notifications` version 10.**
+**État : défaut de configuration confirmé et maintenant visible dans le moniteur de santé version 7 ; aucun push réel testé.**
 
-Les journaux du 6 novembre 2026 montrent à répétition `fcm_service_account_missing` et `hasFcmProjectId: false`. Le worker renvoie HTTP 503 `fcm_not_configured` au lieu de déclarer une notification envoyée. Les fichiers natifs `google-services.json`, `GoogleService-Info.plist` et `firebase_options.dart` sont absents du dépôt.
+- `dispatch-push-notifications` v10 exige `FCM_SERVICE_ACCOUNT_JSON` et un `project_id` dans le JSON ou `FCM_PROJECT_ID` en secours.
+- Les journaux consultés dans la fenêtre par défaut de l'outil comportaient 324 événements `fcm_service_account_missing`, avec `hasFcmProjectId: false`. Le worker renvoie HTTP 503 `fcm_not_configured`.
+- Le moniteur `platform-health-monitor` est maintenant en v7 et publie un composant `FCM`. Son dernier contrôle manuel du 6 novembre à 20:19:04 UTC a enregistré `NOT_CONFIGURED`, raison `FCM_SERVICE_ACCOUNT_JSON_missing`, `has_fcm_project_id=false`.
+- Deux migrations étendent la liste blanche SQL et la contrainte de `private.platform_health_checks` pour accepter le composant FCM : `20261106201627_allow_fcm_platform_health_component.sql` et `20261106201705_allow_fcm_health_check_component.sql`. La fonction `private.record_platform_health_checks` reste exécutable uniquement par `service_role`.
+- Deux assertions pgTAP vérifient que FCM est autorisé dans l'enregistreur et la contrainte, et que la frontière `service_role` seule est conservée. Le fichier `security_regression_test.sql` compte désormais 47 assertions ; elles n'ont pas encore été exécutées.
 
-**Correction :** associer les applications Android/iOS à un vrai projet Firebase, activer APNs pour iOS, installer les fichiers officiels et configurer `FCM_SERVICE_ACCOUNT_JSON` et `FCM_PROJECT_ID` comme secrets Edge Function. Ensuite, tester une notification réelle sur un appareil contrôlé.
-
-Suivi complémentaire : https://linear.app/faso/issue/RIA-26/notifications-integrer-la-desactivation-du-token-avant-chaque
+**Correction restante :** associer Android/iOS à un projet Firebase, activer APNs pour iOS, créer un compte de service autorisé pour Firebase Cloud Messaging et saisir le JSON directement dans Supabase Edge Function Secrets. Configurer `FCM_PROJECT_ID` seulement si le champ `project_id` n'est pas fourni dans le JSON. Ne jamais placer la clé privée dans GitHub, Flutter ou la conversation. Effectuer ensuite un vrai push sur un appareil de test, avec consentement et vérification du token.
 
 #### AUD-07 — Dérive de l'historique des migrations
 **État : écart réduit ; une divergence historique reste à réconcilier.**
 
-- GitHub contient 326 migrations, Supabase en consigne 325 (7 novembre 2026).
-- Les migrations AUD-01, AUD-03 et AUD-04 récentes sont maintenant présentes dans les deux historiques.
+- GitHub contient 328 migrations, Supabase en consigne 327 (mise à jour du 6 novembre 2026 à 20:19 UTC).
+- Les migrations AUD-01, AUD-03, AUD-04 et les deux migrations de surveillance FCM sont maintenant présentes dans les deux historiques.
 - `20261104020500_add_toy_weapon_product_classification.sql` reste présente dans GitHub mais absente de l'historique Supabase ; pourtant la fonction `private.scan_toy_weapon_products()` et son cron actif existent déjà dans la base. Cette dérive semble provenir d'une application manuelle ou d'une histoire de déploiement incomplète.
 - L'ancienne migration locale de stock par variante a été remplacée par la version déployée `20261106201211_add_secure_seller_variant_inventory_read.sql`, afin que le fichier versionné corresponde exactement à l'historique Supabase.
 - La migration AUD-03 administrateur impayé est versionnée dans GitHub sous le numéro exact `20261106201034_aud03_allow_admin_to_cancel_unpaid_orders_safely.sql`, qui correspond à l'historique Supabase.
@@ -219,12 +222,14 @@ La dernière est un ancien endpoint qui répond explicitement HTTP 410 `legacy_e
 
 **Correction :** versionner les deux sources manquantes, documenter le tombstone 410, puis vérifier les références entrantes et sortantes avant de désactiver une ancienne fonction.
 
-#### AUD-16 — Le moniteur de santé ne teste que deux buckets sur cinq
-**État : confirmé dans `platform-health-monitor` v5.**
+#### AUD-16 — Le moniteur Storage ne couvrait initialement que deux buckets sur cinq
+**État : correction de surveillance appliquée et testée ; flux d'accès aux objets encore à valider.**
 
-Le contrôle Storage interroge `order-feedback-media` et `product-media` uniquement. Les buckets `avatars`, `documents` et `shop-media` ne sont pas couverts par cette vérification. Au moment de l'audit, aucun objet n'était stocké dans les cinq buckets ; les vrais flux upload/download/URL signée/suppression n'ont donc pas été validés.
+Le contrôle initial ne vérifiait que `order-feedback-media` et `product-media`. La fonction `platform-health-monitor` v7 vérifie maintenant les cinq buckets réels : `avatars`, `documents`, `order-feedback-media`, `product-media` et `shop-media`.
 
-**Correction :** étendre les probes à tous les buckets selon le niveau d'accès attendu et exécuter des tests avec des objets factices, en vérifiant les accès positifs et négatifs pour chaque rôle.
+Le contrôle manuel du 6 novembre 2026 à 20:19:02 UTC a renvoyé HTTP 200 et les cinq buckets ont répondu `UP` avec HTTP 200.
+
+**Limite :** ce probe confirme que le bucket existe et répond au point d'accès Storage privilégié ; il ne démontre pas un upload, un téléchargement, une URL signée, ni l'application des règles RLS/Storage par rôle. Les tests de fichiers factices et les accès positifs/négatifs pour client, vendeur et administrateur restent requis. Les buckets `documents`, `shop-media`, `product-media` et `order-feedback-media` sont privés ; `avatars` est public selon sa configuration actuelle.
 
 #### AUD-17 — Couverture des tests métier insuffisante
 **État : confirmé par l'inventaire, niveau de risque à mesurer.**
