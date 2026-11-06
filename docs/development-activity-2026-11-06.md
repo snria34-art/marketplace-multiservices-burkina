@@ -289,3 +289,26 @@ Commits :
 - `22e9d810c313392810ac6b1fcf367ccb047a411c` — repli sûr avant déploiement de la migration
 
 Aucun changement SQL n'a été appliqué à la base de production et aucun test Flutter/build n'a été exécuté.
+
+### 17. Corrections des branches switch et vérification réelle de la migration vendeur
+
+Fichiers :
+- lib/core/notifications/push_notification_service.dart
+- lib/features/verticals/presentation/vertical_discovery_page.dart
+
+Les branches non vides des deux instructions switch asynchrones ont été terminées explicitement. Cela retire les fins de branche ambiguës qui empêchaient une validation Dart fiable et garantit qu'une action d'un module vertical ne continue pas dans le cas suivant.
+
+Commits :
+- 975df8e74f3d8e2e5bf236ca3c50876dd46bc4db — terminaison des branches d'état d'authentification FCM.
+- ca2c46af9ed0076b7d040a5fe1927c1100b4eeb3 — terminaison des actions des modules verticaux.
+
+Vérification Supabase en lecture seule du 6 novembre 2026 :
+- les colonnes utilisées par get_seller_product_variant_inventory existent ;
+- les contraintes de stock interdisent les quantités négatives et les réservations supérieures au stock ;
+- la table product_variant_inventory interdit l'accès direct des rôles anon et authenticated ;
+- la fonction public.get_seller_product_variant_inventory(uuid) est absente de la base ;
+- la version de migration 20261106180000 est absente de supabase_migrations.schema_migrations.
+
+Conséquence : le code Flutter et la migration sont dans GitHub, mais la lecture sécurisée des variantes n'est pas encore disponible dans le projet Supabase actif. Le stock par variante reste bloqué en production tant que cette migration n'est pas déployée et testée. Aucune migration n'a été appliquée pendant cet audit.
+
+Aucun test Dart/Flutter ni analyse statique n'a été exécuté : le SDK n'est pas installé dans l'environnement de cette session. Les deux corrections doivent être validées avec flutter analyze, les tests et un build sur un environnement Flutter avant d'être considérées comme certifiées.
