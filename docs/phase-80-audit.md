@@ -477,3 +477,18 @@ Relecture en lecture seule des définitions SQL actuellement déployées (`compl
 
 
 - Extension du précontrôle mémoire au parcours d'image produit : `SellerProductsRepository.uploadProductImage` vérifie maintenant `XFile.length()` avant la lecture en mémoire, puis contrôle à nouveau la taille des octets lus. Plafond inchangé : 5 MiB. Commit `1d93b3022a04945f819937d1c9347bd4c3715a45`.
+
+
+### AUD-03 — annulation globale : durcissement serveur appliqué — 7 novembre 2026
+
+- La revue de la fonction SQL active a confirmé que l'annulation globale pouvait auparavant cibler une commande payée et exécuter la libération du stock sans fermer systématiquement les colis et affectations de livraison.
+- Migration appliquée sur Supabase : `20261106200419_block_global_order_cancel_and_harden_unpaid_cancellation`.
+- `transition_order_status(..., 'CANCELLED', ...)` délègue maintenant à `cancel_unpaid_order`. La fonction globale n'effectue plus elle-même une libération des réservations ni une mise à jour globale des groupes en `CANCELLED`.
+- Le flux impayé vérifie le propriétaire de la commande, le statut `PENDING_PAYMENT`, l'absence de paiement réglé, l'absence de colis/affectation déjà expédié(e) et l'absence de consommation de stock.
+- Il libère le stock par produit et variante, ferme les affectations pré-départ, ajoute `delivery_assignment_events`, annule colis/groupes, libère les utilisations de coupon et inscrit `order_events`.
+- Contrôle post-migration : fonctions détenues par `postgres`, `SECURITY DEFINER` conservé, `anon` sans droit EXECUTE, `authenticated` et `service_role` autorisés. Les gardes attendues ont été retrouvées dans les définitions actives.
+- Deux assertions pgTAP ont été ajoutées au fichier `security_regression_test.sql` (plan augmenté de 41 à 43 assertions pour ce fichier). Aucun test pgTAP/Flutter/Edge n'a été exécuté : les validations automatiques restent à lancer sur un runner fonctionnel et une base isolée.
+- La base ne contient actuellement aucune commande, paiement, coupon utilisé, affectation ou remboursement ; aucun stock ou argent métier n'a été modifié.
+- **Statut : correction serveur appliquée ; ticket RIA-29 maintenu en cours** jusqu'aux tests d'intégration et à la validation des parcours. L'annulation d'une commande payée reste bloquée par cette RPC tant qu'un workflow de retour/remboursement cohérent n'est pas défini (voir AUD-02).
+- Commit migration GitHub : `53e513c5487ba5c27cf819033edc7d70092766b7`. Commit tests : `8a32c1e1e6994c75d3c0961be68715a1cccc7d2e`.
+
