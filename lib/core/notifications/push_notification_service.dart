@@ -108,13 +108,9 @@ class PushNotificationService {
           // MFA verification does not change push-token ownership.
           break;
         case AuthChangeEvent.signedOut:
-          final token = _currentToken;
-          if (token != null) {
-            await client.rpc(
-              'deactivate_notification_device',
-              params: {'p_push_token': token},
-            );
-          }
+          // Supabase emits signedOut after clearing the session. A
+          // user-scoped RPC cannot be authorized from this event callback.
+          // Deactivation must happen in signOutAndDeactivateCurrentDevice().
           _currentToken = null;
         }
       } catch (error, stackTrace) {
@@ -133,6 +129,30 @@ class PushNotificationService {
         openNotificationRoute(initial.data);
       });
     }
+  }
+
+  /// Deactivates this device token while the authenticated session still
+  /// exists, then signs the user out. If the server cannot confirm
+  /// deactivation, sign-out is aborted so the caller can retry safely.
+  ///
+  /// All app-initiated logout actions must use this method instead of
+  /// calling [SupabaseClient.auth.signOut] directly.
+  Future<void> signOutAndDeactivateCurrentDevice() async {
+    final client = _client;
+    if (client == null) {
+      throw StateError('Supabase n’est pas initialisé.');
+    }
+
+    final token = _currentToken;
+    if (token != null && client.auth.currentUser != null) {
+      await client.rpc(
+        'deactivate_notification_device',
+        params: {'p_push_token': token},
+      );
+    }
+
+    _currentToken = null;
+    await client.auth.signOut();
   }
 
   Future<void> openSystemNotificationSettings() async {
