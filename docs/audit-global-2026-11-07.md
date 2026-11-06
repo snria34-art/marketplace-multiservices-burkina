@@ -5,7 +5,7 @@
 **Branche :** `main`  
 **Supabase :** `dzhhsoikzxibmngjzcch` — PostgreSQL 17.6 — `eu-west-1`  
 **Nature :** audit statique du dépôt + contrôles Supabase + examen des workflows et journaux.  
-**Mises à jour AUD-01/AUD-03/AUD-04/AUD-06/AUD-16 :** préparation PostGIS, durcissement des annulations impayées, lecteur sécurisé du stock par variante, surveillance FCM et contrôle des cinq buckets appliqués/déployés. Seules les fonctions de santé et les tables de diagnostic ont été modifiées ; aucun paiement, remboursement, stock, solde vendeur ou compte utilisateur n'a été créé/modifié.
+**Mises à jour AUD-01/AUD-03/AUD-04/AUD-06/AUD-11/AUD-12/AUD-13/AUD-16 :** préparation PostGIS, annulation impayée sécurisée, RPC stock variante, surveillance FCM/Storage, guards de navigation, séparation admin/modérateur et déconnexion avec révocation du token appliquées/documentées. Aucun paiement, remboursement, stock, solde vendeur, compte propriétaire ou associé n'a été créé/modifié.
 
 ## 1. Conclusion
 
