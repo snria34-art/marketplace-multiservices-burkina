@@ -272,8 +272,7 @@ class _VerticalDiscoveryPageState
                     booking['service_name']?.toString() ?? 'Prestation créative',
                   ),
                   subtitle: Text(
-                    'Client : ${booking['customer_id']?.toString() ?? '-'}'
-                    '\nStatut : $status'
+                    'Statut : $status'
                     '${scheduledAt == null ? '' : '\nDate demandée : $scheduledAt'}'
                     '${booking['agreed_amount'] == null ? '' : '\nMontant convenu : ${booking['agreed_amount']} XOF'}',
                   ),
