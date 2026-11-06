@@ -51,7 +51,11 @@ class CartRepository {
           .select('id')
           .single();
       return created['id'].toString();
-    } catch (_) {
+    } on PostgrestException catch (error) {
+      // Recover only from the unique partial index protecting one ACTIVE
+      // cart per customer. Do not hide permission, network, or server errors.
+      if (error.code != '23505') rethrow;
+
       final fallback = await client
           .from('carts')
           .select('id,created_at')
