@@ -201,14 +201,17 @@ class PushNotificationService {
     }
 
     if (token != null && token.isNotEmpty) {
-      await activeClient.rpc(
+      final deactivated = await activeClient.rpc(
         'deactivate_notification_device',
         params: {'p_push_token': token},
       );
+      if (deactivated != true) {
+        throw StateError('La désactivation du token n’a pas été confirmée.');
+      }
     }
 
     // Do not clear the cached token or sign out until the server confirms
-    // the device-deactivation request by completing the RPC successfully.
+    // that no active registration for this user's token remains.
     _currentToken = null;
     await activeClient.auth.signOut();
   }
