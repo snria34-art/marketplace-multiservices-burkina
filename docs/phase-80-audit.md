@@ -659,3 +659,23 @@ Relecture en lecture seule des définitions SQL actuellement déployées (`compl
 - Un index unique `uq_seller_ledger_ref_type(seller_id,entry_type,reference_id)` rend aussi vulnérable le remboursement d'une commande comportant plusieurs boutiques appartenant au même vendeur, puisque complete_refund écrit une ligne REFUND par groupe avec refund_id comme référence.
 - Wave refund est appelé avant l'écriture ledger ; si cette écriture échoue, fournisseur remboursé mais transaction DB rollback, demande locale peut rester PROCESSING. Ajouter un état de rapprochement sans répéter l'appel fournisseur.
 - Runbook AUD-02 et registre mis à jour. Code financier de production non modifié. Zéro ligne de commande, paiement, refund, retour, commission, seller ledger en base au moment des vérifications.
+
+### AUD-05 — précontrôle du fournisseur avant checkout — 7 novembre 2026
+
+- Les secrets restent absents : dernier moniteur 6 novembre 22:20:04 UTC : Wave NOT_CONFIGURED, CinetPay NOT_CONFIGURED. Aucun KYC marchand ou secret n'a été ajouté.
+- Nouvelle Edge Function `check-payment-provider-config` v1 déployée, `verify_jwt=true`. Elle exige la présence API key + webhook secret Wave, ou API key + site ID + secret key CinetPay. Elle ne renvoie que `provider`, `configured`, `status`, jamais les valeurs de secrets.
+- Checkout Flutter appelle maintenant ce précontrôle AVANT `checkout_cart`. Si les identifiants server-side du fournisseur choisi manquent, la commande n'est pas créée et le stock n'est pas réservé.
+- Classe `PaymentProviderAvailability` ajoutée avec validation stricte de la réponse ; 4 tests unitaires testent l'état configuré/non configuré, normalisation et réponses incohérentes.
+- Le précontrôle valide uniquement la présence de secrets, pas l'activation marchande/KYC, le solde ou le fonctionnement du webhook. Test sandbox et test paiement réels restent interdits tant que les comptes ne sont pas activés.
+- Runbook AUD-05/06 et docs/payment-integration.md mis à jour. Rien n'a été débité, aucun ordre n'a été créé.
+
+### AUD-06 — dernier état FCM — 7 novembre 2026
+
+- Dernier état live de `private.platform_health_checks` (6 novembre 22:20:04 UTC) : FCM NOT_CONFIGURED, `FCM_SERVICE_ACCOUNT_JSON_missing`, `has_fcm_project_id=false`.
+- Logs des dernières 24 h observées : 450 événements `fcm_service_account_missing` dans function_logs. Aucun push réel n'a été envoyé.
+- Firebase projet, APNs et service account restent à configurer par le propriétaire dans leurs consoles ; aucune clé n'a été copiée ou modifiée.
+
+### AUD-17 — inventaire tests mis à jour — 7 novembre 2026
+
+- Le dépôt comporte maintenant 8 fichiers de tests Flutter : le nouveau `payment_provider_availability_test.dart` contient 4 tests du contrat de réponse de précontrôle.
+- 3 suites pgTAP planifient toujours 82 assertions au total (56 + 13 + 13). Tests Flutter/pgTAP/Deno non confirmés par CI, les runs ne démarrent pas d'étapes.
