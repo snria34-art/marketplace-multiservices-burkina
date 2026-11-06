@@ -178,22 +178,39 @@ class PushNotificationService {
   ///
   /// All app-initiated logout actions must use this method instead of
   /// calling [SupabaseClient.auth.signOut] directly.
-  Future<void> signOutAndDeactivateCurrentDevice() async {
-    final client = _client;
-    if (client == null) {
+  Future<void> signOutAndDeactivateCurrentDevice({
+    SupabaseClient? client,
+  }) async {
+    final activeClient = client ?? _client;
+    if (activeClient == null) {
       throw StateError('Supabase n’est pas initialisé.');
     }
+    _client = activeClient;
 
-    final token = _currentToken;
-    if (token != null && client.auth.currentUser != null) {
-      await client.rpc(
+    if (activeClient.auth.currentUser == null) {
+      _currentToken = null;
+      await activeClient.auth.signOut();
+      return;
+    }
+
+    var token = _currentToken;
+    if (token == null && _initialized) {
+      // Recover the current installation token if the auth session was
+      // restored before the token-registration listener completed.
+      token = await _messaging.getToken();
+    }
+
+    if (token != null && token.isNotEmpty) {
+      await activeClient.rpc(
         'deactivate_notification_device',
         params: {'p_push_token': token},
       );
     }
 
+    // Do not clear the cached token or sign out until the server confirms
+    // the device-deactivation request by completing the RPC successfully.
     _currentToken = null;
-    await client.auth.signOut();
+    await activeClient.auth.signOut();
   }
 
 
