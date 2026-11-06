@@ -133,7 +133,7 @@ Deno.serve(async (req: Request) => {
   }));
 
   results.push(await timed("SUPABASE_STORAGE", async () => {
-    const bucketNames = ["order-feedback-media", "product-media"];
+    const bucketNames = ["avatars", "documents", "order-feedback-media", "product-media", "shop-media"];
     const bucketResults = await Promise.all(bucketNames.map(async (bucket) => {
       const res = await fetch(url + "/storage/v1/bucket/" + bucket, {
         headers: { apikey: serviceKey, Authorization: "Bearer " + serviceKey },
