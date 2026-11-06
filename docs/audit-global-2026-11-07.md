@@ -27,11 +27,11 @@ Les constats ci-dessous sont classés par gravité et par dépendance. « Confir
 | Tables privées avec RLS | 15/15 |
 | Migrations SQL présentes dans GitHub | 333 |
 | Migrations consignées dans Supabase | 332 |
-| Fonctions Edge actives dans Supabase | 21 |
+| Fonctions Edge actives dans Supabase | 22 |
 | Dossiers sources Edge avec `index.ts` dans GitHub | 22 |
 | Buckets Storage | 5 |
 
-Les mesures de quantité ne prouvent pas la qualité fonctionnelle. Les 60 assertions SQL couvrent notamment des permissions et des contrôles de sécurité, mais ne constituent pas une suite de tests de bout en bout pour les parcours commerciaux.
+Les mesures de quantité ne prouvent pas la qualité fonctionnelle. Les 82 assertions pgTAP prévues couvrent notamment des permissions, les protections RLS et des contrats de commande/livraison ; elles ne constituent pas une suite de tests de bout en bout pour les parcours commerciaux.
 
 ## 2. Registre des anomalies — ordre de correction proposé
 
@@ -284,7 +284,7 @@ Au départ, Supabase exposait 21 fonctions et le dépôt ne contenait que 18 dos
   - `expire-products` v3, `verify_jwt=true`, contrôles admin + profil ACTIVE confirmés ;
   - `admin-health-check` v3, `verify_jwt=true`, contrôles admin + profil ACTIVE confirmés ;
   - `payment-webhook-gateway` v4, `verify_jwt=false`, HTTP 410 confirmé.
-- Le projet expose toujours 21 fonctions et GitHub contient maintenant 21 dossiers sources correspondants : parité 21/21. Aucun endpoint n'a été supprimé ou désactivé.
+- Le projet expose maintenant 22 fonctions et GitHub contient 22 dossiers sources correspondants : parité 22/22. La fonction `check-payment-provider-config` v1, `verify_jwt=true`, a été ajoutée pour le précontrôle paiement client. Aucun endpoint n'a été supprimé ou désactivé.
 - Aucun secret n'a été lu ou ajouté à GitHub ; aucun paiement ni produit réel n'a été modifié.
 
 **Limite CI :** le workflow Edge Functions a échoué sans enregistrer d'étapes ou journaux récupérables. Les sources déployées ont été relues, mais `deno check` n'est donc pas confirmé. Le test Deno doit être relancé quand GitHub Actions attribuera un runner.
@@ -304,8 +304,8 @@ Le contrôle manuel du 6 novembre 2026 à 20:19:02 UTC a renvoyé HTTP 200 et le
 **État : couverture structurelle renforcée ; exécution CI et scénarios end-to-end toujours bloquants.**
 
 Inventaire actuel :
-- 6 fichiers de tests Dart : routage/guards, bouton de session, refus de GPS sans mission, routage des notifications, démarrage app et configuration des verticales.
-- 3 fichiers SQL pgTAP : comptes de démo locaux (13 assertions), contrats checkout/commande/livraison/remboursement (13 assertions) et sécurité/RLS/RPC (51 assertions), soit 77 assertions prévues.
+- 8 fichiers de tests Dart : authentification/récupération email, précontrôle de configuration paiement, routage/guards, bouton de session, refus de GPS sans mission, routage des notifications, démarrage app et configuration des verticales.
+- 3 fichiers SQL pgTAP : comptes de démo locaux (13 assertions), contrats checkout/commande/livraison/remboursement (13 assertions) et sécurité/RLS/RPC (56 assertions), soit 82 assertions prévues.
 - Les 13 nouvelles conditions du fichier `order_delivery_contract_test.sql` ont été évaluées en lecture seule sur les fonctions SQL et ACL réellement déployées : 13/13 sont vraies.
 
 **Tests de contrat ajoutés :** annulation uniquement des commandes impayées, refus des commandes déjà payées/expédiées, libération du stock et des coupons, synchronisation commandes/colis/affectations, garde de propriété vendeur, idempotence checkout et adresse appartenant au client, calcul des frais côté serveur, vérification expiration/stock, acceptation d'affectation coursier, preuve photo/code de retrait, progression de livraison et preuve/code de livraison, accès service-role-only à `complete_refund`.
