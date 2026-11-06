@@ -465,3 +465,13 @@ Commits :
 Contrôle Supabase en lecture seule : `product_variants.active_account_guard` est bien une politique `RESTRICTIVE` pour `authenticated`, et non une politique permissive. Elle impose donc un compte actif en plus de la politique permissive `product_variants_public_read`, qui ne permet la lecture que des produits actifs, boutiques actives et vérifiées, et articles non expirés. Le droit SQL SELECT ne contourne pas ces conditions RLS.
 
 `product_variant_inventory` conserve RLS activé et aucun privilège SELECT/INSERT/UPDATE/DELETE direct pour `authenticated`; son accès de lecture vendeur passe par la RPC propriétaire dédiée, qui reste en attente du déploiement de sa migration. Aucun changement de politique RLS n'était nécessaire ; aucune modification de production n'a été effectuée.
+
+### 32. Annulation globale des commandes — nouveau blocage métier confirmé
+
+Audit Supabase en lecture seule : `public.transition_order_status(uuid, order_status, text)` reste exécutable par `authenticated`. Elle accepte l'annulation des commandes payées, libère les réservations, mais ne ferme pas explicitement les colis/affectations pré-ramassage, ne bloque pas explicitement les colis déjà pris en charge et ne crée pas de demande de remboursement pour une commande déjà payée. Aucun trigger actif sur `orders` ne complète automatiquement ces actions. Le webhook des paiements tardifs après annulation ne couvre que le scénario inverse.
+
+La recherche Flutter n'a retrouvé aucun appel direct à cette RPC dans les écrans actuels ; le risque demeure sur le point d'entrée SQL accordé au rôle authenticated et à d'autres clients/intégrations.
+
+Tâche prioritaire créée dans Linear : [RIA-29 — sécuriser l'annulation globale et synchroniser colis, affectations et remboursements](https://linear.app/faso/issue/RIA-29/commande-securiser-lannulation-globale-et-synchroniser-colis).
+
+Aucune fonction de transition, réservation de stock, table de commande ou remboursement n'a été modifiée. Une correction de production reste bloquée jusqu'à la définition du traitement des commandes payées et aux tests transactionnels isolés ; elle doit être coordonnée avec RIA-25.
