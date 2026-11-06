@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -49,12 +51,24 @@ class _NotificationsPageState
         .subscribe();
   }
 
+  Future<void> _removeChannelSafely(
+    SupabaseClient client,
+    RealtimeChannel channel,
+  ) async {
+    try {
+      await client.removeChannel(channel);
+    } catch (_) {
+      // Channel cleanup is best-effort during navigation/disposal.
+    }
+  }
+
   @override
   void dispose() {
     final client = ref.read(supabaseProvider);
     final channel = _notificationsChannel;
+    _notificationsChannel = null;
     if (client != null && channel != null) {
-      client.removeChannel(channel);
+      unawaited(_removeChannelSafely(client, channel));
     }
     super.dispose();
   }
@@ -84,14 +98,21 @@ class _NotificationsPageState
 
     if (client == null || user == null) return;
 
-    await client
-        .from('notifications')
-        .update({'read_at': DateTime.now().toUtc().toIso8601String()})
-        .eq('id', id)
-        .eq('user_id', user.id);
+    try {
+      await client
+          .from('notifications')
+          .update({'read_at': DateTime.now().toUtc().toIso8601String()})
+          .eq('id', id)
+          .eq('user_id', user.id);
 
-    if (!mounted) return;
-    setState(() => _future = _load());
+      if (!mounted) return;
+      setState(() => _future = _load());
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Lecture de la notification impossible : $error')),
+      );
+    }
   }
 
   @override
@@ -124,6 +145,25 @@ class _NotificationsPageState
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
+          }
+
+          if (snapshot.hasError) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text('Impossible de charger les notifications.'),
+                    const SizedBox(height: 8),
+                    FilledButton(
+                      onPressed: () => setState(() => _future = _load()),
+                      child: const Text('Réessayer'),
+                    ),
+                  ],
+                ),
+              ),
+            );
           }
 
           final items =
