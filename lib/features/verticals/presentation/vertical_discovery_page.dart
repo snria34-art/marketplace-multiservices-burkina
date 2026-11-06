@@ -125,7 +125,7 @@ class _VerticalDiscoveryPageState
           break;
         case VerticalModule.beauty:
           final dateTime = await _pickDateTime();
-          if (dateTime == null) return;
+          if (!mounted || dateTime == null) return;
           final id = await repo.bookBeauty(
             serviceId: item['id'].toString(),
             scheduledAt: dateTime,
