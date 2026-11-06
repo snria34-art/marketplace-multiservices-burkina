@@ -116,6 +116,13 @@ class _SignInPageState extends ConsumerState<SignInPage> {
                   : (_signUp ? 'Créer le compte' : 'Se connecter'),
             ),
           ),
+          if (!_signUp)
+            TextButton(
+              onPressed: _loading
+                  ? null
+                  : () => context.push('/auth/forgot-password'),
+              child: const Text('Mot de passe oublié ?'),
+            ),
           TextButton(
             onPressed: _loading
                 ? null
