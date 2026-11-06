@@ -512,3 +512,15 @@ L'annulation globale par `transition_order_status` reste le défaut SQL ouvert, 
 - Le compte suspendu/bloqué doit pouvoir se déconnecter malgré le guard RLS actif. Migration Supabase appliquée : `20261106203915_secure_notification_device_deactivation_for_blocked_accounts`. La fonction SQL devient `SECURITY DEFINER`, vérifie `auth.uid()`, limite l'UPDATE au token de ce même utilisateur et renvoie un succès idempotent seulement si aucune entrée active correspondante ne reste. Anon n'a pas EXECUTE.
 - Tests ajoutés : un test d'interface sans Supabase configuré et une assertion pgTAP ; le fichier de régression SQL passe de 47 à 48 assertions. Tests encore non exécutés faute de runner GitHub opérationnel.
 - Aucun token, utilisateur réel ou push n'a été modifié/envoyé.
+
+
+### AUD-12 — correction des privilèges trop larges du rôle MODERATOR — 7 novembre 2026
+
+- Inspection des fonctions SQL : `public.is_admin_actor()` reconnaissait ADMIN, SUPER_ADMIN et MODERATOR ; ce helper protégeait aussi le tableau de bord général, les réparations/rollback, le health monitor et les règles de retour.
+- Application de la migration `20261106204520_restrict_platform_admin_actions_to_registered_admins`. Ces fonctions et les triggers statut profil / documents vendeur exigent maintenant `private.is_admin()`, donc une ligne active dans `admin_users`.
+- Les fonctions de modération catalogue et avis conservent la permission `public.is_admin_actor()`.
+- Le routeur Flutter distingue désormais les deux routes de modération des autres routes admin. Les modérateurs sans enregistrement admin ne peuvent ouvrir que catalogue et avis.
+- Deux tests pgTAP ont été ajoutés ; le fichier atteint 50 assertions (total prévu 63 avec l'autre fichier). Dix tests unitaires de routes couvrent désormais aussi les deux routes modérateur. Aucun test n'a été exécuté car runner CI non attribué.
+- Documentation et matrice de permissions créées dans `docs/runbooks/aud-12-admin-rbac-matrix.md`; ticket Linear RIA-30 créé pour la prochaine phase de RBAC.
+- Aucun compte propriétaire/administrateur/associé, rôle ni permission n'a été créé dans la base hébergée.
+
