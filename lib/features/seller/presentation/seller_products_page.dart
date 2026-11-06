@@ -72,6 +72,7 @@ class _SellerProductsPageState
 
     if (!mounted || result == null) return;
 
+    String? createdProductId;
     try {
       final id = await repo.createProduct(
         shopId: result['shop_id'].toString(),
@@ -84,6 +85,10 @@ class _SellerProductsPageState
         isExpirable: result['is_expirable'] == true,
         expiryDate: result['expiry_date'] as DateTime?,
       );
+      createdProductId = id;
+      if (id.trim().isEmpty || id.toLowerCase() == 'null') {
+        throw StateError('Identifiant du produit invalide.');
+      }
 
       if (!mounted) return;
 
@@ -150,7 +155,10 @@ class _SellerProductsPageState
       setState(() => _future = _loadProducts());
       _show(submissionMessage);
     } catch (error) {
-      _show('Création impossible. Vérifiez les informations et réessayez.');
+      final message = createdProductId == null
+          ? 'Création impossible. Vérifiez les informations et réessayez.'
+          : 'Produit créé en brouillon, mais les photos ou la validation ont échoué. Ne recréez pas ce produit : réessayez d’ajouter les photos depuis la liste.';
+      _show(message);
     }
   }
 
