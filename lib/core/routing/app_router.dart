@@ -199,6 +199,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: '/auth/recovery',
         builder: (_, __) => const AuthRecoveryPage(),
       ),
+      // Some platform deep-link handlers expose only the URI path (/recovery)
+      // and omit the custom-scheme host (auth). Keep this equivalent route.
+      GoRoute(
+        path: '/recovery',
+        builder: (_, __) => const AuthRecoveryPage(),
+      ),
       GoRoute(
         path: '/access-status',
         builder: (_, state) => AccessStatusPage(
