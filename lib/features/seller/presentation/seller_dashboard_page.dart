@@ -62,7 +62,7 @@ class _SellerDashboardPageState
 
     controller.dispose();
 
-    if (result == null) return;
+    if (!mounted || result == null) return;
 
     final amount =
         num.tryParse(result['amount']?.toString() ?? '') ?? 0;
