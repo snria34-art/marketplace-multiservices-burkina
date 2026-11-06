@@ -1,3 +1,4 @@
+
 alter policy courier_locations_read
 on public.courier_locations
 using (

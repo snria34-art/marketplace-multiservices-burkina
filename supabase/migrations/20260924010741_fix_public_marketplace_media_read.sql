@@ -1,3 +1,4 @@
+
 create policy "product_media_anon_read"
 on storage.objects
 for select

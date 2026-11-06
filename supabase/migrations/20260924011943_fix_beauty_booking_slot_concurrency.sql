@@ -1,3 +1,4 @@
+
 create or replace function public.create_beauty_booking(
   p_service_id uuid,
   p_scheduled_at timestamptz

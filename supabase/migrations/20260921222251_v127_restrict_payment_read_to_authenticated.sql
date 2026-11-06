@@ -1,3 +1,4 @@
+
 drop policy if exists payments_customer_read on public.payments;
 
 create policy payments_customer_read

@@ -1,3 +1,4 @@
+
 alter table public.delivery_addresses
   add constraint delivery_addresses_latitude_range
   check (latitude is null or latitude between -90 and 90);

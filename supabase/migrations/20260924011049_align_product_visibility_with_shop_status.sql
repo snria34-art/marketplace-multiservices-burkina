@@ -1,3 +1,4 @@
+
 alter policy products_read
 on public.products
 using (

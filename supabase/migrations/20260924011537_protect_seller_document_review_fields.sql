@@ -1,3 +1,4 @@
+
 create or replace function public.enforce_seller_document_review_fields()
 returns trigger
 language plpgsql

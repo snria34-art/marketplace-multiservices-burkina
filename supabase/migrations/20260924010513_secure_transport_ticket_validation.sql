@@ -1,3 +1,4 @@
+
 create or replace function public.validate_transport_ticket(
   p_ticket_id uuid
 )

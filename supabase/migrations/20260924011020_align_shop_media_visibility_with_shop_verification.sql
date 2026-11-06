@@ -1,3 +1,4 @@
+
 alter policy shop_media_customer_read
 on storage.objects
 using (

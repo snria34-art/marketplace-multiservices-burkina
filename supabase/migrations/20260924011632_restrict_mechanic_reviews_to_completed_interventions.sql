@@ -1,3 +1,4 @@
+
 alter policy mechanic_review_customer_manage
 on public.mechanic_reviews
 using (

@@ -1,3 +1,4 @@
+
 create or replace function public.prepare_payment_processing(
   p_payment_id uuid,
   p_provider_reference text,

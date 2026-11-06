@@ -1,3 +1,4 @@
+
 drop policy if exists event_bookings_own on public.event_bookings;
 
 create policy event_bookings_customer_read

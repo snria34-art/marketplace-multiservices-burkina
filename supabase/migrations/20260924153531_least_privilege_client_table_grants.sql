@@ -1,5 +1,7 @@
 begin;
 
+-- Client roles receive only the SQL privileges that correspond to an
+-- existing RLS policy. Backend service_role keeps full database access.
 revoke all on all tables in schema public from public, anon, authenticated;
 grant all on all tables in schema public to service_role;
 
@@ -38,13 +40,19 @@ begin
       if target_role in ('anon','authenticated') then
         execute format(
           'grant %s on table %I.%I to %I',
-          grant_priv, p.schemaname, p.tablename, target_role
+          grant_priv,
+          p.schemaname,
+          p.tablename,
+          target_role
         );
 
+        -- A policy declared for PUBLIC historically meant both client roles.
         if r = 'public' and target_role = 'authenticated' then
           execute format(
             'grant %s on table %I.%I to anon',
-            grant_priv, p.schemaname, p.tablename
+            grant_priv,
+            p.schemaname,
+            p.tablename
           );
         end if;
       end if;
@@ -53,6 +61,7 @@ begin
 end;
 $block$;
 
+-- PostGIS metadata does not belong in the client-facing API.
 revoke all on table public.spatial_ref_sys from public, anon, authenticated;
 revoke all on table public.geography_columns from public, anon, authenticated;
 revoke all on table public.geometry_columns from public, anon, authenticated;

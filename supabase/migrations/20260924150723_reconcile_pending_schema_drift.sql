@@ -2,6 +2,9 @@
 -- Only missing end-state pieces are created here; existing push functions/triggers remain intact.
 
 ALTER TABLE public.notifications
+  ADD COLUMN IF NOT EXISTS push_sent_at timestamptz,
+  ADD COLUMN IF NOT EXISTS push_attempts integer NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS push_error text,
   ADD COLUMN IF NOT EXISTS push_processing_at timestamptz;
 
 CREATE INDEX IF NOT EXISTS idx_notification_devices_user_active

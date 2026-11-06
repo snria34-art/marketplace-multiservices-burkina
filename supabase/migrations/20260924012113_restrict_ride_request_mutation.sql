@@ -1,3 +1,4 @@
+
 drop policy if exists ride_requests_own on public.ride_requests;
 
 create policy ride_requests_customer_read

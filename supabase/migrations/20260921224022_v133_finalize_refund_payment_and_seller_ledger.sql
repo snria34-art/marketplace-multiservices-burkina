@@ -1,3 +1,4 @@
+
 create or replace function public.complete_refund(p_refund_id uuid, p_provider_reference text)
 returns boolean
 language plpgsql
@@ -92,7 +93,10 @@ begin
     v_remaining := v_refund.amount;
 
     for v_group in
-      select og.id as order_group_id, og.shop_id, og.subtotal
+      select
+        og.id as order_group_id,
+        og.shop_id,
+        og.subtotal
       from public.order_groups og
       where og.order_id=v_order.id
       order by og.created_at, og.id
@@ -124,11 +128,16 @@ begin
         insert into public.seller_ledger(
           seller_id,order_group_id,entry_type,amount,currency,reference_id
         )
-        select s.id,v_group.order_group_id,'REFUND',-v_allocated,'XOF',v_refund.id
+        select
+          s.id,
+          v_group.order_group_id,
+          'REFUND',
+          -v_allocated,
+          'XOF',
+          v_refund.id
         from public.shops sh
         join public.sellers s on s.id=sh.seller_id
         where sh.id=v_group.shop_id;
-
         v_remaining := greatest(0, v_remaining - v_allocated);
       end if;
     end loop;

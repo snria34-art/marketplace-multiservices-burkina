@@ -1,3 +1,4 @@
+
 create or replace function public.accept_mechanic_quote(
   p_quote_id uuid
 )

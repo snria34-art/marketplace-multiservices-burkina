@@ -1,3 +1,4 @@
+
 create or replace function public.enforce_product_status_transition()
 returns trigger
 language plpgsql

@@ -1,3 +1,4 @@
+
 create or replace function public.validate_refund_amount()
 returns trigger
 language plpgsql

@@ -1,3 +1,4 @@
+
 create or replace function public.get_public_mechanics()
 returns table (
   id uuid,

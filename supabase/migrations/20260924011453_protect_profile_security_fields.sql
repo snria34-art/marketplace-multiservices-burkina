@@ -1,3 +1,4 @@
+
 create or replace function public.enforce_profile_security_fields()
 returns trigger
 language plpgsql

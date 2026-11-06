@@ -1,3 +1,4 @@
+
 drop policy if exists job_applications_own on public.job_applications;
 
 create policy job_applications_applicant_read
