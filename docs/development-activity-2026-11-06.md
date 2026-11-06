@@ -617,3 +617,11 @@ L'annulation globale par `transition_order_status` reste le défaut SQL ouvert, 
 - Aucun appelant DB / trigger / job pg_cron trouvé pour finalize_seller_group, finalize_seller_group_financials ou reverse_seller_group. Aucun appelant Flutter/Edge trouvé dans la recherche GitHub main ; les appels externes hors repo restent à vérifier.
 - L'écran OrderDetailsPage envoie uniquement order_id + amount + reason. Le schéma returns ne stocke pas de quantité ni refund_id. Zéro ordre/paiement/refund/retour/commission/ledger en production à l'heure de l'audit.
 - Runbook et rapport AUD-02 enrichis ; aucun changement financier ou DDL de production effectué.
+
+### AUD-02 / AUD-03 — défaut sur paiement capturé après annulation — 7 novembre 2026
+
+- `process_payment_event` crée un refund REQUESTED quand le prestataire capture après que order.status soit CANCELLED. Il ne crédite pas SELLER SALE dans ce chemin.
+- `complete_refund` n'a pas de garde empêchant un débit seller si aucun SALE/commission n'a été comptabilisé : il parcourt les groupes annulés et écrit REFUND négatif. Il peut également changer les groupes vers REFUNDED tout en laissant la commande parent CANCELLED.
+- La contrainte uq_seller_ledger_ref_type(seller_id,entry_type,reference_id) peut aussi faire échouer un remboursement multi-groupe si même seller_id possède plusieurs shops ; la fonction insère plusieurs REFUND avec reference_id=refund_id.
+- Edge refund appelle Wave avant la comptabilisation locale : provider-confirmed + SQL failure laisse un risque de refund en PROCESSING mais déjà remboursé en externe. Le runbook prescrit rapprochement interne sans retry provider.
+- Aucun code financier ni ledger touché. Toutes les tables métier concernées restent vides. Runbook AUD-02 complété.
