@@ -191,11 +191,11 @@ Runbook : `docs/runbooks/aud-07-reconcile-toy-weapon-migration-history.md`.
 **État : AUD-10.1 — réservation créative sécurisée côté backend et raccordée à Flutter ; quatre verticales et les scénarios d'intégration restent à faire.**
 
 Les modules immobilier, professionnels, agriculture, santé et créatifs avaient été exclus de `_hasAction`. Une correction ciblée est maintenant appliquée à la verticale Créatifs :
-- migrations Supabase `20261106235154_secure_creative_booking_workflow` et `20261106235226_fix_creative_booking_decision_normalization` ;
+- migrations Supabase `20261106235154_secure_creative_booking_workflow`, `20261106235226_fix_creative_booking_decision_normalization` et `20261106235601_minimize_creative_booking_provider_payload` ;
 - retrait des écritures directes client sur `creative_bookings` ; lecture limitée aux réservations du client, avec maintien de `active_account_guard` en RESTRICTIVE ;
 - RPC serveur pour demander, annuler une demande en attente, lister les demandes des services détenus par le prestataire, confirmer avec montant ou refuser ;
 - les quatre RPC vérifient la session/compte actif, l'identité propriétaire et l'état attendu ; aucun EXECUTE anon ;
-- interface Flutter raccordée : demande, liste client, annulation d'une demande en attente, liste prestataire et décision avec montant ;
+- interface Flutter raccordée : demande, liste client, annulation d'une demande en attente, liste prestataire et décision avec montant ; l'identifiant du compte client n'est pas renvoyé au prestataire ni affiché par l'interface ;
 - lien public `service_providers(display_name)` retiré de la requête catalogue créatif car anon n'a pas le droit de lire cette table.
 
 **Vérification :** dix contrôles SQL live équivalents aux assertions du nouveau fichier pgTAP sont vrais (10/10), les quatre corps PL/pgSQL ont été compilés par appels sans session contrôlés, et les droits/RLS ont été relus après migration.
