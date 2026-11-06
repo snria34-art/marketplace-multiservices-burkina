@@ -34,10 +34,14 @@ class _CartPageState extends ConsumerState<CartPage> {
     if (repo == null) return;
 
     try {
-      await repo.setQuantity(
-        cartItemId: item['id'].toString(),
-        quantity: quantity,
-      );
+      if (quantity == 0) {
+        await repo.remove(item['id'].toString());
+      } else {
+        await repo.setQuantity(
+          cartItemId: item['id'].toString(),
+          quantity: quantity,
+        );
+      }
 
       if (!mounted) return;
       setState(() => _future = _load());
