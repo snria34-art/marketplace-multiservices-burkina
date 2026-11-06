@@ -67,6 +67,7 @@ class _VerticalDiscoveryPageState
       switch (widget.module) {
         case VerticalModule.rides:
           await _requestRide(repo);
+          break;
         case VerticalModule.events:
           final quantity = await _quantityDialog('Nombre de billets');
           if (quantity == null) return;
@@ -75,6 +76,7 @@ class _VerticalDiscoveryPageState
             quantity: quantity,
           );
           _success('Réservation créée : $id');
+          break;
         case VerticalModule.rentals:
           final range = await _dateRangeDialog();
           if (range == null) return;
@@ -84,6 +86,7 @@ class _VerticalDiscoveryPageState
             endsAt: range.end,
           );
           _success('Demande de location créée : $id');
+          break;
         case VerticalModule.accommodations:
           final rawUnits = item['accommodation_units'];
           if (rawUnits is! List || rawUnits.isEmpty) {
@@ -106,15 +109,19 @@ class _VerticalDiscoveryPageState
             guests: guests,
           );
           _success('Demande d’hébergement créée : $id');
+          break;
         case VerticalModule.jobs:
           final id = await repo.applyToJob(item['id'].toString());
           _success('Candidature envoyée : $id');
+          break;
         case VerticalModule.training:
           final id = await repo.enrollTraining(item['id'].toString());
           _success('Inscription créée : $id');
+          break;
         case VerticalModule.digital:
           final id = await repo.orderDigital(item['id'].toString());
           _success('Commande numérique créée : $id');
+          break;
         case VerticalModule.beauty:
           final dateTime = await _pickDateTime();
           if (dateTime == null) return;
@@ -123,6 +130,7 @@ class _VerticalDiscoveryPageState
             scheduledAt: dateTime,
           );
           _success('Rendez-vous demandé : $id');
+          break;
         case VerticalModule.homeServices:
           final dateTime = await _pickDateTime();
           if (dateTime == null) return;
@@ -134,10 +142,13 @@ class _VerticalDiscoveryPageState
             address: {'label': address},
           );
           _success('Demande à domicile créée : $id');
+          break;
         case VerticalModule.freight:
           await _createFreight(repo);
+          break;
         case VerticalModule.parcels:
           await _createParcel(repo);
+          break;
         default:
           break;
       }
