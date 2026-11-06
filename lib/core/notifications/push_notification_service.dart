@@ -54,7 +54,13 @@ class PushNotificationService {
       if (Firebase.apps.isEmpty) {
         await Firebase.initializeApp();
       }
-    } on FirebaseException catch (_) {
+    } catch (error, stackTrace) {
+      // Firebase configuration is provisioned per real Firebase project.
+      // Missing native files must disable push, not interrupt app startup.
+      if (kDebugMode) {
+        debugPrint('Firebase initialization unavailable; push is disabled: $error');
+        debugPrintStack(stackTrace: stackTrace);
+      }
       return;
     }
 
