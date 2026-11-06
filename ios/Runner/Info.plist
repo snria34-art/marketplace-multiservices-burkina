@@ -35,11 +35,12 @@
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Votre localisation est utilisée pour les livraisons, le suivi des livreurs et les services de proximité.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>Votre localisation peut être utilisée pour maintenir le suivi d’une mission de livraison active.</string>
+	<string>Lorsque vous activez le suivi d’une livraison, votre position est partagée avec le client pendant cette mission, même si l’application passe en arrière-plan. Le suivi s’arrête lorsque la mission est terminée ou annulée, ou lorsque vous le désactivez.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>fetch</string>
 		<string>remote-notification</string>
+		<string>location</string>
 	</array>
 	<key>CFBundleURLTypes</key>
 	<array>
