@@ -142,10 +142,10 @@ Suivi complémentaire : https://linear.app/faso/issue/RIA-26/notifications-integ
 - Les migrations AUD-01, AUD-03 et AUD-04 récentes sont maintenant présentes dans les deux historiques.
 - `20261104020500_add_toy_weapon_product_classification.sql` reste présente dans GitHub mais absente de l'historique Supabase ; pourtant la fonction `private.scan_toy_weapon_products()` et son cron actif existent déjà dans la base. Cette dérive semble provenir d'une application manuelle ou d'une histoire de déploiement incomplète.
 - L'ancienne migration locale de stock par variante a été remplacée par la version déployée `20261106201211_add_secure_seller_variant_inventory_read.sql`, afin que le fichier versionné corresponde exactement à l'historique Supabase.
-- La migration AUD-03 administrateur impayé enregistrée par Supabase est `20261106201034_aud03_allow_admin_to_cancel_unpaid_orders_safely` ; le fichier versionné est à contrôler avec son numéro exact avant une reconstruction complète.
+- La migration AUD-03 administrateur impayé est versionnée dans GitHub sous le numéro exact `20261106201034_aud03_allow_admin_to_cancel_unpaid_orders_safely.sql`, qui correspond à l'historique Supabase.
 - La documentation du dépôt indique également que l'ancien historique SQL n'est pas encore entièrement reproductible sur une base vide.
 
-**Correction :** établir un état de référence entre migrations locales, historique distant et schéma réel ; vérifier le numéro exact de la migration AUD-03 ; reconstruire une base vide et résoudre l'écart historique restant avant d'utiliser `db reset` comme preuve de déploiement. Ne pas appliquer automatiquement les migrations de classification ou de stock restantes.
+**Correction restante :** l'écart actuel est d'une migration. Établir un état de référence entre migrations GitHub, historique distant et schéma réel ; la migration `20261104020500_add_toy_weapon_product_classification.sql` est le seul numéro GitHub non présent dans l'historique distant, alors que sa fonction et son cron existent déjà. Vérifier les effets complets de cette migration et réconcilier l'historique de façon contrôlée avant de reconstruire une base vide. Ne pas l'appliquer aveuglément ni supprimer ses objets existants.
 
 #### AUD-08 — Validation CI non démontrée sur le dernier commit de `main`
 **État : confirmé dans la configuration et les exécutions consultées.**
