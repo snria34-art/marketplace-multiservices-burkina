@@ -154,7 +154,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
       builder: (_) => const _AddressDialog(),
     );
 
-    if (result == null) return;
+    if (!mounted || result == null) return;
 
     final repo = ref.read(checkoutRepositoryProvider);
     if (repo == null) return;
