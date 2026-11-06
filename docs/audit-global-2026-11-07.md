@@ -5,7 +5,7 @@
 **Branche :** `main`  
 **Supabase :** `dzhhsoikzxibmngjzcch` — PostgreSQL 17.6 — `eu-west-1`  
 **Nature :** audit statique du dépôt + contrôles Supabase + examen des workflows et journaux.  
-**Mises à jour AUD-01/AUD-03/AUD-04/AUD-06/AUD-11/AUD-12/AUD-13/AUD-14/AUD-15/AUD-16/AUD-17/AUD-18 :** protections commandes, accès et GPS renforcées, parité Edge Functions restaurée, tests de contrats ajoutés, premier relevé capacité/backup et script de charge staging préparés. Aucun paiement réel, test de charge ou restore de production, compte propriétaire ou associé n'a été réalisé.
+**Mises à jour AUD-01/AUD-03/AUD-04/AUD-06/AUD-11/AUD-12/AUD-13/AUD-14/AUD-15/AUD-16/AUD-17/AUD-18/AUD-19 :** protections commandes, accès et GPS renforcées, parité Edge Functions restaurée, tests de contrats ajoutés, capacité/backup évalués et récupération du mot de passe email ajoutée côté app. Aucun paiement réel, test de charge ou restore production, compte propriétaire ou associé n'a été réalisé.
 
 ## 1. Conclusion
 
@@ -19,7 +19,7 @@ Les constats ci-dessous sont classés par gravité et par dépendance. « Confir
 |---|---:|
 | Entrées dans l'arbre GitHub | 657 |
 | Fichiers Dart sous `lib/` | 72 |
-| Fichiers de tests Dart | 6 |
+| Fichiers de tests Dart | 7 |
 | Tests SQL dans `supabase/tests/database` | 3 |
 | Assertions pgTAP prévues dans ces trois fichiers | 77 (51 + 13 + 13) |
 | Tables Supabase `public` et `private` | 182 |
@@ -327,12 +327,24 @@ Snapshot du projet Supabase en lecture seule :
 
 Runbook : `docs/runbooks/aud-18-capacity-backup-restore.md`.
 
-#### AUD-19 — Authentification utilisateur encore limitée
-**État : confirmé dans l'écran de connexion actuel ; décision produit nécessaire.**
+#### AUD-19 — Récupération de compte et OTP téléphone manquants
+**État : récupération email ajoutée côté application ; callback et SMTP Supabase à configurer ; OTP téléphone non activé.**
 
-L'écran `SignInPage` propose email/mot de passe et inscription email. Aucun parcours « mot de passe oublié » n'y est visible ; aucun flux OTP par téléphone n'a été retrouvé. Si la connexion par numéro burkinabè et la récupération autonome de compte font partie du cahier des charges, ces parcours restent à construire.
+Le formulaire de connexion propose toujours email/mot de passe et inscription email. Le parcours de récupération par email est maintenant ajouté :
+- écran `Mot de passe oublié ?` relié à `resetPasswordForEmail()` ;
+- email de récupération avec redirection `marketplaceburkina://auth/recovery` ;
+- événement Supabase `AuthChangeEvent.passwordRecovery` écouté dès la fin de `Supabase.initialize()` ;
+- écran de nouveau mot de passe qui reste verrouillé sans événement de récupération confirmé, vérifie deux saisies identiques, puis utilise `updateUser(UserAttributes(password: ...))` ;
+- callback Android déclaré ; iOS réutilise le schéma personnalisé déjà présent ;
+- 3 tests unitaires vérifient l'ouverture/fermeture du marqueur de récupération ; test de routes public couvrant les deux chemins de callback.
 
-**Correction :** décider des modes d'identification (email, téléphone/OTP ou les deux), de la récupération, de la vérification, de la politique de mot de passe et de la protection anti-abus.
+**Action manuelle nécessaire :** ajouter exactement `marketplaceburkina://auth/recovery` dans Supabase Dashboard > Authentication > URL Configuration > Redirect URLs, puis vérifier le modèle Email Templates > Reset Password et le SMTP. L'outil de connexion ne permet pas de lire ou modifier cette allow-list ; cette configuration n'est donc pas confirmée. Le SMTP Supabase intégré est limité et best-effort ; l'usage en production peut nécessiter un SMTP personnalisé. Aucun fournisseur payant n'a été activé.
+
+**OTP téléphone :** non activé. Supabase Phone Auth nécessite un fournisseur SMS externe (Twilio, MessageBird, Vonage, etc.) et les SMS sont facturés selon le fournisseur/destination. Aucun secret ou fournisseur SMS n'a été configuré. Il faut décider du coût avant d'ajouter le flux de numéro +226. Le runbook documente cette décision.
+
+**Tests/limites :** aucun email réel n'a été envoyé, aucun compte utilisateur n'existe en base et aucun test sur appareil Android/iOS n'a été effectué. Les tests Flutter/CI ne sont pas confirmés exécutés. Le reset email ne peut être déclaré prêt en production qu'après configuration Redirect URLs + SMTP et test d'un lien sur les deux plateformes.
+
+Runbook : `docs/runbooks/aud-19-email-password-recovery.md`.
 
 ### P3 — Alertes d'information, pas des défauts à corriger en masse
 
