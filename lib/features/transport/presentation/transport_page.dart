@@ -72,7 +72,7 @@ class _TransportPageState extends ConsumerState<TransportPage> {
 
     controller.dispose();
 
-    if (passenger == null) return;
+    if (!mounted || passenger == null) return;
 
     final repo = ref.read(transportRepositoryProvider);
     if (repo == null) return;
