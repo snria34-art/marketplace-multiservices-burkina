@@ -58,6 +58,15 @@ void main() {
       expect(isCourierRoute('/courier/extra'), isFalse);
       expect(isCourierRoute('/orders'), isFalse);
     });
+
+    test('allows moderators only on catalog and review moderation routes', () {
+      expect(isModerationRoute('/admin/catalog-moderation'), isTrue);
+      expect(isModerationRoute('/admin/reviews'), isTrue);
+      expect(isModerationRoute('/admin'), isFalse);
+      expect(isModerationRoute('/admin/accounts'), isFalse);
+      expect(isModerationRoute('/admin/platform-health'), isFalse);
+      expect(isModerationRoute('/admin/refunds'), isFalse);
+    });
   });
 
   group('sanitizeInternalLocation', () {
