@@ -1,0 +1,45 @@
+bool _matchesRoute(String path, String base) {
+  return path == base || path.startsWith('$base/');
+}
+
+bool isAdminRoute(String path) => _matchesRoute(path, '/admin');
+
+bool isSellerRoute(String path) => _matchesRoute(path, '/seller');
+
+bool isCourierRoute(String path) => path == '/courier';
+
+bool routeRequiresAuthentication(String path) {
+  return _matchesRoute(path, '/cart') ||
+      _matchesRoute(path, '/checkout') ||
+      _matchesRoute(path, '/orders') ||
+      _matchesRoute(path, '/delivery') ||
+      _matchesRoute(path, '/follows') ||
+      _matchesRoute(path, '/group-buy') ||
+      _matchesRoute(path, '/messages') ||
+      _matchesRoute(path, '/notifications') ||
+      isAdminRoute(path) ||
+      isSellerRoute(path) ||
+      isCourierRoute(path);
+}
+
+/// Only accepts an internal application location.
+///
+/// This value comes from a URL query parameter and must never become an
+/// external redirect or a redirect loop back to the login/status pages.
+String? sanitizeInternalLocation(String? value) {
+  if (value == null || value.isEmpty) return null;
+
+  final uri = Uri.tryParse(value);
+  if (uri == null ||
+      uri.hasScheme ||
+      uri.hasAuthority ||
+      !uri.path.startsWith('/') ||
+      uri.path.startsWith('//') ||
+      uri.path == '/auth' ||
+      uri.path == '/access-status' ||
+      uri.pathSegments.any((segment) => segment == '..')) {
+    return null;
+  }
+
+  return uri.toString();
+}
