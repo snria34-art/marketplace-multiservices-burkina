@@ -1,5 +1,5 @@
 begin;
-select plan(10);
+select plan(11);
 
 select ok(
   not has_table_privilege('anon','public.creative_bookings','INSERT')
@@ -88,6 +88,12 @@ select ok(
   position('sp.user_id = v_user' in pg_get_functiondef('public.get_provider_creative_bookings()'::regprocedure)) > 0
   and position('private.require_active_account()' in pg_get_functiondef('public.get_provider_creative_bookings()'::regprocedure)) > 0,
   'provider booking list is scoped to services owned by the active caller'
+);
+
+select ok(
+  position('customer_id' in pg_get_function_result('public.get_provider_creative_bookings()'::regprocedure)) = 0
+  and position('sp.user_id = v_user' in pg_get_functiondef('public.get_provider_creative_bookings()'::regprocedure)) > 0,
+  'provider booking list returns no customer account identifier'
 );
 
 select ok(
