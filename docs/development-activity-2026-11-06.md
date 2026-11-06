@@ -97,3 +97,54 @@ Le projet PostHog connecté est encore à `ingested_event=false`. Le SDK Flutter
 - Linear RIA-27 : validation mesurable des parcours critiques, sécurité, charge et restauration.
 
 Le taux cible de 99 % reste un objectif. Il ne sera annoncé comme atteint qu'après exécution des contrôles définis, fermeture des défauts P0/P1 et mesure reproductible sur un commit candidat.
+
+
+## Corrections complémentaires — commandes, paiement et livraison
+
+### 5. Événements Realtime limités à la ressource concernée
+
+Fichiers :
+- `lib/features/notifications/presentation/notifications_page.dart`
+- `lib/features/checkout/presentation/order_details_page.dart`
+
+Les notifications écoutent désormais uniquement les changements de lignes portant le `user_id` de la session. Le détail d'une commande filtre les événements `payments` par `order_id`, `orders` par `id`, les groupes par `order_id` et les colis par les `order_group_id` de la commande. Le rechargement déclenché par n'importe quelle notification de l'utilisateur a été retiré de l'écran de commande, car cette donnée n'est pas nécessaire à son affichage.
+
+Commits :
+- `73677a04b22a15cc47cac3f5f58f9ccee4ae4db0`
+- `6bb133f80397c5e6bae397a1f78cdec6ba7def6f`
+
+### 6. Protection du lien de paiement
+
+Fichier : `lib/features/checkout/presentation/checkout_page.dart`
+
+Avant d'ouvrir le guichet externe, le client vérifie maintenant que la réponse contient une URL analysable, en HTTPS, avec un hôte et sans identifiants utilisateur intégrés dans l'URL. Une URL non sécurisée ou malformée est rejetée.
+
+Commit : `b1d9eae4b07c645fe93a4c3185af46320c262e44`.
+
+Cette vérification côté client complète les contrôles serveur ; elle ne remplace pas la validation du fournisseur côté Edge Function.
+
+### 7. Reprise du calcul de livraison
+
+Fichier : `lib/features/checkout/presentation/checkout_page.dart`
+
+Si le calcul initial du devis échoue alors que l'adresse est déjà sélectionnée, le client dispose maintenant d'une action explicite pour relancer le calcul. Un état de chargement et un état d'échec sont affichés. Les identifiants de requête conservent la protection contre l'association d'un devis obsolète à une nouvelle adresse.
+
+Commit : `8c0a72ccd481304014f0a823d0820c12817ea691`.
+
+### 8. Chargement des positions et Realtime de livraison
+
+Fichiers :
+- `lib/features/delivery/data/delivery_repository.dart`
+- `lib/features/delivery/presentation/delivery_tracking_page.dart`
+
+Les positions sont maintenant récupérées une seule fois par livreur distinct, avec des requêtes parallèles, au lieu d'une requête séquentielle par colis. Le suivi choisit uniquement une affectation de livreur active. Les abonnements Realtime sont limités aux identifiants de livreurs et de colis liés à la commande consultée. L'initialisation asynchrone nettoie correctement le canal si l'écran est fermé pendant sa création.
+
+Commits :
+- `094f062026c04b8e648d5c0caab63e406ebb5bf2`
+- `3b02859742c059636da68d052f5acfd6dc41057a`
+- `ff9fd5dde0760946133c287c8867abfa93677a71`
+- `8f2b9bf92394b6b7591471dc29e0fe717cfe9702`
+
+### Contrôle des fichiers
+
+Chaque fichier modifié a été relu depuis `main` après l'écriture. Le SDK Dart/Flutter n'est pas disponible dans l'environnement d'exécution de cette session : aucune analyse de compilation ni test n'est déclaré réussi. Aucun workflow, build, test payant, paiement réel, push ou migration de production n'a été déclenché.
