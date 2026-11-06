@@ -71,6 +71,8 @@ class CartRepository {
   }
 
   Future<void> remove(String cartItemId) async {
-    await client.from('cart_items').delete().eq('id', cartItemId);
+    // Use the ownership-checked RPC so cart timestamps and server-side
+    // validation stay consistent with quantity changes.
+    await setQuantity(cartItemId: cartItemId, quantity: 0);
   }
 }
