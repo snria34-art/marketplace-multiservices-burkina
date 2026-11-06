@@ -48,12 +48,12 @@ class _MechanicsPageState extends ConsumerState<MechanicsPage> {
   }
 
   Future<void> _manageAvailability() async {
-    if (!await _loadOwnMechanic()) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Aucun profil mécanicien lié à ce compte.')),
-        );
-      }
+    final canManage = await _loadOwnMechanic();
+    if (!mounted) return;
+    if (!canManage) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Aucun profil mécanicien lié à ce compte.')),
+      );
       return;
     }
 
@@ -137,11 +137,12 @@ class _MechanicsPageState extends ConsumerState<MechanicsPage> {
         );
 
         reasonController.dispose();
-        if (!mounted || reason == null) return;
+        if (!mounted) return;
 
-        await client?.rpc(
-          'schedule_mechanic_time_off',
-          params: {
+        if (reason != null) {
+          await client?.rpc(
+            'schedule_mechanic_time_off',
+            params: {
             'p_starts_at': DateTime(
               vacation.start.year,
               vacation.start.month,
@@ -155,9 +156,10 @@ class _MechanicsPageState extends ConsumerState<MechanicsPage> {
               59,
               59,
             ).toUtc().toIso8601String(),
-            'p_reason': reason,
-          },
-        );
+              'p_reason': reason,
+            },
+          );
+        }
       }
 
       if (!mounted) return;
