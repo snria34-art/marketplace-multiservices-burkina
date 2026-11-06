@@ -1,5 +1,5 @@
 begin;
-select plan(47);
+select plan(48);
 
 select ok(
   not has_table_privilege('anon','private.catalog_moderation_findings','SELECT')
@@ -394,6 +394,22 @@ select ok(
   and not has_function_privilege('authenticated','private.record_platform_health_checks(jsonb)','EXECUTE')
   and not has_function_privilege('anon','private.record_platform_health_checks(jsonb)','EXECUTE'),
   'platform health recorder remains executable only by service_role'
+);
+
+
+select ok(
+  (
+    select prosecdef
+    from pg_proc
+    where oid = 'public.deactivate_notification_device(text)'::regprocedure
+  )
+  and has_function_privilege('authenticated','public.deactivate_notification_device(text)','EXECUTE')
+  and not has_function_privilege('anon','public.deactivate_notification_device(text)','EXECUTE')
+  and position('(select auth.uid())' in pg_get_functiondef('public.deactivate_notification_device(text)'::regprocedure)) > 0
+  and position('where user_id = v_user' in pg_get_functiondef('public.deactivate_notification_device(text)'::regprocedure)) > 0
+  and position('return not exists' in pg_get_functiondef('public.deactivate_notification_device(text)'::regprocedure)) > 0
+  and position('private.require_active_account()' in pg_get_functiondef('public.deactivate_notification_device(text)'::regprocedure)) = 0,
+  'push-token deactivation is authenticated, user-scoped, idempotent, and still available to inactive accounts'
 );
 
 select * from finish();
