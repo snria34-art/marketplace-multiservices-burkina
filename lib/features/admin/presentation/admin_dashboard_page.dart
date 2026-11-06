@@ -259,7 +259,8 @@ class _AdminDashboardPageState
     amountController.dispose();
     referenceController.dispose();
 
-    if (values != true ||
+    if (!mounted ||
+        values != true ||
         companyId == null ||
         shareClassId == null ||
         shareholderId == null ||
