@@ -1,5 +1,5 @@
 begin;
-select plan(44);
+select plan(45);
 
 select ok(
   not has_table_privilege('anon','private.catalog_moderation_findings','SELECT')
@@ -363,6 +363,18 @@ select ok(
   and position('v_order.status <> ''PENDING_PAYMENT''' in pg_get_functiondef('public.cancel_unpaid_order(uuid)'::regprocedure)) > 0
   and position('order_payment_already_settled' in pg_get_functiondef('public.cancel_unpaid_order(uuid)'::regprocedure)) > 0,
   'active admins may cancel unpaid orders, but the workflow still rejects paid orders'
+);
+
+
+select ok(
+  to_regprocedure('public.get_seller_product_variant_inventory(uuid)') is not null
+  and has_function_privilege('authenticated','public.get_seller_product_variant_inventory(uuid)','EXECUTE')
+  and not has_function_privilege('anon','public.get_seller_product_variant_inventory(uuid)','EXECUTE')
+  and not has_table_privilege('authenticated','public.product_variant_inventory','SELECT')
+  and not has_table_privilege('anon','public.product_variant_inventory','SELECT')
+  and position('private.require_active_account()' in pg_get_functiondef('public.get_seller_product_variant_inventory(uuid)'::regprocedure)) > 0
+  and position('se.user_id = v_user' in pg_get_functiondef('public.get_seller_product_variant_inventory(uuid)'::regprocedure)) > 0,
+  'seller variant inventory is read only through the owner-checked RPC, never by direct client table access'
 );
 
 select * from finish();
