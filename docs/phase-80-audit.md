@@ -679,3 +679,13 @@ Relecture en lecture seule des définitions SQL actuellement déployées (`compl
 
 - Le dépôt comporte maintenant 8 fichiers de tests Flutter : le nouveau `payment_provider_availability_test.dart` contient 4 tests du contrat de réponse de précontrôle.
 - 3 suites pgTAP planifient toujours 82 assertions au total (56 + 13 + 13). Tests Flutter/pgTAP/Deno non confirmés par CI, les runs ne démarrent pas d'étapes.
+
+### AUD-07 — réparer uniquement l'historique de migration — 7 novembre 2026
+
+- Comparaison exacte des timestamps : GitHub 333 migrations, Supabase 332. Unique version locale absente du remote : `20261104020500` (`add_toy_weapon_product_classification.sql`). Aucun autre écart.
+- Le fichier crée `private.scan_toy_weapon_products()` et un job cron ; les deux effets existent déjà à l'identique dans Supabase. La fonction est détenue par postgres, SECURITY DEFINER, search_path vide, EXECUTE uniquement postgres. Le job `toy-weapon-classifier` est actif (jobid 5, */10 * * * *, même commande), tables dépendantes présentes.
+- Important : ne pas rejouer le SQL de cette migration car il contient `cron.unschedule` puis `cron.schedule` et remplacerait le job existant.
+- Workflow manuel préparé `.github/workflows/repair-aud-07-migration-history.yml`, utilisant la CLI Supabase 2.122.1. Il refuse une autre branche, exige la confirmation exacte `REPAIR-HISTORY-20261104020500`, et n'exécute que `supabase migration repair 20261104020500 --status applied`, puis liste l'historique.
+- Les secrets `SUPABASE_ACCESS_TOKEN` et `SUPABASE_DB_PASSWORD` doivent être fournis directement dans GitHub Actions > Repository secrets. Ils ne sont pas disponibles à l'agent.
+- Workflow préparé mais non déclenché ; l'historique reste 333/332 jusqu'à son lancement par le propriétaire. Aucune insertion manuelle dans `supabase_migrations.schema_migrations`, aucune fonction/cron appelée.
+- Runbook : `docs/runbooks/aud-07-reconcile-toy-weapon-migration-history.md`.
