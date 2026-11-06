@@ -86,7 +86,7 @@ class _MechanicsPageState extends ConsumerState<MechanicsPage> {
       ),
     );
 
-    if (status == null) return;
+    if (!mounted || status == null) return;
 
     try {
       final client = ref.read(supabaseProvider);
@@ -107,14 +107,14 @@ class _MechanicsPageState extends ConsumerState<MechanicsPage> {
       );
 
       if (vacation != null && mounted) {
+        final reasonController = TextEditingController();
         final reason = await showDialog<String>(
           context: context,
           builder: (dialogContext) {
-            final controller = TextEditingController();
             return AlertDialog(
               title: const Text('Période de congé'),
               content: TextField(
-                controller: controller,
+                controller: reasonController,
                 decoration: const InputDecoration(
                   labelText: 'Motif (facultatif)',
                 ),
@@ -127,7 +127,7 @@ class _MechanicsPageState extends ConsumerState<MechanicsPage> {
                 FilledButton(
                   onPressed: () => Navigator.pop(
                     dialogContext,
-                    controller.text.trim(),
+                    reasonController.text.trim(),
                   ),
                   child: const Text('Enregistrer'),
                 ),
@@ -135,6 +135,9 @@ class _MechanicsPageState extends ConsumerState<MechanicsPage> {
             );
           },
         );
+
+        reasonController.dispose();
+        if (!mounted || reason == null) return;
 
         await client?.rpc(
           'schedule_mechanic_time_off',
@@ -185,10 +188,11 @@ class _MechanicsPageState extends ConsumerState<MechanicsPage> {
       builder: (_) => const _MechanicRequestDialog(),
     );
 
-    if (result == null) return;
+    if (!mounted || result == null) return;
 
     try {
       final pos = await DeviceLocationService.current();
+      if (!mounted) return;
       final repo = ref.read(mechanicRepositoryProvider);
       if (repo == null) return;
 
