@@ -150,6 +150,9 @@ class _VerticalDiscoveryPageState
         case VerticalModule.parcels:
           await _createParcel(repo);
           break;
+        case VerticalModule.agriculture:
+          await _requestAgricultureOrder(item);
+          break;
         case VerticalModule.professionals:
           final draft = await _professionalRequestDialog();
           if (!mounted || draft == null) return;
@@ -626,6 +629,437 @@ class _VerticalDiscoveryPageState
     amount.dispose();
     message.dispose();
     return result;
+  }
+
+  Future<num?> _agricultureOrderQuantityDialog({
+    required num available,
+    required String unit,
+  }) async {
+    final controller = TextEditingController(text: '1');
+    final result = await showDialog<num>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Commander ce produit agricole'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('Stock disponible : ' + available.toString() + ' ' + unit),
+            TextField(
+              controller: controller,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              decoration: InputDecoration(labelText: 'Quantité en ' + unit),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Annuler')),
+          FilledButton(
+            onPressed: () {
+              final value = num.tryParse(controller.text.trim());
+              if (value != null && value > 0 && value <= available) {
+                Navigator.pop(dialogContext, value);
+              }
+            },
+            child: const Text('Réserver le stock'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    return result;
+  }
+
+  Future<Map<String, dynamic>?> _agricultureListingDialog({
+    Map<String, dynamic>? initial,
+  }) async {
+    final editing = initial != null;
+    final name = TextEditingController(text: initial?['name']?.toString() ?? '');
+    final description = TextEditingController(text: initial?['description']?.toString() ?? '');
+    final price = TextEditingController(text: initial?['price']?.toString() ?? '');
+    final unit = TextEditingController(text: initial?['unit']?.toString() ?? 'kg');
+    final quantity = TextEditingController(text: initial?['quantity']?.toString() ?? '');
+    var listingType = initial?['listing_type']?.toString() ?? 'PRODUCE';
+    var active = initial?['active'] == true;
+
+    final result = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) => AlertDialog(
+          title: Text(editing ? 'Modifier mon annonce agricole' : 'Nouvelle annonce agricole'),
+          content: SizedBox(
+            width: 520,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  DropdownButtonFormField<String>(
+                    value: listingType,
+                    decoration: const InputDecoration(labelText: 'Catégorie'),
+                    items: const [
+                      DropdownMenuItem(value: 'PRODUCE', child: Text('Produits agricoles')),
+                      DropdownMenuItem(value: 'LIVESTOCK', child: Text('Bétail / élevage')),
+                      DropdownMenuItem(value: 'SEEDS', child: Text('Semences')),
+                      DropdownMenuItem(value: 'EQUIPMENT', child: Text('Équipements')),
+                      DropdownMenuItem(value: 'INPUTS', child: Text('Intrants')),
+                    ],
+                    onChanged: (value) {
+                      if (value != null) setDialogState(() => listingType = value);
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(controller: name, maxLength: 160, decoration: const InputDecoration(labelText: 'Nom du produit ou matériel')),
+                  TextField(controller: description, maxLines: 3, maxLength: 2000, decoration: const InputDecoration(labelText: 'Description (facultatif)')),
+                  TextField(controller: price, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'Prix unitaire en XOF')),
+                  TextField(controller: unit, maxLength: 32, decoration: const InputDecoration(labelText: 'Unité (kg, sac, tête, pièce...)')),
+                  TextField(controller: quantity, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'Quantité totale en stock')),
+                  if (editing)
+                    SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('Annonce visible'),
+                      value: active,
+                      onChanged: (value) => setDialogState(() => active = value),
+                    ),
+                  const Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text('La quantité ne peut pas être réduite sous le stock déjà réservé.', style: TextStyle(fontSize: 12)),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Annuler')),
+            FilledButton(
+              onPressed: name.text.trim().isEmpty ||
+                      num.tryParse(price.text.trim()) == null ||
+                      num.tryParse(quantity.text.trim()) == null ||
+                      unit.text.trim().isEmpty
+                  ? null
+                  : () => Navigator.pop(dialogContext, {
+                        'listing_type': listingType,
+                        'name': name.text.trim(),
+                        'description': description.text.trim(),
+                        'price': num.parse(price.text.trim()),
+                        'unit': unit.text.trim(),
+                        'quantity': num.parse(quantity.text.trim()),
+                        'active': active,
+                      }),
+              child: Text(editing ? 'Enregistrer' : 'Publier'),
+            ),
+          ],
+        ),
+      ),
+    );
+    name.dispose();
+    description.dispose();
+    price.dispose();
+    unit.dispose();
+    quantity.dispose();
+    return result;
+  }
+
+  Future<void> _createAgricultureListing() async {
+    final repo = ref.read(verticalRepositoryProvider);
+    if (repo == null || !await _ensureAuth() || !mounted) return;
+    final draft = await _agricultureListingDialog();
+    if (!mounted || draft == null) return;
+    try {
+      final id = await repo.createAgricultureListing(
+        listingType: draft['listing_type'].toString(),
+        name: draft['name'].toString(),
+        description: draft['description'].toString(),
+        price: draft['price'] as num,
+        unit: draft['unit'].toString(),
+        quantity: draft['quantity'] as num,
+      );
+      _success('Annonce agricole créée : ' + id);
+      await _showMyAgricultureListings();
+    } catch (error) {
+      _info('Publication impossible : ' + error.toString());
+    }
+  }
+
+  Future<void> _showMyAgricultureListings() async {
+    final repo = ref.read(verticalRepositoryProvider);
+    if (repo == null || !await _ensureAuth() || !mounted) return;
+    try {
+      final listings = await repo.myAgricultureListings();
+      if (!mounted) return;
+      await showDialog<void>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Mes annonces agricoles'),
+          content: SizedBox(
+            width: 560,
+            child: listings.isEmpty
+                ? const Text('Aucune annonce. La publication est réservée aux vendeurs dont le compte et la vérification sont actifs.')
+                : ListView.separated(
+                    shrinkWrap: true,
+                    itemCount: listings.length,
+                    separatorBuilder: (_, __) => const Divider(),
+                    itemBuilder: (_, index) {
+                      final listing = listings[index];
+                      return ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(listing['name']?.toString() ?? 'Annonce'),
+                        subtitle: Text(
+                          (listing['price']?.toString() ?? '-') + ' XOF / ' + (listing['unit']?.toString() ?? '-') +
+                          '\nStock libre : ' + (listing['available_quantity']?.toString() ?? '0') +
+                          '\nRéservé : ' + (listing['reserved_quantity']?.toString() ?? '0') +
+                          '\nStatut : ' + (listing['active'] == true ? 'Visible' : 'Masquée'),
+                        ),
+                        trailing: IconButton(
+                          tooltip: 'Modifier l’annonce',
+                          icon: const Icon(Icons.edit_outlined),
+                          onPressed: () async {
+                            final draft = await _agricultureListingDialog(initial: listing);
+                            if (!mounted || draft == null) return;
+                            try {
+                              await repo.updateAgricultureListing(
+                                listingId: listing['listing_id'].toString(),
+                                listingType: draft['listing_type'].toString(),
+                                name: draft['name'].toString(),
+                                description: draft['description'].toString(),
+                                price: draft['price'] as num,
+                                unit: draft['unit'].toString(),
+                                quantity: draft['quantity'] as num,
+                                active: draft['active'] == true,
+                              );
+                              if (!mounted) return;
+                              Navigator.pop(dialogContext);
+                              _success('Annonce agricole mise à jour.');
+                              await _showMyAgricultureListings();
+                            } catch (error) {
+                              _info('Modification impossible : ' + error.toString());
+                            }
+                          },
+                        ),
+                      );
+                    },
+                  ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Fermer')),
+            FilledButton.icon(
+              onPressed: () {
+                Navigator.pop(dialogContext);
+                _createAgricultureListing();
+              },
+              icon: const Icon(Icons.add),
+              label: const Text('Nouvelle annonce'),
+            ),
+          ],
+        ),
+      );
+    } catch (error) {
+      _info('Chargement des annonces impossible : ' + error.toString());
+    }
+  }
+
+  Future<void> _showMyAgricultureOrderRequests() async {
+    final repo = ref.read(verticalRepositoryProvider);
+    if (repo == null || !await _ensureAuth() || !mounted) return;
+    try {
+      final orders = await repo.myAgricultureOrderRequests();
+      if (!mounted) return;
+      if (orders.isEmpty) {
+        _info('Vous n’avez aucune commande agricole.');
+        return;
+      }
+      await showDialog<void>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Mes commandes agricoles'),
+          content: SizedBox(
+            width: 560,
+            child: ListView.separated(
+              shrinkWrap: true,
+              itemCount: orders.length,
+              separatorBuilder: (_, __) => const Divider(),
+              itemBuilder: (_, index) {
+                final order = orders[index];
+                final status = order['status']?.toString() ?? '-';
+                return ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(order['listing_name']?.toString() ?? 'Produit agricole'),
+                  subtitle: Text(
+                    (order['quantity']?.toString() ?? '-') + ' ' + (order['unit']?.toString() ?? '') +
+                    ' • ' + (order['total_amount']?.toString() ?? '-') + ' XOF' +
+                    '\nVendeur : ' + (order['seller_name']?.toString() ?? 'Vendeur') +
+                    '\nStatut : ' + _agricultureStatus(status),
+                  ),
+                  trailing: ['REQUESTED', 'ACCEPTED'].contains(status)
+                      ? IconButton(
+                          tooltip: 'Annuler la commande',
+                          icon: const Icon(Icons.cancel_outlined),
+                          onPressed: () async {
+                            try {
+                              await repo.cancelAgricultureOrderRequest(order['order_id'].toString());
+                              if (!mounted) return;
+                              Navigator.pop(dialogContext);
+                              _success('Commande annulée et stock libéré.');
+                              await _showMyAgricultureOrderRequests();
+                            } catch (error) {
+                              _info('Annulation impossible : ' + error.toString());
+                            }
+                          },
+                        )
+                      : null,
+                );
+              },
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Fermer')),
+          ],
+        ),
+      );
+    } catch (error) {
+      _info('Chargement des commandes impossible : ' + error.toString());
+    }
+  }
+
+  Future<void> _showSellerAgricultureOrderRequests() async {
+    final repo = ref.read(verticalRepositoryProvider);
+    if (repo == null || !await _ensureAuth() || !mounted) return;
+    try {
+      final orders = await repo.sellerAgricultureOrderRequests();
+      if (!mounted) return;
+      if (orders.isEmpty) {
+        _info('Aucune commande agricole reçue pour vos annonces.');
+        return;
+      }
+      await showDialog<void>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Commandes agricoles reçues'),
+          content: SizedBox(
+            width: 560,
+            child: ListView.separated(
+              shrinkWrap: true,
+              itemCount: orders.length,
+              separatorBuilder: (_, __) => const Divider(),
+              itemBuilder: (_, index) {
+                final order = orders[index];
+                final status = order['status']?.toString() ?? '-';
+                return ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(order['listing_name']?.toString() ?? 'Produit agricole'),
+                  subtitle: Text(
+                    (order['quantity']?.toString() ?? '-') + ' ' + (order['unit']?.toString() ?? '') +
+                    ' • ' + (order['total_amount']?.toString() ?? '-') + ' XOF' +
+                    '\nÉtat : ' + _agricultureStatus(status),
+                  ),
+                  trailing: status == 'REQUESTED'
+                      ? Wrap(
+                          spacing: 2,
+                          children: [
+                            IconButton(
+                              tooltip: 'Refuser et libérer le stock',
+                              icon: const Icon(Icons.close),
+                              onPressed: () async {
+                                try {
+                                  await repo.respondAgricultureOrderRequest(
+                                    orderId: order['order_id'].toString(),
+                                    decision: 'DECLINE',
+                                  );
+                                  if (!mounted) return;
+                                  Navigator.pop(dialogContext);
+                                  _success('Commande refusée ; stock libéré.');
+                                  await _showSellerAgricultureOrderRequests();
+                                } catch (error) {
+                                  _info('Refus impossible : ' + error.toString());
+                                }
+                              },
+                            ),
+                            IconButton(
+                              tooltip: 'Accepter',
+                              icon: const Icon(Icons.check_circle_outline),
+                              onPressed: () async {
+                                try {
+                                  await repo.respondAgricultureOrderRequest(
+                                    orderId: order['order_id'].toString(),
+                                    decision: 'ACCEPT',
+                                  );
+                                  if (!mounted) return;
+                                  Navigator.pop(dialogContext);
+                                  _success('Commande acceptée. Le stock reste réservé.');
+                                  await _showSellerAgricultureOrderRequests();
+                                } catch (error) {
+                                  _info('Acceptation impossible : ' + error.toString());
+                                }
+                              },
+                            ),
+                          ],
+                        )
+                      : status == 'ACCEPTED'
+                          ? IconButton(
+                              tooltip: 'Marquer comme remise effectuée',
+                              icon: const Icon(Icons.inventory_2_outlined),
+                              onPressed: () async {
+                                try {
+                                  await repo.fulfillAgricultureOrderRequest(order['order_id'].toString());
+                                  if (!mounted) return;
+                                  Navigator.pop(dialogContext);
+                                  _success('Commande clôturée ; stock vendu déduit.');
+                                  await _showSellerAgricultureOrderRequests();
+                                } catch (error) {
+                                  _info('Clôture impossible : ' + error.toString());
+                                }
+                              },
+                            )
+                          : null,
+                );
+              },
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Fermer')),
+          ],
+        ),
+      );
+    } catch (error) {
+      _info('Chargement des commandes reçues impossible : ' + error.toString());
+    }
+  }
+
+  Future<void> _requestAgricultureOrder(Map<String, dynamic> item) async {
+    final repo = ref.read(verticalRepositoryProvider);
+    if (repo == null || !await _ensureAuth() || !mounted) return;
+    final quantity = item['quantity'];
+    final reserved = item['reserved_quantity'];
+    if (quantity is! num) {
+      _info('Ce produit n’a pas de stock quantifié. Contactez le vendeur.');
+      return;
+    }
+    final available = quantity - (reserved is num ? reserved : 0);
+    if (available <= 0) {
+      _info('Ce produit est momentanément indisponible.');
+      return;
+    }
+    final unit = item['unit']?.toString() ?? 'unité';
+    final requested = await _agricultureOrderQuantityDialog(available: available, unit: unit);
+    if (!mounted || requested == null) return;
+    try {
+      final id = await repo.createAgricultureOrderRequest(
+        listingId: item['id'].toString(),
+        quantity: requested,
+      );
+      _success('Stock réservé. En attente de la réponse du vendeur : ' + id);
+    } catch (error) {
+      _info('Réservation impossible : ' + error.toString());
+    }
+  }
+
+  String _agricultureStatus(String status) {
+    switch (status) {
+      case 'REQUESTED': return 'En attente du vendeur';
+      case 'ACCEPTED': return 'Acceptée';
+      case 'REJECTED': return 'Refusée';
+      case 'CANCELLED': return 'Annulée';
+      case 'FULFILLED': return 'Remise effectuée';
+      default: return status;
+    }
   }
 
   Future<void> _showMyProfessionalRequests() async {
@@ -1697,6 +2131,7 @@ class _VerticalDiscoveryPageState
         VerticalModule.rentals,
         VerticalModule.realEstate,
         VerticalModule.professionals,
+        VerticalModule.agriculture,
         VerticalModule.accommodations,
         VerticalModule.events,
         VerticalModule.jobs,
@@ -1713,6 +2148,8 @@ class _VerticalDiscoveryPageState
     switch (module) {
       case VerticalModule.rides:
         return 'Demander';
+      case VerticalModule.agriculture:
+        return 'Commander';
       case VerticalModule.professionals:
         return 'Demander un devis';
       case VerticalModule.realEstate:
@@ -1797,8 +2234,28 @@ class _VerticalDiscoveryPageState
       if (item['location'] != null) item['location'].toString(),
       if (item['service_area'] != null) item['service_area'].toString(),
       if (item['vehicle_type'] != null) item['vehicle_type'].toString(),
-      if (price != null) '$price XOF',
+      if (widget.module == VerticalModule.agriculture)
+        if (item['unit'] != null && item['quantity'] is num)
+          'Stock : ' +
+              (((item['quantity'] as num) -
+                          (item['reserved_quantity'] is num
+                              ? item['reserved_quantity'] as num
+                              : 0))
+                      .clamp(0, 999999999)
+                      .toString()) +
+              ' ' +
+              item['unit'].toString(),
+      if (price != null) price.toString() + ' XOF',
     ];
+
+    final rawSeller = item['sellers'];
+    final seller = rawSeller is Map
+        ? Map<String, dynamic>.from(rawSeller)
+        : const <String, dynamic>{};
+    if (widget.module == VerticalModule.agriculture &&
+        seller['business_name'] != null) {
+      base.insert(0, seller['business_name'].toString());
+    }
 
     return base.isNotEmpty
         ? base.join(' • ')
@@ -1818,6 +2275,27 @@ class _VerticalDiscoveryPageState
               tooltip: 'Suivre un colis',
               onPressed: _trackParcel,
               icon: const Icon(Icons.qr_code_scanner_outlined),
+            ),
+          if (widget.module == VerticalModule.agriculture &&
+              client?.auth.currentUser != null)
+            IconButton(
+              tooltip: 'Mes commandes agricoles',
+              onPressed: _showMyAgricultureOrderRequests,
+              icon: const Icon(Icons.shopping_bag_outlined),
+            ),
+          if (widget.module == VerticalModule.agriculture &&
+              client?.auth.currentUser != null)
+            IconButton(
+              tooltip: 'Commandes reçues (vendeur)',
+              onPressed: _showSellerAgricultureOrderRequests,
+              icon: const Icon(Icons.inbox_outlined),
+            ),
+          if (widget.module == VerticalModule.agriculture &&
+              client?.auth.currentUser != null)
+            IconButton(
+              tooltip: 'Mes annonces agricoles',
+              onPressed: _showMyAgricultureListings,
+              icon: const Icon(Icons.storefront_outlined),
             ),
           if (widget.module == VerticalModule.professionals &&
               client?.auth.currentUser != null)
