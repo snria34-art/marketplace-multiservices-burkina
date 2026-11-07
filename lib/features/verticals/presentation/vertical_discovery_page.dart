@@ -1331,6 +1331,240 @@ class _VerticalDiscoveryPageState
     }
   }
 
+  Future<String?> _healthReviewNoteDialog({
+    required String title,
+    required String actionLabel,
+    required bool requiredNote,
+  }) async {
+    final controller = TextEditingController();
+    final result = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) => AlertDialog(
+          title: Text(title),
+          content: TextField(
+            controller: controller,
+            maxLines: 3,
+            maxLength: 1000,
+            onChanged: (_) => setDialogState(() {}),
+            decoration: InputDecoration(
+              labelText: requiredNote ? 'Motif obligatoire' : 'Note (facultative)',
+              hintText: requiredNote ? 'Expliquez brièvement le refus...' : 'Information destinée au client...',
+              border: const OutlineInputBorder(),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Annuler'),
+            ),
+            FilledButton(
+              onPressed: requiredNote && controller.text.trim().isEmpty
+                  ? null
+                  : () => Navigator.pop(dialogContext, controller.text.trim()),
+              child: Text(actionLabel),
+            ),
+          ],
+        ),
+      ),
+    );
+    controller.dispose();
+    return result;
+  }
+
+  Future<void> _reviewHealthOrder(
+    Map<String, dynamic> order, {
+    required String decision,
+  }) async {
+    final repo = ref.read(verticalRepositoryProvider);
+    if (repo == null) return;
+    final rejecting = decision == 'REJECT';
+    final note = await _healthReviewNoteDialog(
+      title: rejecting
+          ? 'Motif du refus'
+          : decision == 'APPROVE'
+              ? 'Valider l’ordonnance'
+              : 'Accepter la demande',
+      actionLabel: rejecting
+          ? 'Refuser la demande'
+          : decision == 'APPROVE'
+              ? 'Valider'
+              : 'Accepter',
+      requiredNote: rejecting,
+    );
+    if (!mounted || note == null) return;
+    try {
+      await repo.respondHealthOrderRequest(
+        requestId: order['request_id'].toString(),
+        decision: decision,
+        reviewNote: note,
+      );
+      _success(
+        rejecting
+            ? 'Demande refusée et stock libéré.'
+            : decision == 'APPROVE'
+                ? 'Ordonnance validée. La remise du produit reste une étape séparée.'
+                : 'Demande acceptée. La remise du produit reste une étape séparée.',
+      );
+      await _showPharmacyHealthOrders();
+    } catch (error) {
+      _info('Décision impossible : ' + error.toString());
+    }
+  }
+
+  Future<void> _openHealthPrescription(String path) async {
+    final repo = ref.read(verticalRepositoryProvider);
+    if (repo == null) return;
+    try {
+      final url = await repo.createHealthPrescriptionSignedUrl(path);
+      final opened = await launchUrl(
+        Uri.parse(url),
+        mode: LaunchMode.externalApplication,
+      );
+      if (!opened) _info('Impossible d’ouvrir l’ordonnance.');
+    } catch (error) {
+      _info('Accès à l’ordonnance refusé ou indisponible : ' + error.toString());
+    }
+  }
+
+  Future<void> _showPharmacyHealthOrders() async {
+    final repo = ref.read(verticalRepositoryProvider);
+    if (repo == null || !await _ensureAuth() || !mounted) return;
+    try {
+      final orders = await repo.pharmacyHealthOrderRequests();
+      if (!mounted) return;
+      if (orders.isEmpty) {
+        _info('Aucune demande de santé reçue pour cette pharmacie.');
+        return;
+      }
+      await showDialog<void>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Demandes reçues par la pharmacie'),
+          content: SizedBox(
+            width: 620,
+            child: ListView.separated(
+              shrinkWrap: true,
+              itemCount: orders.length,
+              separatorBuilder: (_, __) => const Divider(),
+              itemBuilder: (_, index) {
+                final order = orders[index];
+                final status = order['status']?.toString() ?? '-';
+                final requiresPrescription = order['requires_prescription'] == true;
+                final isReview = status == 'PENDING_REVIEW';
+                final isRequest = status == 'REQUESTED';
+                final canDispense = status == 'ACCEPTED' ||
+                    status == 'APPROVED_FOR_DISPENSING';
+                final path = order['prescription_path']?.toString();
+
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(order['product_name']?.toString() ?? 'Produit de santé'),
+                      subtitle: Text(
+                        (order['quantity']?.toString() ?? '-') +
+                        ' unité(s) • ' +
+                        (order['total_amount']?.toString() ?? '-') + ' XOF' +
+                        '\nStatut : ' + _healthOrderStatus(status) +
+                        (requiresPrescription
+                            ? '\nOrdonnance obligatoire'
+                            : '\nSans ordonnance'),
+                      ),
+                    ),
+                    if (path != null && path.isNotEmpty)
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: TextButton.icon(
+                          onPressed: () => _openHealthPrescription(path),
+                          icon: const Icon(Icons.description_outlined),
+                          label: const Text('Ouvrir l’ordonnance (lien temporaire)'),
+                        ),
+                      ),
+                    if (isReview || isRequest)
+                      Wrap(
+                        spacing: 6,
+                        children: [
+                          TextButton.icon(
+                            onPressed: () => _reviewHealthOrder(
+                              order,
+                              decision: 'REJECT',
+                            ),
+                            icon: const Icon(Icons.close),
+                            label: const Text('Refuser'),
+                          ),
+                          FilledButton.icon(
+                            onPressed: () => _reviewHealthOrder(
+                              order,
+                              decision: isReview ? 'APPROVE' : 'ACCEPT',
+                            ),
+                            icon: const Icon(Icons.check),
+                            label: Text(
+                              isReview ? 'Valider l’ordonnance' : 'Accepter',
+                            ),
+                          ),
+                        ],
+                      ),
+                    if (canDispense)
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: FilledButton.icon(
+                          onPressed: () async {
+                            final confirm = await showDialog<bool>(
+                              context: context,
+                              builder: (confirmContext) => AlertDialog(
+                                title: const Text('Confirmer la remise ?'),
+                                content: const Text(
+                                  'Cette action marque le produit comme remis au client et déduit la quantité du stock. Elle ne déclenche aucun paiement.',
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(confirmContext, false),
+                                    child: const Text('Retour'),
+                                  ),
+                                  FilledButton(
+                                    onPressed: () => Navigator.pop(confirmContext, true),
+                                    child: const Text('Confirmer la remise'),
+                                  ),
+                                ],
+                              ),
+                            );
+                            if (!mounted || confirm != true) return;
+                            try {
+                              await repo.fulfillHealthOrderRequest(
+                                order['request_id'].toString(),
+                              );
+                              if (!mounted) return;
+                              Navigator.pop(dialogContext);
+                              _success('Remise enregistrée ; stock déduit.');
+                              await _showPharmacyHealthOrders();
+                            } catch (error) {
+                              _info('Clôture impossible : ' + error.toString());
+                            }
+                          },
+                          icon: const Icon(Icons.inventory_2_outlined),
+                          label: const Text('Marquer comme remis'),
+                        ),
+                      ),
+                  ],
+                );
+              },
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Fermer'),
+            ),
+          ],
+        ),
+      );
+    } catch (error) {
+      _info('Chargement des demandes pharmacie impossible : ' + error.toString());
+    }
+  }
+
   Future<void> _showMyProfessionalRequests() async {
     final repo = ref.read(verticalRepositoryProvider);
     if (repo == null || !await _ensureAuth() || !mounted) return;
