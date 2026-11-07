@@ -7,7 +7,7 @@
 **Migrations :**
 - `20261107004702_secure_health_prescription_order_workflow`
 - `20261107005325_restrict_health_product_catalog_to_verified_pharmacies`
-- `20261107005631_limit_pharmacy_prescription_access_to_active_orders`
+- `20261107005637_limit_pharmacy_prescription_access_to_active_orders`
 
 **État :** backend appliqué ; catalogue, client, pharmacie et gestion de stock raccordés dans Flutter ; contrôles SQL live de structure, droits, rôles et gardes sans session réussis. Compilation Flutter et essai métier multi-comptes non exécutés.
 
