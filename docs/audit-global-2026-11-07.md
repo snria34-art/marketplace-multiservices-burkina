@@ -528,3 +528,77 @@ Runbook : `docs/runbooks/aud-22-security-definer-search-path-review.md`.
 Cet audit combine inspection de fichiers, recherches ciblées, lecture de fonctions SQL actives, privilèges, historique des migrations, listes de fonctions et journaux. Il ne constitue pas un audit ligne par ligne certifié de chaque fichier ni un pentest externe. Les SDK Flutter/Dart/Deno n'ont pas été exécutés depuis cet environnement ; les dernières exécutions GitHub consultées n'ont pas démarré de runner. Aucun paiement, push, GPS en arrière-plan, scénario multi-utilisateur, charge, sauvegarde ou restauration réelle n'a été effectué.
 
 Le registre doit être mis à jour après chaque correction avec : référence du commit, migration éventuelle, tests exécutés, résultat CI et preuve de non-régression.
+
+
+## AUD-23 — Préparation Flutter Web / Vercel — 7 novembre 2026
+
+État : la cible web est ajoutée au dépôt ; le déploiement Vercel attend l'approbation de l'accès à l'équipe ; la compilation web n'a pas été exécutée.
+
+- Ajout de web/ (index, manifeste PWA minimal, favicon), vercel.json et scripts/vercel-build.sh.
+- Build prévu avec Flutter 3.47.2, vérification SHA-256 de l'archive, lockfile obligatoire et seulement SUPABASE_URL + SUPABASE_PUBLISHABLE_KEY.
+- Les deux écrans média utilisent maintenant un import conditionnel des lecteurs vidéo natif et web. Il ne reste aucun import direct dart:io dans les fichiers applicatifs hormis le helper natif sélectionné conditionnellement.
+- Récupération de mot de passe : redirection web /auth/recovery ; le deep link mobile est conservé.
+- CI étendue avec une compilation web sans credentials de production.
+- Vercel : espace par défaut ridiastore identifié, mais l'appel au compte d'équipe retourne HTTP 403 avant le consentement. Aucun projet ou URL de déploiement n'a été créé. Après approbation du lien, relier le dépôt, configurer les variables Supabase encrypted et lancer Preview.
+- Le service push Flutter désactive le push sur navigateur. La fonction payment-return ne renvoie encore qu'un deep link mobile. Les deux parcours restent à compléter/tester avant checkout web.
+- Les callbacks Supabase Auth doivent autoriser le domaine web exact après le premier déploiement.
+- Build Flutter Web non exécuté localement (SDK absent) ; les runners GitHub Actions observés n'ont pas démarré.
+
+Runbook : docs/runbooks/aud-23-vercel-web-release.md.
+
+## AUD-24 — Audit transversal des flux opérationnels — 7 novembre 2026
+
+### Paiements et remboursements — P1
+
+Les fonctions Edge de création de sessions Wave/CinetPay et les webhooks v3 sont présentes et ACTIVE. Les créations exigent JWT ; les webhooks publics valident leur signature fournisseur. Le webhook CinetPay re-vérifie la transaction, le montant et la devise. Ces contrôles statiques ne remplacent pas les tests sandbox signés et la configuration réelle des comptes marchands.
+
+Les fonctions de finalisation et de traitement financier critiques (process_payment_event, process_payment_provider_event, complete_refund) sont réservées à service_role. Les tables commandes, paiements, remboursements et livraison ont RLS et ne permettent pas l'écriture directe par anon/authenticated.
+
+Défaut comptable P1 confirmé dans complete_refund : un remboursement partiel est ventilé au prorata sur tous les groupes vendeurs de la commande, sans lien obligatoire avec les articles réellement retournés. Une boutique non concernée ou un vendeur non crédité peut être débité. Lors d'un remboursement complet après une capture tardive sur une commande annulée, les groupes peuvent devenir REFUNDED alors que la commande parent reste CANCELLED.
+
+Décision : ne pas exécuter de remboursement réel et ne pas inventer un prorata correctif. Définir la règle ligne/quantité/remise/frais/commission, conserver un snapshot d'allocation avant l'appel fournisseur, puis corriger avec tests transactionnels et idempotence. Voir docs/runbooks/aud-02-refund-allocation.md.
+
+### Livraison — moteur présent, validation E2E absente
+
+Les fonctions inspectées vérifient rôle coursier, affectation, statut du colis, preuve photo et code de livraison à six chiffres haché. Les changements synchronisent colis, groupe vendeur et commande parent. RLS est activé ; les écritures directes anon/authenticated sont refusées sur les tables sensibles.
+
+Aucun colis, événement ou affectation réel n'était présent lors du contrôle. Restent les scénarios E2E multi-vendeurs, refus d'affectation, collecte multi-boutiques, photo, code erroné, réseau interrompu et livraison partielle.
+
+### Notifications — P1 opérationnel
+
+dispatch-push-notifications est ACTIVE version 10 ; la source GitHub est identique à la version déployée. Les journaux répètent fcm_service_account_missing, hasFcmProjectId=false et HTTP 503. Les secrets Edge FCM_SERVICE_ACCOUNT_JSON et FCM_PROJECT_ID sont absents de l'environnement observé.
+
+Les fichiers Firebase natifs et firebase_options.dart ne sont pas présents dans le dépôt. L'initialisation mobile intercepte les erreurs Firebase, mais FCM n'est pas opérationnel. Le service Flutter désactive également l'initialisation sur navigateur. Il faut fournir le vrai projet Firebase, son compte de service au seul environnement serveur et les fichiers natifs officiels, puis tester un appareil autorisé.
+
+### Supabase Security Advisor — état observé le 7 novembre 2026
+
+- 1 ERROR : public.spatial_ref_sys sans RLS. Table PostGIS gérée par supabase_admin, hors capacité du rôle connecté. Ne pas déplacer l'extension ni toucher aux catalogues système via migration applicative ; demander une solution compatible à Supabase Support ou une réduction ciblée de l'exposition Data API.
+- 3 WARN : surcharges natives PostGIS public.st_estimatedextent exécutables par anon. À examiner avec Supabase Support/contrôle Data API ; ne pas modifier des fonctions C appartenant à supabase_admin.
+- 106 WARN génériques : fonctions SECURITY DEFINER accessibles à authenticated. Revue signature par signature : certaines sont des RPC client attendues et doivent vérifier identité, rôle et propriété. Ne pas révoquer globalement ni transformer aveuglément en INVOKER.
+- 17 INFO : tables RLS sans policy, dont 15 tables privées et deux tables de médias protégées par absence de privilèges directs client. État intentionnel documenté dans AUD-21 ; ne pas ajouter de policies permissives pour masquer l'alerte.
+- 5 extensions signalées dans public : citext, pg_trgm, postgis, vector et pg_net. Tout déplacement exige une migration de dépendances planifiée.
+
+### Données et preuves de lancement
+
+Les tables métier auditées (utilisateurs/profils, boutiques, produits, commandes, paiements, remboursements, notifications et affectations) étaient vides lors du contrôle. Aucun utilisateur, aucune commande, aucun paiement et aucun scénario de livraison n'ont été créés pendant l'audit. Aucun parcours réel de production n'est donc démontré.
+
+### Autres éléments manquants avant lancement
+
+1. Reproductibilité de la base depuis un état vierge et réconciliation de l'historique GitHub/Supabase.
+2. Tests E2E multi-rôles et concurrence : panier multi-vendeurs, stock variante, paiement, webhooks, remboursement, livraison, médias, messagerie, admin et verticales.
+3. Contrôle de complétude de toutes les verticales. AUD-10.1 à AUD-10.5 couvrent plusieurs workflows précis, sans prouver que chaque écran et chaque action de tous les modules sont finalisés ; certains modules peuvent rester des pages placeholder.
+4. Abonnements, quotas, invitations, délégations et droits des boutiques.
+5. GPS coursier en arrière-plan avec consentement, rétention, essais Android/iOS et réseau faible.
+6. CGU, CGV, confidentialité, retours, règles vendeurs/coursiers, commissions, facturation et fiscalité Burkina Faso. legal_documents et user_consents étaient vides ; textes à faire valider par un professionnel compétent.
+7. Capacité 1 000–10 000 connexions simultanées, latences p95/p99, saturation DB/Realtime/Edge, sauvegarde et test réel de restauration. Le script k6 n'a pas été exécuté.
+8. Signature Android, archive iOS signée et distribution interne Play/TestFlight.
+9. Récupération email : autoriser les callbacks mobile/web, configurer SMTP et effectuer un test contrôlé ; OTP SMS non configuré.
+10. Retour checkout navigateur et push web.
+11. Revue des anciennes générations Edge et retrait seulement après contrôle de leurs appels.
+12. Tests Storage/médias sur appareils et navigateurs réels.
+
+### Limites des validations
+
+Aucun paiement ou remboursement réel, aucun secret lu ou écrit, aucun push de test, aucune donnée utilisateur/commande créée, aucun build Flutter exécuté, aucun pgTAP ou E2E complet, aucune charge ni restauration n'ont été réalisés. Il s'agit d'inspections de code, lectures SQL, contrôles de privilèges et journaux, pas d'un pentest certifié.
+
+Verdict au 7 novembre 2026 : une première cible web Vercel est préparée mais aucune URL n'est déployée. Le produit n'est pas prêt pour commandes et paiements publics avant résolution des blocages P1, tests E2E, configuration des intégrations, documents juridiques et preuves de charge/restauration.
