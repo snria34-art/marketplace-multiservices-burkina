@@ -1166,6 +1166,7 @@ class _VerticalDiscoveryPageState
                 final quantity = int.tryParse(quantityController.text.trim());
                 if (quantity == null ||
                     quantity < 1 ||
+                    quantity > 50 ||
                     quantity > available ||
                     (requiresPrescription && prescription == null)) {
                   return;
@@ -1203,10 +1204,22 @@ class _VerticalDiscoveryPageState
     if (!mounted || draft == null) return;
     try {
       final image = draft['prescription'] as XFile?;
+      final extension = image?.name.toLowerCase() ?? '';
+      if (image != null &&
+          !extension.endsWith('.png') &&
+          !extension.endsWith('.jpg') &&
+          !extension.endsWith('.jpeg')) {
+        _info('Format de photo non pris en charge. Utilisez une image JPEG ou PNG.');
+        return;
+      }
       final bytes = image == null ? null : await image.readAsBytes();
+      if (bytes != null && bytes.length > 10 * 1024 * 1024) {
+        _info('La photo de l’ordonnance dépasse la limite de 10 Mo.');
+        return;
+      }
       final mimeType = image == null
           ? null
-          : image.name.toLowerCase().endsWith('.png')
+          : extension.endsWith('.png')
               ? 'image/png'
               : 'image/jpeg';
 
