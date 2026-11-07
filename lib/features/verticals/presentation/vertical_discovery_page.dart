@@ -2248,13 +2248,9 @@ class _VerticalDiscoveryPageState
       if (price != null) price.toString() + ' XOF',
     ];
 
-    final rawSeller = item['sellers'];
-    final seller = rawSeller is Map
-        ? Map<String, dynamic>.from(rawSeller)
-        : const <String, dynamic>{};
     if (widget.module == VerticalModule.agriculture &&
-        seller['business_name'] != null) {
-      base.insert(0, seller['business_name'].toString());
+        item['seller_name'] != null) {
+      base.insert(0, item['seller_name'].toString());
     }
 
     return base.isNotEmpty
