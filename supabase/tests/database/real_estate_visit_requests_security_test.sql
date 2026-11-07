@@ -1,5 +1,5 @@
 BEGIN;
-SELECT plan(12);
+SELECT plan(13);
 SELECT ok(to_regclass('public.real_estate_visit_requests') IS NOT NULL,'the real estate visit request table exists');
 SELECT ok((SELECT relrowsecurity FROM pg_class WHERE oid='public.real_estate_visit_requests'::regclass),'RLS is enabled on real estate visit requests');
 SELECT ok(
@@ -78,5 +78,11 @@ SELECT ok(
  (SELECT count(*)=3 FROM pg_constraint WHERE conrelid='public.real_estate_visit_requests'::regclass AND contype='c'),
  'status, message length, and preferred time constraints exist'
 );
+SELECT ok(
+ pg_get_functiondef('public.request_real_estate_visit(uuid,timestamp with time zone,text)'::regprocedure) ILIKE '%FOR SHARE OF l, sp%'
+ AND pg_get_functiondef('public.respond_real_estate_visit(uuid,text)'::regprocedure) ILIKE '%FOR UPDATE OF r, l, sp%',
+ 'creation and provider decisions lock listing and provider state against concurrent changes'
+);
+
 SELECT * FROM finish();
 ROLLBACK;
