@@ -3035,9 +3035,6 @@ class _VerticalDiscoveryPageState
               onPressed: _trackParcel,
               icon: const Icon(Icons.qr_code_scanner_outlined),
             ),
-          if (widget.module == VerticalModule.agriculture &&
-              client?.auth.currentUser != null)
-            IconButton(
           if (widget.module == VerticalModule.health &&
               client?.auth.currentUser != null)
             IconButton(
@@ -3059,6 +3056,9 @@ class _VerticalDiscoveryPageState
               onPressed: _showMyHealthProducts,
               icon: const Icon(Icons.local_pharmacy_outlined),
             ),
+          if (widget.module == VerticalModule.agriculture &&
+              client?.auth.currentUser != null)
+            IconButton(
               tooltip: 'Mes commandes agricoles',
               onPressed: _showMyAgricultureOrderRequests,
               icon: const Icon(Icons.shopping_bag_outlined),
