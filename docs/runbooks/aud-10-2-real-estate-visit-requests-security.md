@@ -23,6 +23,7 @@ Champs : identifiant, annonce, demandeur, date/heure souhaitée facultative, mes
 Statuts autorisés : \`REQUESTED\`, \`ACCEPTED\`, \`DECLINED\`, \`CANCELLED\`.
 
 Mesures de protection :
+- Les contrôles d'état verrouillent l'annonce et le prestataire : `FOR SHARE` à la création, `FOR UPDATE` à l'acceptation, afin de prévenir les courses avec une désactivation ou un changement de vérification.
 - RLS activée ; politique RESTRICTIVE de compte actif pour \`authenticated\`.
 - Aucun privilège direct SELECT/INSERT/UPDATE/DELETE pour \`anon\` ou \`authenticated\`.
 - \`service_role\` conserve les privilèges de service.
@@ -35,6 +36,9 @@ Mesures de protection :
 - Les fonctions ont un \`search_path\` vide, appartiennent à \`postgres\`, et leur EXECUTE est accordé uniquement à \`authenticated\`. EXECUTE est révoqué à \`PUBLIC\` et \`anon\`.
 
 ## 3. Contrat des RPC
+
+Migration de durcissement complémentaire : `20261107000545_lock_real_estate_listing_state_during_request_transitions` — elle remplace les fonctions de création et de réponse pour verrouiller les lignes annonce/prestataire pendant les contrôles de disponibilité.
+
 
 - \`request_real_estate_visit(uuid,timestamptz,text)\` : crée une demande depuis un compte actif ; vérifie annonce, prestataire, date et message.
 - \`cancel_real_estate_visit(uuid)\` : le demandeur peut annuler uniquement sa propre demande encore \`REQUESTED\`.
@@ -66,7 +70,7 @@ Vérifié sur la base hébergée :
 - cinq RPC présentes, propriétaire \`postgres\`, SECURITY DEFINER, \`search_path\` vide ;
 - EXECUTE authentifié vrai ; EXECUTE anon/PUBLIC faux ;
 - les cinq corps PL/pgSQL ont franchi le garde d'authentification en appels sans session ; les requêtes SQL internes ont aussi été exécutées en transaction avec identifiants aléatoires et rollback, sans mutation persistante ;
-- le conseiller sécurité signale les cinq RPC dans la catégorie générique « Signed-In Users Can Execute SECURITY DEFINER Function » ; c'est intentionnel puisque ce sont les points d'entrée authentifiés, avec vérification de compte et de propriété. Aucun EXECUTE anon/PUBLIC n'est ouvert.
+- les contrôles de disponibilité utilisent des verrous transactionnels sur l'annonce et le prestataire ; le conseiller sécurité signale les cinq RPC dans la catégorie générique « Signed-In Users Can Execute SECURITY DEFINER Function » ; c'est intentionnel puisque ce sont les points d'entrée authentifiés, avec vérification de compte et de propriété. Aucun EXECUTE anon/PUBLIC n'est ouvert.
 
 Le fichier \`supabase/tests/database/real_estate_visit_requests_security_test.sql\` prévoit 12 assertions pgTAP, mais pgTAP n'est pas installé sur la base hébergée et le fichier n'a donc pas été exécuté.
 
