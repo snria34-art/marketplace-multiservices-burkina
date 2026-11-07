@@ -1,5 +1,5 @@
 BEGIN;
-SELECT plan(29);
+SELECT plan(30);
 
 SELECT ok(
   EXISTS (
@@ -328,6 +328,23 @@ SELECT ok(
   AND pg_get_functiondef('private.get_public_health_products_internal()'::regprocedure)
     ILIKE '%is_verified_active_health_provider%',
   'public health product catalog contains only products from verified active pharmacies'
+);
+
+
+SELECT ok(
+  pg_get_functiondef('private.can_read_health_prescription(text)'::regprocedure)
+    ILIKE '%PENDING_REVIEW%'
+  AND pg_get_functiondef('private.can_read_health_prescription(text)'::regprocedure)
+    ILIKE '%APPROVED_FOR_DISPENSING%'
+  AND pg_get_functiondef('private.can_read_health_prescription(text)'::regprocedure)
+    ILIKE '%DISPENSED%'
+  AND pg_get_functiondef('private.can_read_health_prescription(text)'::regprocedure)
+    NOT ILIKE '%CANCELLED%'
+  AND pg_get_functiondef('private.can_read_health_prescription(text)'::regprocedure)
+    NOT ILIKE '%REJECTED%'
+  AND pg_get_functiondef('private.can_read_health_prescription(text)'::regprocedure)
+    NOT ILIKE '%EXPIRED%',
+  'pharmacy prescription access is revoked after cancellation, rejection or expiry'
 );
 
 SELECT * FROM finish();
