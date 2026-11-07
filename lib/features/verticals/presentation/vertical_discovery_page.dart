@@ -707,11 +707,11 @@ class _VerticalDiscoveryPageState
                     },
                   ),
                   const SizedBox(height: 8),
-                  TextField(controller: name, maxLength: 160, decoration: const InputDecoration(labelText: 'Nom du produit ou matériel')),
+                  TextField(controller: name, maxLength: 160, onChanged: (_) => setDialogState(() {}), decoration: const InputDecoration(labelText: 'Nom du produit ou matériel')),
                   TextField(controller: description, maxLines: 3, maxLength: 2000, decoration: const InputDecoration(labelText: 'Description (facultatif)')),
-                  TextField(controller: price, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'Prix unitaire en XOF')),
-                  TextField(controller: unit, maxLength: 32, decoration: const InputDecoration(labelText: 'Unité (kg, sac, tête, pièce...)')),
-                  TextField(controller: quantity, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'Quantité totale en stock')),
+                  TextField(controller: price, keyboardType: const TextInputType.numberWithOptions(decimal: true), onChanged: (_) => setDialogState(() {}), decoration: const InputDecoration(labelText: 'Prix unitaire en XOF')),
+                  TextField(controller: unit, maxLength: 32, onChanged: (_) => setDialogState(() {}), decoration: const InputDecoration(labelText: 'Unité (kg, sac, tête, pièce...)')),
+                  TextField(controller: quantity, keyboardType: const TextInputType.numberWithOptions(decimal: true), onChanged: (_) => setDialogState(() {}), decoration: const InputDecoration(labelText: 'Quantité totale en stock')),
                   if (editing)
                     SwitchListTile(
                       contentPadding: EdgeInsets.zero,
