@@ -1026,13 +1026,11 @@ class _VerticalDiscoveryPageState
   Future<void> _requestAgricultureOrder(Map<String, dynamic> item) async {
     final repo = ref.read(verticalRepositoryProvider);
     if (repo == null || !await _ensureAuth() || !mounted) return;
-    final quantity = item['quantity'];
-    final reserved = item['reserved_quantity'];
-    if (quantity is! num) {
+    final available = item['available_quantity'];
+    if (available is! num) {
       _info('Ce produit n’a pas de stock quantifié. Contactez le vendeur.');
       return;
     }
-    final available = quantity - (reserved is num ? reserved : 0);
     if (available <= 0) {
       _info('Ce produit est momentanément indisponible.');
       return;
@@ -2235,14 +2233,9 @@ class _VerticalDiscoveryPageState
       if (item['service_area'] != null) item['service_area'].toString(),
       if (item['vehicle_type'] != null) item['vehicle_type'].toString(),
       if (widget.module == VerticalModule.agriculture)
-        if (item['unit'] != null && item['quantity'] is num)
-          'Stock : ' +
-              (((item['quantity'] as num) -
-                          (item['reserved_quantity'] is num
-                              ? item['reserved_quantity'] as num
-                              : 0))
-                      .clamp(0, 999999999)
-                      .toString()) +
+        if (item['unit'] != null && item['available_quantity'] is num)
+          'Stock disponible : ' +
+              (item['available_quantity'] as num).toString() +
               ' ' +
               item['unit'].toString(),
       if (price != null) price.toString() + ' XOF',
