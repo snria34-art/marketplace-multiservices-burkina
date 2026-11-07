@@ -1565,6 +1565,249 @@ class _VerticalDiscoveryPageState
     }
   }
 
+  Future<Map<String, dynamic>?> _healthProductDialog({
+    Map<String, dynamic>? initial,
+  }) async {
+    final editing = initial != null;
+    final name = TextEditingController(
+      text: initial?['name']?.toString() ?? '',
+    );
+    final description = TextEditingController(
+      text: initial?['description']?.toString() ?? '',
+    );
+    final price = TextEditingController(
+      text: initial?['price']?.toString() ?? '',
+    );
+    final stock = TextEditingController(
+      text: initial?['stock_quantity']?.toString() ?? '0',
+    );
+    var requiresPrescription = initial?['requires_prescription'] == true;
+    var active = initial?['active'] == true;
+
+    final result = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) => AlertDialog(
+          title: Text(
+            editing ? 'Modifier le produit de santé' : 'Ajouter un produit de santé',
+          ),
+          content: SizedBox(
+            width: 520,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: name,
+                    maxLength: 160,
+                    onChanged: (_) => setDialogState(() {}),
+                    decoration: const InputDecoration(
+                      labelText: 'Nom du médicament / produit',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: description,
+                    maxLines: 3,
+                    maxLength: 2000,
+                    decoration: const InputDecoration(
+                      labelText: 'Description (facultatif)',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: price,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    onChanged: (_) => setDialogState(() {}),
+                    decoration: const InputDecoration(
+                      labelText: 'Prix en XOF',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: stock,
+                    keyboardType: TextInputType.number,
+                    onChanged: (_) => setDialogState(() {}),
+                    decoration: const InputDecoration(
+                      labelText: 'Stock total',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Ordonnance obligatoire'),
+                    value: requiresPrescription,
+                    onChanged: (value) {
+                      setDialogState(() => requiresPrescription = value);
+                    },
+                  ),
+                  if (editing)
+                    SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('Produit visible'),
+                      value: active,
+                      onChanged: (value) {
+                        setDialogState(() => active = value);
+                      },
+                    ),
+                  const Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      'Le stock ne peut pas être abaissé sous les quantités déjà réservées.',
+                      style: TextStyle(fontSize: 12),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Annuler'),
+            ),
+            FilledButton(
+              onPressed: name.text.trim().isEmpty ||
+                      num.tryParse(price.text.trim()) == null ||
+                      int.tryParse(stock.text.trim()) == null
+                  ? null
+                  : () => Navigator.pop(dialogContext, {
+                        'name': name.text.trim(),
+                        'description': description.text.trim(),
+                        'price': num.parse(price.text.trim()),
+                        'stock_quantity': int.parse(stock.text.trim()),
+                        'requires_prescription': requiresPrescription,
+                        'active': active,
+                      }),
+              child: Text(editing ? 'Enregistrer' : 'Publier'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    name.dispose();
+    description.dispose();
+    price.dispose();
+    stock.dispose();
+    return result;
+  }
+
+  Future<void> _createHealthProduct() async {
+    final repo = ref.read(verticalRepositoryProvider);
+    if (repo == null || !await _ensureAuth() || !mounted) return;
+    final draft = await _healthProductDialog();
+    if (!mounted || draft == null) return;
+    try {
+      final id = await repo.createHealthProduct(
+        name: draft['name'].toString(),
+        description: draft['description'].toString(),
+        price: draft['price'] as num,
+        requiresPrescription: draft['requires_prescription'] == true,
+        stockQuantity: draft['stock_quantity'] as int,
+      );
+      _success('Produit de santé ajouté : ' + id);
+      await _showMyHealthProducts();
+    } catch (error) {
+      _info(
+        'Publication impossible. La gestion est réservée aux pharmacies vérifiées et actives : ' +
+            error.toString(),
+      );
+    }
+  }
+
+  Future<void> _showMyHealthProducts() async {
+    final repo = ref.read(verticalRepositoryProvider);
+    if (repo == null || !await _ensureAuth() || !mounted) return;
+    try {
+      final products = await repo.myHealthProducts();
+      if (!mounted) return;
+      await showDialog<void>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Mon catalogue pharmacie'),
+          content: SizedBox(
+            width: 560,
+            child: products.isEmpty
+                ? const Text(
+                    'Aucun produit. Cette gestion est réservée aux pharmacies vérifiées et actives.',
+                  )
+                : ListView.separated(
+                    shrinkWrap: true,
+                    itemCount: products.length,
+                    separatorBuilder: (_, __) => const Divider(),
+                    itemBuilder: (_, index) {
+                      final product = products[index];
+                      return ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(product['name']?.toString() ?? 'Produit'),
+                        subtitle: Text(
+                          (product['price']?.toString() ?? '-') + ' XOF' +
+                          '\nStock libre : ' +
+                              (product['available_quantity']?.toString() ?? '0') +
+                          '\nRéservé : ' +
+                              (product['reserved_quantity']?.toString() ?? '0') +
+                          '\nPrescription : ' +
+                              (product['requires_prescription'] == true ? 'Oui' : 'Non') +
+                          '\nStatut : ' +
+                              (product['active'] == true ? 'Visible' : 'Masqué'),
+                        ),
+                        trailing: IconButton(
+                          tooltip: 'Modifier le produit',
+                          icon: const Icon(Icons.edit_outlined),
+                          onPressed: () async {
+                            final draft = await _healthProductDialog(
+                              initial: product,
+                            );
+                            if (!mounted || draft == null) return;
+                            try {
+                              await repo.updateHealthProduct(
+                                productId: product['product_id'].toString(),
+                                name: draft['name'].toString(),
+                                description: draft['description'].toString(),
+                                price: draft['price'] as num,
+                                requiresPrescription:
+                                    draft['requires_prescription'] == true,
+                                stockQuantity: draft['stock_quantity'] as int,
+                                active: draft['active'] == true,
+                              );
+                              if (!mounted) return;
+                              Navigator.pop(dialogContext);
+                              _success('Produit de santé mis à jour.');
+                              await _showMyHealthProducts();
+                            } catch (error) {
+                              _info('Modification impossible : ' + error.toString());
+                            }
+                          },
+                        ),
+                      );
+                    },
+                  ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Fermer'),
+            ),
+            FilledButton.icon(
+              onPressed: () {
+                Navigator.pop(dialogContext);
+                _createHealthProduct();
+              },
+              icon: const Icon(Icons.add),
+              label: const Text('Ajouter'),
+            ),
+          ],
+        ),
+      );
+    } catch (error) {
+      _info('Chargement du catalogue pharmacie impossible : ' + error.toString());
+    }
+  }
+
   Future<void> _showMyProfessionalRequests() async {
     final repo = ref.read(verticalRepositoryProvider);
     if (repo == null || !await _ensureAuth() || !mounted) return;
