@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 enum VerticalModule {
@@ -147,6 +149,10 @@ class VerticalRepository {
 
   Future<List<Map<String, dynamic>>> list(VerticalModule module) async {
     final config = configs[module]!;
+    if (module == VerticalModule.health) {
+      final rows = await client.rpc('get_public_health_products');
+      return _maps(rows);
+    }
     if (module == VerticalModule.agriculture) {
       final rows = await client.rpc('get_public_agriculture_listings');
       return _maps(rows);
@@ -524,6 +530,162 @@ class VerticalRepository {
       'fulfill_agriculture_order_request',
       params: {'p_order_id': orderId},
     );
+  }
+
+  Future<String> createHealthProduct({
+    required String name,
+    String? description,
+    required num price,
+    required bool requiresPrescription,
+    required int stockQuantity,
+  }) async =>
+      (await client.rpc(
+        'create_health_product',
+        params: {
+          'p_name': name,
+          'p_description': description,
+          'p_price': price,
+          'p_requires_prescription': requiresPrescription,
+          'p_stock_quantity': stockQuantity,
+        },
+      ))
+          .toString();
+
+  Future<void> updateHealthProduct({
+    required String productId,
+    required String name,
+    String? description,
+    required num price,
+    required bool requiresPrescription,
+    required int stockQuantity,
+    required bool active,
+  }) async {
+    await client.rpc(
+      'update_health_product',
+      params: {
+        'p_product_id': productId,
+        'p_name': name,
+        'p_description': description,
+        'p_price': price,
+        'p_requires_prescription': requiresPrescription,
+        'p_stock_quantity': stockQuantity,
+        'p_active': active,
+      },
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> myHealthProducts() async {
+    final rows = await client.rpc('get_my_health_products');
+    return _maps(rows);
+  }
+
+  Future<String> createHealthOrderRequest({
+    required String productId,
+    required int quantity,
+    Uint8List? prescriptionBytes,
+    String? prescriptionMimeType,
+  }) async {
+    final user = client.auth.currentUser;
+    if (user == null) {
+      throw StateError('authentication_required');
+    }
+
+    String? prescriptionPath;
+    if (prescriptionBytes != null) {
+      final mimeType = prescriptionMimeType;
+      if (mimeType != 'image/jpeg' && mimeType != 'image/png') {
+        throw ArgumentError.value(
+          prescriptionMimeType,
+          'prescriptionMimeType',
+          'Only JPEG and PNG images are accepted.',
+        );
+      }
+      final extension = mimeType == 'image/png' ? 'png' : 'jpg';
+      prescriptionPath = user.id +
+          '/' +
+          DateTime.now().microsecondsSinceEpoch.toString() +
+          '.' +
+          extension;
+
+      await client.storage.from('health-prescriptions').uploadBinary(
+            prescriptionPath,
+            prescriptionBytes,
+            fileOptions: FileOptions(
+              contentType: mimeType,
+              upsert: false,
+            ),
+          );
+    }
+
+    try {
+      return (await client.rpc(
+        'create_health_order_request',
+        params: {
+          'p_product_id': productId,
+          'p_quantity': quantity,
+          'p_prescription_path': prescriptionPath,
+        },
+      ))
+          .toString();
+    } catch (_) {
+      if (prescriptionPath != null) {
+        try {
+          await client.storage
+              .from('health-prescriptions')
+              .remove([prescriptionPath]);
+        } catch (_) {
+          // Keep the original order error; orphan cleanup can be retried.
+        }
+      }
+      rethrow;
+    }
+  }
+
+  Future<void> cancelHealthOrderRequest(String requestId) async {
+    await client.rpc(
+      'cancel_health_order_request',
+      params: {'p_request_id': requestId},
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> myHealthOrderRequests() async {
+    final rows = await client.rpc('get_my_health_order_requests');
+    return _maps(rows);
+  }
+
+  Future<List<Map<String, dynamic>>> pharmacyHealthOrderRequests() async {
+    final rows = await client.rpc('get_pharmacy_health_order_requests');
+    return _maps(rows);
+  }
+
+  Future<void> respondHealthOrderRequest({
+    required String requestId,
+    required String decision,
+    String? reviewNote,
+  }) async {
+    await client.rpc(
+      'respond_health_order_request',
+      params: {
+        'p_request_id': requestId,
+        'p_decision': decision,
+        'p_review_note': reviewNote?.trim().isEmpty == true
+            ? null
+            : reviewNote?.trim(),
+      },
+    );
+  }
+
+  Future<void> fulfillHealthOrderRequest(String requestId) async {
+    await client.rpc(
+      'fulfill_health_order_request',
+      params: {'p_request_id': requestId},
+    );
+  }
+
+  Future<String> createHealthPrescriptionSignedUrl(String path) async {
+    return client.storage
+        .from('health-prescriptions')
+        .createSignedUrl(path, 300);
   }
 
   Future<String> applyToJob(String jobId) async =>
