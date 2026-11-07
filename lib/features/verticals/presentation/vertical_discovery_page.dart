@@ -150,6 +150,16 @@ class _VerticalDiscoveryPageState
         case VerticalModule.parcels:
           await _createParcel(repo);
           break;
+        case VerticalModule.realEstate:
+          final draft = await _realEstateVisitDialog();
+          if (!mounted || draft == null) return;
+          final id = await repo.requestRealEstateVisit(
+            listingId: item['id'].toString(),
+            preferredVisitAt: draft['preferred_at'] as DateTime?,
+            message: draft['message'] as String?,
+          );
+          _success('Demande de visite envoyée au propriétaire : $id');
+          break;
         case VerticalModule.creative:
           final id = await repo.requestCreativeBooking(
             serviceId: item['id'].toString(),
@@ -161,6 +171,332 @@ class _VerticalDiscoveryPageState
       }
     } catch (error) {
       _info('Opération impossible : $error');
+    }
+  }
+
+  Future<Map<String, dynamic>?> _realEstateVisitDialog() async {
+    final messageController = TextEditingController();
+    DateTime? preferredVisitAt;
+
+    final result = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) => AlertDialog(
+          title: const Text('Demander une visite / des informations'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Le propriétaire recevra votre demande et devra la confirmer. '
+                  'La date souhaitée reste une préférence, pas un rendez-vous garanti.',
+                ),
+                const SizedBox(height: 12),
+                OutlinedButton.icon(
+                  onPressed: () async {
+                    final now = DateTime.now();
+                    final date = await showDatePicker(
+                      context: dialogContext,
+                      firstDate: DateTime(now.year, now.month, now.day),
+                      lastDate: now.add(const Duration(days: 180)),
+                      initialDate: now.add(const Duration(days: 1)),
+                    );
+                    if (date == null || !mounted) return;
+                    final time = await showTimePicker(
+                      context: dialogContext,
+                      initialTime: const TimeOfDay(hour: 9, minute: 0),
+                    );
+                    if (time == null || !mounted) return;
+                    final selected = DateTime(
+                      date.year,
+                      date.month,
+                      date.day,
+                      time.hour,
+                      time.minute,
+                    );
+                    if (!selected.isAfter(DateTime.now())) {
+                      _info('Choisissez une date et une heure futures.');
+                      return;
+                    }
+                    setDialogState(() => preferredVisitAt = selected);
+                  },
+                  icon: const Icon(Icons.calendar_month_outlined),
+                  label: Text(
+                    preferredVisitAt == null
+                        ? 'Choisir une date souhaitée (facultatif)'
+                        : 'Date : ' +
+                            preferredVisitAt!.toLocal().toString().substring(0, 16),
+                  ),
+                ),
+                if (preferredVisitAt != null)
+                  TextButton(
+                    onPressed: () => setDialogState(() => preferredVisitAt = null),
+                    child: const Text('Retirer la date'),
+                  ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: messageController,
+                  maxLines: 4,
+                  maxLength: 1000,
+                  decoration: const InputDecoration(
+                    labelText: 'Votre message (facultatif)',
+                    hintText: 'Précisez votre demande ou vos questions...',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Annuler'),
+            ),
+            FilledButton(
+              onPressed: () {
+                final message = messageController.text.trim();
+                Navigator.pop(dialogContext, {
+                  'preferred_at': preferredVisitAt,
+                  'message': message.isEmpty ? null : message,
+                });
+              },
+              child: const Text('Envoyer la demande'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    messageController.dispose();
+    return result;
+  }
+
+  Future<void> _showMyRealEstateVisitRequests() async {
+    final repo = ref.read(verticalRepositoryProvider);
+    if (repo == null || !await _ensureAuth() || !mounted) return;
+
+    try {
+      final requests = await repo.myRealEstateVisitRequests();
+      if (!mounted) return;
+      if (requests.isEmpty) {
+        _info('Vous n’avez aucune demande immobilière pour le moment.');
+        return;
+      }
+
+      await showDialog<void>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Mes demandes immobilières'),
+          content: SizedBox(
+            width: 520,
+            child: ListView.separated(
+              shrinkWrap: true,
+              itemCount: requests.length,
+              separatorBuilder: (_, __) => const Divider(),
+              itemBuilder: (_, index) {
+                final request = requests[index];
+                final status = request['status']?.toString() ?? '-';
+                final preferred = request['preferred_visit_at']?.toString();
+                final message = request['message']?.toString();
+
+                return ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(
+                    request['listing_title']?.toString() ?? 'Annonce immobilière',
+                  ),
+                  subtitle: Text(
+                    'Statut : ' + _realEstateStatus(status) +
+                    (request['city'] == null ? '' : '\\nVille : ' + request['city'].toString()) +
+                    (preferred == null ? '' : '\\nDate souhaitée : ' + preferred) +
+                    (message == null || message.isEmpty ? '' : '\\nMessage : ' + message),
+                  ),
+                  isThreeLine: true,
+                  trailing: status == 'REQUESTED'
+                      ? IconButton(
+                          tooltip: 'Annuler la demande',
+                          icon: const Icon(Icons.cancel_outlined),
+                          onPressed: () async {
+                            try {
+                              await repo.cancelRealEstateVisit(
+                                request['request_id'].toString(),
+                              );
+                              if (!mounted) return;
+                              Navigator.pop(dialogContext);
+                              _success('Demande immobilière annulée.');
+                              await _showMyRealEstateVisitRequests();
+                            } catch (error) {
+                              _info('Annulation impossible : ' + error.toString());
+                            }
+                          },
+                        )
+                      : null,
+                );
+              },
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Fermer'),
+            ),
+          ],
+        ),
+      );
+    } catch (error) {
+      _info('Chargement des demandes immobilières impossible : ' + error.toString());
+    }
+  }
+
+  Future<void> _showProviderRealEstateVisitRequests() async {
+    final repo = ref.read(verticalRepositoryProvider);
+    if (repo == null || !await _ensureAuth() || !mounted) return;
+
+    try {
+      final requests = await repo.providerRealEstateVisitRequests();
+      if (!mounted) return;
+      if (requests.isEmpty) {
+        _info('Aucune demande de visite reçue pour vos annonces.');
+        return;
+      }
+
+      await showDialog<void>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Demandes reçues pour mes annonces'),
+          content: SizedBox(
+            width: 540,
+            child: ListView.separated(
+              shrinkWrap: true,
+              itemCount: requests.length,
+              separatorBuilder: (_, __) => const Divider(),
+              itemBuilder: (_, index) {
+                final request = requests[index];
+                final status = request['status']?.toString() ?? '-';
+                final preferred = request['preferred_visit_at']?.toString();
+                final message = request['message']?.toString();
+
+                return ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(
+                    request['listing_title']?.toString() ?? 'Annonce immobilière',
+                  ),
+                  subtitle: Text(
+                    'Statut : ' + _realEstateStatus(status) +
+                    (request['city'] == null ? '' : '\\nVille : ' + request['city'].toString()) +
+                    (preferred == null ? '' : '\\nDate souhaitée : ' + preferred) +
+                    (message == null || message.isEmpty ? '' : '\\nMessage : ' + message),
+                  ),
+                  isThreeLine: true,
+                  trailing: status == 'REQUESTED'
+                      ? Wrap(
+                          spacing: 2,
+                          children: [
+                            IconButton(
+                              tooltip: 'Refuser',
+                              icon: const Icon(Icons.close),
+                              onPressed: () async {
+                                final confirmed = await _confirmRealEstateDecision(
+                                  title: 'Refuser cette demande ?',
+                                  message: 'Le demandeur verra que sa demande a été refusée.',
+                                  actionLabel: 'Refuser',
+                                );
+                                if (!mounted || !confirmed) return;
+                                try {
+                                  await repo.respondRealEstateVisit(
+                                    requestId: request['request_id'].toString(),
+                                    decision: 'DECLINE',
+                                  );
+                                  if (!mounted) return;
+                                  Navigator.pop(dialogContext);
+                                  _success('Demande immobilière refusée.');
+                                  await _showProviderRealEstateVisitRequests();
+                                } catch (error) {
+                                  _info('Refus impossible : ' + error.toString());
+                                }
+                              },
+                            ),
+                            IconButton(
+                              tooltip: 'Accepter la demande',
+                              icon: const Icon(Icons.check_circle_outline),
+                              onPressed: () async {
+                                final confirmed = await _confirmRealEstateDecision(
+                                  title: 'Accepter cette demande ?',
+                                  message: 'Vous confirmez la demande de visite. L’heure exacte devra encore être coordonnée avec le demandeur.',
+                                  actionLabel: 'Accepter',
+                                );
+                                if (!mounted || !confirmed) return;
+                                try {
+                                  await repo.respondRealEstateVisit(
+                                    requestId: request['request_id'].toString(),
+                                    decision: 'ACCEPT',
+                                  );
+                                  if (!mounted) return;
+                                  Navigator.pop(dialogContext);
+                                  _success('Demande acceptée. Coordonnez l’heure exacte avec le demandeur.');
+                                  await _showProviderRealEstateVisitRequests();
+                                } catch (error) {
+                                  _info('Acceptation impossible : ' + error.toString());
+                                }
+                              },
+                            ),
+                          ],
+                        )
+                      : null,
+                );
+              },
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Fermer'),
+            ),
+          ],
+        ),
+      );
+    } catch (error) {
+      _info('Chargement des demandes reçues impossible : ' + error.toString());
+    }
+  }
+
+  Future<bool> _confirmRealEstateDecision({
+    required String title,
+    required String message,
+    required String actionLabel,
+  }) async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(title),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Retour'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: Text(actionLabel),
+          ),
+        ],
+      ),
+    );
+    return result == true;
+  }
+
+  String _realEstateStatus(String status) {
+    switch (status) {
+      case 'REQUESTED':
+        return 'En attente';
+      case 'ACCEPTED':
+        return 'Acceptée';
+      case 'DECLINED':
+        return 'Refusée';
+      case 'CANCELLED':
+        return 'Annulée';
+      default:
+        return status;
     }
   }
 
@@ -1008,6 +1344,7 @@ class _VerticalDiscoveryPageState
 
   bool _hasAction(VerticalModule module) => const {
         VerticalModule.rentals,
+        VerticalModule.realEstate,
         VerticalModule.accommodations,
         VerticalModule.events,
         VerticalModule.jobs,
@@ -1024,6 +1361,8 @@ class _VerticalDiscoveryPageState
     switch (module) {
       case VerticalModule.rides:
         return 'Demander';
+      case VerticalModule.realEstate:
+        return 'Visiter / contacter';
       case VerticalModule.rentals:
       case VerticalModule.accommodations:
         return 'Réserver';
@@ -1125,6 +1464,20 @@ class _VerticalDiscoveryPageState
               tooltip: 'Suivre un colis',
               onPressed: _trackParcel,
               icon: const Icon(Icons.qr_code_scanner_outlined),
+            ),
+          if (widget.module == VerticalModule.realEstate &&
+              client?.auth.currentUser != null)
+            IconButton(
+              tooltip: 'Mes demandes immobilières',
+              onPressed: _showMyRealEstateVisitRequests,
+              icon: const Icon(Icons.bookmark_outline),
+            ),
+          if (widget.module == VerticalModule.realEstate &&
+              client?.auth.currentUser != null)
+            IconButton(
+              tooltip: 'Demandes reçues (propriétaire)',
+              onPressed: _showProviderRealEstateVisitRequests,
+              icon: const Icon(Icons.inbox_outlined),
             ),
           if (widget.module == VerticalModule.creative &&
               client?.auth.currentUser != null)
