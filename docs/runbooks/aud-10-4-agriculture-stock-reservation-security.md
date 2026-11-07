@@ -8,6 +8,7 @@
 - \`20261107002105_harden_agriculture_order_acceptance_and_fulfillment\`
 - \`20261107002124_minimize_public_agriculture_catalog_seller_identity\`
 - \`20261107002316_minimize_public_agriculture_catalog_stock_and_seller_ids\`
+- 20261107002512_move_agriculture_catalog_definer_to_private
 
 **État :** backend appliqué ; Flutter raccordé ; contrôles SQL de structure/droits et appels sans session réussis ; essais métier multi-comptes et compilation Flutter encore non exécutés.
 
@@ -25,7 +26,7 @@
 - Un helper \`private.is_verified_active_seller(uuid)\` vérifie ces deux conditions.
 - L'accès anonyme direct à \`sellers\` est limité à \`id\`, \`business_name\` et \`verification_status\`. Les colonnes \`user_id\` et \`business_phone\` ne sont pas accessibles à \`anon\`.
 - Les clients authentifiés ne reçoivent pas une policy générale sur les vendeurs, ce qui évite de révéler les champs privés des autres comptes.
-- Le catalogue passe par \`get_public_agriculture_listings()\`, qui retourne uniquement les champs publics : identifiant de l'annonce, nom de l'entreprise, catégorie, nom, description, prix, unité, quantité disponible, visibilité et date. Il ne retourne ni identifiant vendeur, ni nombre réservé, ni téléphone, ni identifiant utilisateur.
+- Le catalogue passe par get_public_agriculture_listings(), une RPC publique SECURITY INVOKER qui délègue à private.get_public_agriculture_listings_internal(), fonction de lecture privilégiée non exposée dans le schéma public. Elle retourne uniquement les champs publics : identifiant de l'annonce, nom de l'entreprise, catégorie, nom, description, prix, unité, quantité disponible, visibilité et date. Elle ne retourne ni identifiant vendeur, ni nombre réservé, ni téléphone, ni identifiant utilisateur. Cette séparation évite d'exposer une RPC publique SECURITY DEFINER à anon.
 - Les listes directes d'annonces restent filtrées par vendeur vérifié.
 
 ## 3. Stock et modèle de commande
