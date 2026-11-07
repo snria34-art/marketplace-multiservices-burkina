@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/location/device_location_service.dart';
 import '../../../core/providers/repository_providers.dart';
@@ -149,6 +151,9 @@ class _VerticalDiscoveryPageState
           break;
         case VerticalModule.parcels:
           await _createParcel(repo);
+          break;
+        case VerticalModule.health:
+          await _requestHealthProduct(item);
           break;
         case VerticalModule.agriculture:
           await _requestAgricultureOrder(item);
@@ -2130,6 +2135,7 @@ class _VerticalDiscoveryPageState
         VerticalModule.realEstate,
         VerticalModule.professionals,
         VerticalModule.agriculture,
+        VerticalModule.health,
         VerticalModule.accommodations,
         VerticalModule.events,
         VerticalModule.jobs,
@@ -2147,6 +2153,7 @@ class _VerticalDiscoveryPageState
       case VerticalModule.rides:
         return 'Demander';
       case VerticalModule.agriculture:
+      case VerticalModule.health:
         return 'Commander';
       case VerticalModule.professionals:
         return 'Demander un devis';
@@ -2238,12 +2245,19 @@ class _VerticalDiscoveryPageState
               (item['available_quantity'] as num).toString() +
               ' ' +
               item['unit'].toString(),
+      if (widget.module == VerticalModule.health && item['available_quantity'] is num)
+        'Stock disponible : ' + item['available_quantity'].toString(),
+      if (widget.module == VerticalModule.health && item['requires_prescription'] == true)
+        'Ordonnance requise',
       if (price != null) price.toString() + ' XOF',
     ];
 
     if (widget.module == VerticalModule.agriculture &&
         item['seller_name'] != null) {
       base.insert(0, item['seller_name'].toString());
+    }
+    if (widget.module == VerticalModule.health && item['provider_name'] != null) {
+      base.insert(0, item['provider_name'].toString());
     }
 
     return base.isNotEmpty
@@ -2268,6 +2282,27 @@ class _VerticalDiscoveryPageState
           if (widget.module == VerticalModule.agriculture &&
               client?.auth.currentUser != null)
             IconButton(
+          if (widget.module == VerticalModule.health &&
+              client?.auth.currentUser != null)
+            IconButton(
+              tooltip: 'Mes demandes de santé',
+              onPressed: _showMyHealthOrders,
+              icon: const Icon(Icons.medication_outlined),
+            ),
+          if (widget.module == VerticalModule.health &&
+              client?.auth.currentUser != null)
+            IconButton(
+              tooltip: 'Demandes reçues (pharmacie)',
+              onPressed: _showPharmacyHealthOrders,
+              icon: const Icon(Icons.inbox_outlined),
+            ),
+          if (widget.module == VerticalModule.health &&
+              client?.auth.currentUser != null)
+            IconButton(
+              tooltip: 'Mon catalogue pharmacie',
+              onPressed: _showMyHealthProducts,
+              icon: const Icon(Icons.local_pharmacy_outlined),
+            ),
               tooltip: 'Mes commandes agricoles',
               onPressed: _showMyAgricultureOrderRequests,
               icon: const Icon(Icons.shopping_bag_outlined),
