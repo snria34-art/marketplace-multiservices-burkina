@@ -1065,6 +1065,272 @@ class _VerticalDiscoveryPageState
     }
   }
 
+  Future<Map<String, dynamic>?> _healthOrderDialog(
+    Map<String, dynamic> item,
+    num available,
+  ) async {
+    final quantityController = TextEditingController(text: '1');
+    final requiresPrescription = item['requires_prescription'] == true;
+    XFile? prescription;
+
+    final result = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) => AlertDialog(
+          title: const Text('Commander auprès de la pharmacie'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Stock disponible : ' + available.toString()),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: quantityController,
+                  keyboardType: TextInputType.number,
+                  onChanged: (_) => setDialogState(() {}),
+                  decoration: const InputDecoration(
+                    labelText: 'Quantité (boîtes / unités)',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                if (requiresPrescription) ...[
+                  const SizedBox(height: 14),
+                  const Text(
+                    'Ordonnance obligatoire. Joignez une photo nette et lisible. Elle sera envoyée dans un espace privé accessible uniquement à vous et à la pharmacie concernée.',
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    children: [
+                      OutlinedButton.icon(
+                        onPressed: () async {
+                          final picked = await ImagePicker().pickImage(
+                            source: ImageSource.gallery,
+                            imageQuality: 90,
+                          );
+                          if (picked != null && mounted) {
+                            setDialogState(() => prescription = picked);
+                          }
+                        },
+                        icon: const Icon(Icons.photo_library_outlined),
+                        label: const Text('Galerie'),
+                      ),
+                      OutlinedButton.icon(
+                        onPressed: () async {
+                          final picked = await ImagePicker().pickImage(
+                            source: ImageSource.camera,
+                            imageQuality: 90,
+                          );
+                          if (picked != null && mounted) {
+                            setDialogState(() => prescription = picked);
+                          }
+                        },
+                        icon: const Icon(Icons.camera_alt_outlined),
+                        label: const Text('Photographier'),
+                      ),
+                    ],
+                  ),
+                  if (prescription != null)
+                    ListTile(
+                      dense: true,
+                      contentPadding: EdgeInsets.zero,
+                      leading: const Icon(Icons.description_outlined),
+                      title: Text(
+                        prescription!.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      subtitle: const Text('Photo prête à être envoyée'),
+                      trailing: IconButton(
+                        tooltip: 'Retirer la photo',
+                        icon: const Icon(Icons.close),
+                        onPressed: () => setDialogState(() => prescription = null),
+                      ),
+                    ),
+                  const Text(
+                    'Formats acceptés : JPEG et PNG. Les PDF ne sont pas encore pris en charge dans cette version.',
+                    style: TextStyle(fontSize: 12),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Annuler'),
+            ),
+            FilledButton(
+              onPressed: () {
+                final quantity = int.tryParse(quantityController.text.trim());
+                if (quantity == null ||
+                    quantity < 1 ||
+                    quantity > available ||
+                    (requiresPrescription && prescription == null)) {
+                  return;
+                }
+                Navigator.pop(dialogContext, {
+                  'quantity': quantity,
+                  'prescription': prescription,
+                });
+              },
+              child: const Text('Envoyer la demande'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    quantityController.dispose();
+    return result;
+  }
+
+  Future<void> _requestHealthProduct(Map<String, dynamic> item) async {
+    final repo = ref.read(verticalRepositoryProvider);
+    if (repo == null || !await _ensureAuth() || !mounted) return;
+    if (item['provider_type']?.toString() != 'PHARMACY') {
+      _info('Seules les pharmacies vérifiées peuvent traiter une commande de produit dans ce parcours.');
+      return;
+    }
+    final available = item['available_quantity'];
+    if (available is! num || available <= 0) {
+      _info('Ce produit est momentanément indisponible.');
+      return;
+    }
+
+    final draft = await _healthOrderDialog(item, available);
+    if (!mounted || draft == null) return;
+    try {
+      final image = draft['prescription'] as XFile?;
+      final bytes = image == null ? null : await image.readAsBytes();
+      final mimeType = image == null
+          ? null
+          : image.name.toLowerCase().endsWith('.png')
+              ? 'image/png'
+              : 'image/jpeg';
+
+      final id = await repo.createHealthOrderRequest(
+        productId: item['id'].toString(),
+        quantity: draft['quantity'] as int,
+        prescriptionBytes: bytes,
+        prescriptionMimeType: mimeType,
+      );
+      _success(
+        item['requires_prescription'] == true
+            ? 'Demande envoyée. La pharmacie doit examiner l’ordonnance avant toute délivrance : ' + id
+            : 'Demande envoyée à la pharmacie : ' + id,
+      );
+      await _showMyHealthOrders();
+    } catch (error) {
+      _info('Demande de santé impossible : ' + error.toString());
+    }
+  }
+
+  Future<void> _showMyHealthOrders() async {
+    final repo = ref.read(verticalRepositoryProvider);
+    if (repo == null || !await _ensureAuth() || !mounted) return;
+    try {
+      final orders = await repo.myHealthOrderRequests();
+      if (!mounted) return;
+      if (orders.isEmpty) {
+        _info('Vous n’avez aucune demande de santé pour le moment.');
+        return;
+      }
+      await showDialog<void>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Mes demandes de santé'),
+          content: SizedBox(
+            width: 560,
+            child: ListView.separated(
+              shrinkWrap: true,
+              itemCount: orders.length,
+              separatorBuilder: (_, __) => const Divider(),
+              itemBuilder: (_, index) {
+                final order = orders[index];
+                final status = order['status']?.toString() ?? '-';
+                final canCancel = [
+                  'PENDING_REVIEW',
+                  'REQUESTED',
+                  'APPROVED_FOR_DISPENSING',
+                  'ACCEPTED',
+                ].contains(status);
+                return ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(
+                    order['product_name']?.toString() ?? 'Produit de santé',
+                  ),
+                  subtitle: Text(
+                    (order['provider_name']?.toString() ?? 'Pharmacie') +
+                    '\nQuantité : ' + (order['quantity']?.toString() ?? '-') +
+                    '\nTotal : ' + (order['total_amount']?.toString() ?? '-') + ' XOF' +
+                    '\nStatut : ' + _healthOrderStatus(status) +
+                    (order['review_note'] == null ||
+                            order['review_note'].toString().isEmpty
+                        ? ''
+                        : '\nNote pharmacie : ' + order['review_note'].toString()),
+                  ),
+                  isThreeLine: true,
+                  trailing: canCancel
+                      ? IconButton(
+                          tooltip: 'Annuler et libérer le stock',
+                          icon: const Icon(Icons.cancel_outlined),
+                          onPressed: () async {
+                            try {
+                              await repo.cancelHealthOrderRequest(
+                                order['request_id'].toString(),
+                              );
+                              if (!mounted) return;
+                              Navigator.pop(dialogContext);
+                              _success('Demande annulée ; le stock réservé a été libéré.');
+                              await _showMyHealthOrders();
+                            } catch (error) {
+                              _info('Annulation impossible : ' + error.toString());
+                            }
+                          },
+                        )
+                      : null,
+                );
+              },
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Fermer'),
+            ),
+          ],
+        ),
+      );
+    } catch (error) {
+      _info('Chargement des demandes de santé impossible : ' + error.toString());
+    }
+  }
+
+  String _healthOrderStatus(String status) {
+    switch (status) {
+      case 'PENDING_REVIEW':
+        return 'Ordonnance à examiner';
+      case 'REQUESTED':
+        return 'En attente de la pharmacie';
+      case 'APPROVED_FOR_DISPENSING':
+        return 'Ordonnance validée — remise à organiser';
+      case 'ACCEPTED':
+        return 'Acceptée — remise à organiser';
+      case 'REJECTED':
+        return 'Refusée';
+      case 'CANCELLED':
+        return 'Annulée';
+      case 'EXPIRED':
+        return 'Expirée';
+      case 'DISPENSED':
+        return 'Produit remis';
+      default:
+        return status;
+    }
+  }
+
   Future<void> _showMyProfessionalRequests() async {
     final repo = ref.read(verticalRepositoryProvider);
     if (repo == null || !await _ensureAuth() || !mounted) return;
