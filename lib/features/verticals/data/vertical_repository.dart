@@ -421,6 +421,107 @@ class VerticalRepository {
     );
   }
 
+  Future<String> createAgricultureListing({
+    required String listingType,
+    required String name,
+    String? description,
+    required num price,
+    required String unit,
+    required num quantity,
+  }) async =>
+      (await client.rpc(
+        'create_agriculture_listing',
+        params: {
+          'p_listing_type': listingType,
+          'p_name': name,
+          'p_description': description,
+          'p_price': price,
+          'p_unit': unit,
+          'p_quantity': quantity,
+        },
+      ))
+          .toString();
+
+  Future<void> updateAgricultureListing({
+    required String listingId,
+    required String listingType,
+    required String name,
+    String? description,
+    required num price,
+    required String unit,
+    required num quantity,
+    required bool active,
+  }) async {
+    await client.rpc(
+      'update_agriculture_listing',
+      params: {
+        'p_listing_id': listingId,
+        'p_listing_type': listingType,
+        'p_name': name,
+        'p_description': description,
+        'p_price': price,
+        'p_unit': unit,
+        'p_quantity': quantity,
+        'p_active': active,
+      },
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> myAgricultureListings() async {
+    final rows = await client.rpc('get_my_agriculture_listings');
+    return _maps(rows);
+  }
+
+  Future<String> createAgricultureOrderRequest({
+    required String listingId,
+    required num quantity,
+  }) async =>
+      (await client.rpc(
+        'create_agriculture_order_request',
+        params: {
+          'p_listing_id': listingId,
+          'p_quantity': quantity,
+        },
+      ))
+          .toString();
+
+  Future<void> cancelAgricultureOrderRequest(String orderId) async {
+    await client.rpc(
+      'cancel_agriculture_order_request',
+      params: {'p_order_id': orderId},
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> myAgricultureOrderRequests() async {
+    final rows = await client.rpc('get_my_agriculture_order_requests');
+    return _maps(rows);
+  }
+
+  Future<List<Map<String, dynamic>>> sellerAgricultureOrderRequests() async {
+    final rows = await client.rpc('get_seller_agriculture_order_requests');
+    return _maps(rows);
+  }
+
+  Future<void> respondAgricultureOrderRequest({
+    required String orderId,
+    required String decision,
+  }) async {
+    await client.rpc(
+      'respond_agriculture_order_request',
+      params: {
+        'p_order_id': orderId,
+        'p_decision': decision,
+      },
+    );
+  }
+
+  Future<void> fulfillAgricultureOrderRequest(String orderId) async {
+    await client.rpc(
+      'fulfill_agriculture_order_request',
+      params: {'p_order_id': orderId},
+    );
+  }
+
   Future<String> applyToJob(String jobId) async =>
       (await client.rpc(
         'apply_to_job',
