@@ -17,21 +17,21 @@ Les constats ci-dessous sont classés par gravité et par dépendance. « Confir
 
 | Mesure | Résultat |
 |---|---:|
-| Entrées dans l'arbre GitHub | 743 |
+| Entrées dans l'arbre GitHub | 744 |
 | Fichiers Dart sous `lib/` | 76 |
 | Fichiers de tests Dart | 8 |
 | Tests SQL dans `supabase/tests/database` | 8 |
-| Assertions pgTAP prévues dans ces huit fichiers | 178 (56 + 13 + 13 + 11 + 13 + 18 + 25 + 29) |
+| Assertions pgTAP prévues dans ces huit fichiers | 179 (56 + 13 + 13 + 11 + 13 + 18 + 25 + 30) |
 | Tables Supabase `public` et `private` | 185 |
 | Tables publiques avec RLS | 169/170 |
 | Tables privées avec RLS | 15/15 |
-| Migrations SQL présentes dans GitHub | 346 |
-| Migrations consignées dans Supabase | 345 |
+| Migrations SQL présentes dans GitHub | 347 |
+| Migrations consignées dans Supabase | 346 |
 | Fonctions Edge actives dans Supabase | 22 |
 | Dossiers sources Edge avec `index.ts` dans GitHub | 22 |
 | Buckets Storage | 5 |
 
-Les mesures de quantité ne prouvent pas la qualité fonctionnelle. Les 178 assertions pgTAP prévues couvrent notamment des permissions, les protections RLS et des contrats de commande/livraison ; elles ne constituent pas une suite de tests de bout en bout pour les parcours commerciaux.
+Les mesures de quantité ne prouvent pas la qualité fonctionnelle. Les 179 assertions pgTAP prévues couvrent notamment des permissions, les protections RLS et des contrats de commande/livraison ; elles ne constituent pas une suite de tests de bout en bout pour les parcours commerciaux.
 
 ## 2. Registre des anomalies — ordre de correction proposé
 
@@ -243,15 +243,15 @@ Runbook : `docs/runbooks/aud-07-reconcile-toy-weapon-migration-history.md`.
 
 ##### AUD-10.5 — Santé
 
-- Deux migrations appliquées et synchronisées avec GitHub : \`20261107004702_secure_health_prescription_order_workflow\` et \`20261107005325_restrict_health_product_catalog_to_verified_pharmacies\`.
+- Trois migrations appliquées et synchronisées avec GitHub : \`20261107004702_secure_health_prescription_order_workflow\`, \`20261107005325_restrict_health_product_catalog_to_verified_pharmacies\` et \`20261107005631_limit_pharmacy_prescription_access_to_active_orders\`.
 - Renforcement de la vérification du prestataire de santé : fiche active/vérifiée, référence de licence non vide, prestataire parent actif et vérifié, compte propriétaire ACTIVE.
 - Le catalogue public n'affiche désormais que les produits des pharmacies vérifiées et actives. La lecture passe par une RPC \`SECURITY INVOKER\` et un lecteur privilégié privé ; aucune table de santé n'est directement lisible via anon/authenticated.
 - Ajout de \`health_products.reserved_quantity\` et \`health_order_requests\`. La quantité est réservée à la demande, avec verrouillage transactionnel ; refus, annulation et expiration libèrent la réservation ; la remise enregistrée réduit le stock réel et clôture la demande.
-- Pour les produits avec ordonnance : photo JPEG/PNG obligatoire, bucket privé \`health-prescriptions\`, 10 Mo maximum. Seul le client demandeur et la pharmacie assignée peuvent lire le document, au moyen d'un accès Storage autorisé ; la pharmacie ouvre un lien signé valable 300 secondes. Pas d'URL publique ni de lecture directe par anon.
+- Pour les produits avec ordonnance : photo JPEG/PNG obligatoire, bucket privé \`health-prescriptions\`, 10 Mo maximum. Le client demandeur conserve l'accès à son document ; la pharmacie assignée ne le lit que pendant l'examen, après validation de l'ordonnance ou après la remise. Le refus, l'annulation et l'expiration retirent la lecture à la pharmacie. Le lien signé est valable 300 secondes. Pas d'URL publique ni de lecture directe par anon.
 - Statuts distincts : \`PENDING_REVIEW\`, \`APPROVED_FOR_DISPENSING\`, \`REQUESTED\`, \`ACCEPTED\`, \`REJECTED\`, \`CANCELLED\`, \`EXPIRED\`, \`DISPENSED\`. L'approbation de l'ordonnance ne vaut pas remise du produit.
 - Dix RPC publiques en \`SECURITY INVOKER\` délèguent aux fonctions privées ; onze fonctions internes de traitement sensibles sont possédées par postgres, SECURITY DEFINER et utilisent un \`search_path\` vide. Aucun droit direct d'écriture client sur les tables médicales ou commandes.
 - Flutter raccordé : catalogue pharmacie, formulaire client avec photo d'ordonnance, suivi/annulation de demandes, boîte de réception pharmacie, lecture temporaire d'ordonnance, validation/refus, confirmation de remise, gestion du catalogue et du stock.
-- 29 assertions pgTAP sont versionnées mais non exécutées car pgTAP n'est pas installé sur la base hébergée. Les vérifications SQL live de structure, RLS, ACL, bucket, lecture catalogue sous anon/authenticated et refus des opérations sans session ont réussi. Aucun produit, prestataire, compte ou dossier médical fictif n'a été créé.
+- 30 assertions pgTAP sont versionnées mais non exécutées car pgTAP n'est pas installé sur la base hébergée. Les vérifications SQL live de structure, RLS, ACL, bucket, lecture catalogue sous anon/authenticated et refus des opérations sans session ont réussi. Aucun produit, prestataire, compte ou dossier médical fictif n'a été créé.
 - Le nettoyage des demandes expirées est opportuniste, déclenché pendant les opérations de lecture/création ; aucun job cron de nettoyage permanent n'a été ajouté. Les photos d'ordonnance PDF ne sont pas encore prises en charge.
 - Aucun paiement Mobile Money ou livraison n'est déclenché. L'ordonnance est présentée à un humain de la pharmacie ; aucun diagnostic ni validation médicale automatique n'est effectué. La référence de licence est contrôlée dans le dossier et le statut administré, sans appel de vérification externe auprès d'un ordre/autorité.
 
