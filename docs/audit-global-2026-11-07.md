@@ -25,8 +25,8 @@ Les constats ci-dessous sont classés par gravité et par dépendance. « Confir
 | Tables Supabase `public` et `private` | 183 |
 | Tables publiques avec RLS | 167/168 |
 | Tables privées avec RLS | 15/15 |
-| Migrations SQL présentes dans GitHub | 337 |
-| Migrations consignées dans Supabase | 336 |
+| Migrations SQL présentes dans GitHub | 338 |
+| Migrations consignées dans Supabase | 337 |
 | Fonctions Edge actives dans Supabase | 22 |
 | Dossiers sources Edge avec `index.ts` dans GitHub | 22 |
 | Buckets Storage | 5 |
@@ -207,6 +207,7 @@ Runbook : `docs/runbooks/aud-07-reconcile-toy-weapon-migration-history.md`.
 - RLS activée ; aucun privilège direct Data API pour \`anon\` et \`authenticated\` ; les RPC authentifiées sont les seuls points d'entrée client.
 - Cinq RPC : création, annulation client, liste client, liste propriétaire, acceptation/refus propriétaire.
 - Contrôles serveur : compte actif, annonce active et vérifiée, prestataire actif et vérifié, identité du propriétaire depuis la relation \`service_providers.user_id\`, état de transition, date dans les 180 jours et message de 1 000 caractères maximum.
+- Migration complémentaire `20261107000545_lock_real_estate_listing_state_during_request_transitions` : verrouillage `FOR SHARE` des lignes annonce/prestataire à la création et `FOR UPDATE` lors de la décision, pour prévenir les courses avec leur désactivation ou leur changement de vérification.
 - Le résultat propriétaire n'expose pas l'UUID du demandeur. Une personne ne peut pas demander une visite de sa propre annonce.
 - Flutter raccordé : bouton \`Visiter / contacter\`, demande facultative avec préférence de date et message, écran des demandes client, annulation, boîte de réception propriétaire et décision accepter/refuser.
 - 12 contrôles directs de structure/droits/RPC sont prévus dans pgTAP ; ils n'ont pas été exécutés car l'extension pgTAP n'est pas installée. Des vérifications SQL live et des appels contrôlés sans session ont réussi.
