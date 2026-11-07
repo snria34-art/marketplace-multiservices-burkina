@@ -600,6 +600,13 @@ class VerticalRepository {
           'Only JPEG and PNG images are accepted.',
         );
       }
+      if (prescriptionBytes.length > 10 * 1024 * 1024) {
+        throw ArgumentError.value(
+          prescriptionBytes.length,
+          'prescriptionBytes',
+          'Prescription photos must not exceed 10 MB.',
+        );
+      }
       final extension = mimeType == 'image/png' ? 'png' : 'jpg';
       prescriptionPath = user.id +
           '/' +
