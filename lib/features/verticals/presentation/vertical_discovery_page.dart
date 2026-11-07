@@ -150,6 +150,16 @@ class _VerticalDiscoveryPageState
         case VerticalModule.parcels:
           await _createParcel(repo);
           break;
+        case VerticalModule.professionals:
+          final draft = await _professionalRequestDialog();
+          if (!mounted || draft == null) return;
+          final id = await repo.createProfessionalServiceRequest(
+            professionalProfileId: item['id'].toString(),
+            description: draft['description'].toString(),
+            scheduledAt: draft['scheduled_at'] as DateTime?,
+          );
+          _success('Demande de devis envoyée au professionnel : ' + id);
+          break;
         case VerticalModule.realEstate:
           final draft = await _realEstateVisitDialog();
           if (!mounted || draft == null) return;
@@ -497,6 +507,347 @@ class _VerticalDiscoveryPageState
         return 'Annulée';
       default:
         return status;
+    }
+  }
+
+  Future<Map<String, dynamic>?> _professionalRequestDialog() async {
+    final description = TextEditingController();
+    DateTime? scheduledAt;
+    final result = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) => AlertDialog(
+          title: const Text('Demander un devis'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: description,
+                  maxLines: 4,
+                  maxLength: 2000,
+                  onChanged: (_) => setDialogState(() {}),
+                  decoration: const InputDecoration(
+                    labelText: 'Décrivez votre besoin',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                OutlinedButton.icon(
+                  icon: const Icon(Icons.calendar_month_outlined),
+                  label: Text(scheduledAt == null
+                      ? 'Date souhaitée (facultatif)'
+                      : 'Date : ' + scheduledAt!.toLocal().toString().substring(0, 16)),
+                  onPressed: () async {
+                    final now = DateTime.now();
+                    final date = await showDatePicker(
+                      context: dialogContext,
+                      firstDate: DateTime(now.year, now.month, now.day),
+                      lastDate: now.add(const Duration(days: 180)),
+                      initialDate: now.add(const Duration(days: 1)),
+                    );
+                    if (date == null || !mounted) return;
+                    final time = await showTimePicker(
+                      context: dialogContext,
+                      initialTime: const TimeOfDay(hour: 9, minute: 0),
+                    );
+                    if (time == null || !mounted) return;
+                    final value = DateTime(date.year, date.month, date.day, time.hour, time.minute);
+                    if (!value.isAfter(DateTime.now())) {
+                      _info('Choisissez une date future.');
+                      return;
+                    }
+                    setDialogState(() => scheduledAt = value);
+                  },
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Annuler')),
+            FilledButton(
+              onPressed: description.text.trim().isEmpty
+                  ? null
+                  : () => Navigator.pop(dialogContext, {
+                        'description': description.text.trim(),
+                        'scheduled_at': scheduledAt,
+                      }),
+              child: const Text('Envoyer'),
+            ),
+          ],
+        ),
+      ),
+    );
+    description.dispose();
+    return result;
+  }
+
+  Future<Map<String, dynamic>?> _professionalQuoteDialog() async {
+    final amount = TextEditingController();
+    final message = TextEditingController();
+    final result = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) => AlertDialog(
+          title: const Text('Proposer un devis'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: amount,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                onChanged: (_) => setDialogState(() {}),
+                decoration: const InputDecoration(labelText: 'Montant en XOF'),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: message,
+                maxLines: 3,
+                maxLength: 1000,
+                decoration: const InputDecoration(labelText: 'Détails (facultatif)'),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Annuler')),
+            FilledButton(
+              onPressed: num.tryParse(amount.text.trim()) == null ||
+                      num.parse(amount.text.trim()) < 0
+                  ? null
+                  : () => Navigator.pop(dialogContext, {
+                        'amount': num.parse(amount.text.trim()),
+                        'message': message.text.trim(),
+                      }),
+              child: const Text('Envoyer le devis'),
+            ),
+          ],
+        ),
+      ),
+    );
+    amount.dispose();
+    message.dispose();
+    return result;
+  }
+
+  Future<void> _showMyProfessionalRequests() async {
+    final repo = ref.read(verticalRepositoryProvider);
+    if (repo == null || !await _ensureAuth() || !mounted) return;
+    try {
+      final rows = await repo.myProfessionalServiceRequests();
+      if (!mounted) return;
+      if (rows.isEmpty) {
+        _info('Vous n’avez aucune demande professionnelle.');
+        return;
+      }
+      await showDialog<void>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Mes demandes professionnelles'),
+          content: SizedBox(
+            width: 560,
+            child: ListView(
+              shrinkWrap: true,
+              children: [
+                for (final request in rows) ...[
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(request['profession']?.toString() ?? 'Professionnel'),
+                    subtitle: Text(
+                      (request['provider_name']?.toString() ?? 'Prestataire') +
+                      '\nStatut : ' + _professionalStatus(request['status']?.toString() ?? '-') +
+                      (request['scheduled_at'] == null ? '' : '\nDate : ' + request['scheduled_at'].toString()) +
+                      '\nBesoin : ' + (request['description']?.toString() ?? '-'),
+                    ),
+                    trailing: ['REQUESTED', 'QUOTED'].contains(request['status'])
+                        ? IconButton(
+                            tooltip: 'Annuler la demande',
+                            icon: const Icon(Icons.cancel_outlined),
+                            onPressed: () async {
+                              try {
+                                await repo.cancelProfessionalServiceRequest(request['request_id'].toString());
+                                if (!mounted) return;
+                                Navigator.pop(dialogContext);
+                                _success('Demande annulée.');
+                                await _showMyProfessionalRequests();
+                              } catch (error) {
+                                _info('Annulation impossible : ' + error.toString());
+                              }
+                            },
+                          )
+                        : null,
+                  ),
+                  if (request['quotes'] is List)
+                    for (final raw in request['quotes'] as List)
+                      if (raw is Map)
+                        Builder(builder: (context) {
+                          final quote = Map<String, dynamic>.from(raw);
+                          final proposed = quote['status']?.toString() == 'PROPOSED';
+                          return Card(
+                            margin: const EdgeInsets.only(left: 8, bottom: 8),
+                            child: ListTile(
+                              title: Text('Devis : ' + (quote['amount']?.toString() ?? '-') +
+                                  ' ' + (quote['currency']?.toString() ?? 'XOF')),
+                              subtitle: Text(
+                                _professionalStatus(quote['status']?.toString() ?? '-') +
+                                (quote['message'] == null ? '' : '\n' + quote['message'].toString()),
+                              ),
+                              trailing: proposed
+                                  ? Wrap(
+                                      children: [
+                                        IconButton(
+                                          tooltip: 'Refuser',
+                                          icon: const Icon(Icons.close),
+                                          onPressed: () async {
+                                            try {
+                                              await repo.respondProfessionalServiceQuote(
+                                                quoteId: quote['id'].toString(),
+                                                decision: 'REJECT',
+                                              );
+                                              if (!mounted) return;
+                                              Navigator.pop(dialogContext);
+                                              _success('Devis refusé.');
+                                              await _showMyProfessionalRequests();
+                                            } catch (error) {
+                                              _info('Refus impossible : ' + error.toString());
+                                            }
+                                          },
+                                        ),
+                                        IconButton(
+                                          tooltip: 'Accepter',
+                                          icon: const Icon(Icons.check_circle_outline),
+                                          onPressed: () async {
+                                            final confirmed = await showDialog<bool>(
+                                              context: context,
+                                              builder: (confirmContext) => AlertDialog(
+                                                title: const Text('Accepter ce devis ?'),
+                                                content: const Text('Le rendez-vous et le paiement restent à organiser avec le professionnel.'),
+                                                actions: [
+                                                  TextButton(onPressed: () => Navigator.pop(confirmContext, false), child: const Text('Retour')),
+                                                  FilledButton(onPressed: () => Navigator.pop(confirmContext, true), child: const Text('Accepter')),
+                                                ],
+                                              ),
+                                            );
+                                            if (!mounted || confirmed != true) return;
+                                            try {
+                                              await repo.respondProfessionalServiceQuote(
+                                                quoteId: quote['id'].toString(),
+                                                decision: 'ACCEPT',
+                                              );
+                                              if (!mounted) return;
+                                              Navigator.pop(dialogContext);
+                                              _success('Devis accepté. Organisez maintenant la prestation avec le professionnel.');
+                                              await _showMyProfessionalRequests();
+                                            } catch (error) {
+                                              _info('Acceptation impossible : ' + error.toString());
+                                            }
+                                          },
+                                        ),
+                                      ],
+                                    )
+                                  : null,
+                            ),
+                          );
+                        }),
+                  const Divider(),
+                ],
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Fermer')),
+          ],
+        ),
+      );
+    } catch (error) {
+      _info('Chargement des demandes impossible : ' + error.toString());
+    }
+  }
+
+  Future<void> _showProviderProfessionalRequests() async {
+    final repo = ref.read(verticalRepositoryProvider);
+    if (repo == null || !await _ensureAuth() || !mounted) return;
+    try {
+      final rows = await repo.providerProfessionalServiceRequests();
+      if (!mounted) return;
+      if (rows.isEmpty) {
+        _info('Aucune demande reçue pour vos prestations.');
+        return;
+      }
+      await showDialog<void>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Demandes professionnelles reçues'),
+          content: SizedBox(
+            width: 560,
+            child: ListView.separated(
+              shrinkWrap: true,
+              itemCount: rows.length,
+              separatorBuilder: (_, __) => const Divider(),
+              itemBuilder: (_, index) {
+                final request = rows[index];
+                final status = request['request_status']?.toString() ?? '-';
+                final quoteStatus = request['quote_status']?.toString();
+                return ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(request['profession']?.toString() ?? 'Prestation'),
+                  subtitle: Text(
+                    'Statut : ' + _professionalStatus(status) +
+                    (request['scheduled_at'] == null ? '' : '\nDate souhaitée : ' + request['scheduled_at'].toString()) +
+                    '\nBesoin : ' + (request['description']?.toString() ?? '-') +
+                    (quoteStatus == null ? '' : '\nVotre devis : ' +
+                      (request['quote_amount']?.toString() ?? '-') + ' ' +
+                      (request['quote_currency']?.toString() ?? 'XOF') +
+                      ' (' + _professionalStatus(quoteStatus) + ')'),
+                  ),
+                  isThreeLine: true,
+                  trailing: status == 'REQUESTED'
+                      ? IconButton(
+                          tooltip: 'Proposer un devis',
+                          icon: const Icon(Icons.request_quote_outlined),
+                          onPressed: () async {
+                            final draft = await _professionalQuoteDialog();
+                            if (!mounted || draft == null) return;
+                            try {
+                              final quoteId = await repo.createProfessionalServiceQuote(
+                                requestId: request['request_id'].toString(),
+                                amount: draft['amount'] as num,
+                                message: draft['message']?.toString(),
+                              );
+                              if (!mounted) return;
+                              Navigator.pop(dialogContext);
+                              _success('Devis envoyé : ' + quoteId);
+                              await _showProviderProfessionalRequests();
+                            } catch (error) {
+                              _info('Envoi du devis impossible : ' + error.toString());
+                            }
+                          },
+                        )
+                      : null,
+                );
+              },
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Fermer')),
+          ],
+        ),
+      );
+    } catch (error) {
+      _info('Chargement des demandes reçues impossible : ' + error.toString());
+    }
+  }
+
+  String _professionalStatus(String status) {
+    switch (status) {
+      case 'REQUESTED': return 'En attente';
+      case 'QUOTED': return 'Devis envoyé';
+      case 'PROPOSED': return 'Proposé';
+      case 'ACCEPTED': return 'Accepté';
+      case 'REJECTED': return 'Refusé';
+      case 'EXPIRED': return 'Expiré';
+      case 'CANCELLED': return 'Annulé';
+      case 'IN_PROGRESS': return 'En cours';
+      case 'COMPLETED': return 'Terminé';
+      default: return status;
     }
   }
 
@@ -1345,6 +1696,7 @@ class _VerticalDiscoveryPageState
   bool _hasAction(VerticalModule module) => const {
         VerticalModule.rentals,
         VerticalModule.realEstate,
+        VerticalModule.professionals,
         VerticalModule.accommodations,
         VerticalModule.events,
         VerticalModule.jobs,
@@ -1361,6 +1713,8 @@ class _VerticalDiscoveryPageState
     switch (module) {
       case VerticalModule.rides:
         return 'Demander';
+      case VerticalModule.professionals:
+        return 'Demander un devis';
       case VerticalModule.realEstate:
         return 'Visiter / contacter';
       case VerticalModule.rentals:
@@ -1464,6 +1818,20 @@ class _VerticalDiscoveryPageState
               tooltip: 'Suivre un colis',
               onPressed: _trackParcel,
               icon: const Icon(Icons.qr_code_scanner_outlined),
+            ),
+          if (widget.module == VerticalModule.professionals &&
+              client?.auth.currentUser != null)
+            IconButton(
+              tooltip: 'Mes demandes professionnelles',
+              onPressed: _showMyProfessionalRequests,
+              icon: const Icon(Icons.request_quote_outlined),
+            ),
+          if (widget.module == VerticalModule.professionals &&
+              client?.auth.currentUser != null)
+            IconButton(
+              tooltip: 'Demandes reçues (professionnel)',
+              onPressed: _showProviderProfessionalRequests,
+              icon: const Icon(Icons.inbox_outlined),
             ),
           if (widget.module == VerticalModule.realEstate &&
               client?.auth.currentUser != null)
