@@ -90,7 +90,7 @@ class VerticalRepository {
       table: 'agriculture_listings',
       title: 'Agriculture',
       icon: 7,
-      select: 'id,listing_type,name,description,price,unit,quantity,active,created_at',
+      select: 'id,seller_id,listing_type,name,description,price,unit,quantity,reserved_quantity,active,created_at,sellers!inner(business_name)',
     ),
     VerticalModule.freight: VerticalConfig(
       table: 'freight_requests',
