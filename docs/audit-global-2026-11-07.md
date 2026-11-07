@@ -243,7 +243,7 @@ Runbook : `docs/runbooks/aud-07-reconcile-toy-weapon-migration-history.md`.
 
 ##### AUD-10.5 — Santé
 
-- Trois migrations appliquées et synchronisées avec GitHub : \`20261107004702_secure_health_prescription_order_workflow\`, \`20261107005325_restrict_health_product_catalog_to_verified_pharmacies\` et \`20261107005631_limit_pharmacy_prescription_access_to_active_orders\`.
+- Trois migrations appliquées et synchronisées avec GitHub : \`20261107004702_secure_health_prescription_order_workflow\`, \`20261107005325_restrict_health_product_catalog_to_verified_pharmacies\` et \`20261107005637_limit_pharmacy_prescription_access_to_active_orders\`.
 - Renforcement de la vérification du prestataire de santé : fiche active/vérifiée, référence de licence non vide, prestataire parent actif et vérifié, compte propriétaire ACTIVE.
 - Le catalogue public n'affiche désormais que les produits des pharmacies vérifiées et actives. La lecture passe par une RPC \`SECURITY INVOKER\` et un lecteur privilégié privé ; aucune table de santé n'est directement lisible via anon/authenticated.
 - Ajout de \`health_products.reserved_quantity\` et \`health_order_requests\`. La quantité est réservée à la demande, avec verrouillage transactionnel ; refus, annulation et expiration libèrent la réservation ; la remise enregistrée réduit le stock réel et clôture la demande.
