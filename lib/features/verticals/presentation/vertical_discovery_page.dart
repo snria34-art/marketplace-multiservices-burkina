@@ -307,9 +307,9 @@ class _VerticalDiscoveryPageState
                   ),
                   subtitle: Text(
                     'Statut : ' + _realEstateStatus(status) +
-                    (request['city'] == null ? '' : '\\nVille : ' + request['city'].toString()) +
-                    (preferred == null ? '' : '\\nDate souhaitée : ' + preferred) +
-                    (message == null || message.isEmpty ? '' : '\\nMessage : ' + message),
+                    (request['city'] == null ? '' : '\nVille : ' + request['city'].toString()) +
+                    (preferred == null ? '' : '\nDate souhaitée : ' + preferred) +
+                    (message == null || message.isEmpty ? '' : '\nMessage : ' + message),
                   ),
                   isThreeLine: true,
                   trailing: status == 'REQUESTED'
@@ -383,9 +383,9 @@ class _VerticalDiscoveryPageState
                   ),
                   subtitle: Text(
                     'Statut : ' + _realEstateStatus(status) +
-                    (request['city'] == null ? '' : '\\nVille : ' + request['city'].toString()) +
-                    (preferred == null ? '' : '\\nDate souhaitée : ' + preferred) +
-                    (message == null || message.isEmpty ? '' : '\\nMessage : ' + message),
+                    (request['city'] == null ? '' : '\nVille : ' + request['city'].toString()) +
+                    (preferred == null ? '' : '\nDate souhaitée : ' + preferred) +
+                    (message == null || message.isEmpty ? '' : '\nMessage : ' + message),
                   ),
                   isThreeLine: true,
                   trailing: status == 'REQUESTED'
