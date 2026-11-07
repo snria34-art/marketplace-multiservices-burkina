@@ -17,21 +17,21 @@ Les constats ci-dessous sont classés par gravité et par dépendance. « Confir
 
 | Mesure | Résultat |
 |---|---:|
-| Entrées dans l'arbre GitHub | 739 |
+| Entrées dans l'arbre GitHub | 743 |
 | Fichiers Dart sous `lib/` | 76 |
 | Fichiers de tests Dart | 8 |
-| Tests SQL dans `supabase/tests/database` | 7 |
-| Assertions pgTAP prévues dans ces sept fichiers | 149 (56 + 13 + 13 + 11 + 13 + 18 + 25) |
-| Tables Supabase `public` et `private` | 184 |
-| Tables publiques avec RLS | 168/169 |
+| Tests SQL dans `supabase/tests/database` | 8 |
+| Assertions pgTAP prévues dans ces huit fichiers | 178 (56 + 13 + 13 + 11 + 13 + 18 + 25 + 29) |
+| Tables Supabase `public` et `private` | 185 |
+| Tables publiques avec RLS | 169/170 |
 | Tables privées avec RLS | 15/15 |
-| Migrations SQL présentes dans GitHub | 344 |
-| Migrations consignées dans Supabase | 343 |
+| Migrations SQL présentes dans GitHub | 346 |
+| Migrations consignées dans Supabase | 345 |
 | Fonctions Edge actives dans Supabase | 22 |
 | Dossiers sources Edge avec `index.ts` dans GitHub | 22 |
 | Buckets Storage | 5 |
 
-Les mesures de quantité ne prouvent pas la qualité fonctionnelle. Les 149 assertions pgTAP prévues couvrent notamment des permissions, les protections RLS et des contrats de commande/livraison ; elles ne constituent pas une suite de tests de bout en bout pour les parcours commerciaux.
+Les mesures de quantité ne prouvent pas la qualité fonctionnelle. Les 178 assertions pgTAP prévues couvrent notamment des permissions, les protections RLS et des contrats de commande/livraison ; elles ne constituent pas une suite de tests de bout en bout pour les parcours commerciaux.
 
 ## 2. Registre des anomalies — ordre de correction proposé
 
@@ -188,7 +188,7 @@ Runbook : `docs/runbooks/aud-07-reconcile-toy-weapon-migration-history.md`.
 ### P2 — Fonctionnalités, autorisations et fiabilité à compléter
 
 #### AUD-10 — Cinq verticales consultables n'avaient pas de parcours d'action complet
-**État : AUD-10.1 Créatifs, AUD-10.2 Immobilier, AUD-10.3 Professionnels et AUD-10.4 Agriculture — backend sécurisé et intégration Flutter ajoutés ; Santé reste à traiter. Les essais de bout en bout restent ouverts.**
+**État : AUD-10.1 Créatifs, AUD-10.2 Immobilier, AUD-10.3 Professionnels, AUD-10.4 Agriculture et AUD-10.5 Santé — backend sécurisé et intégration Flutter ajoutés ; les essais de bout en bout restent ouverts.**
 
 ##### AUD-10.1 — Créatifs
 
@@ -241,14 +241,27 @@ Runbook : `docs/runbooks/aud-07-reconcile-toy-weapon-migration-history.md`.
 - Le test Flutter/analyseur/build n'est pas validé : le job GitHub Actions échoue avant d'attribuer un runner (runner_id=0, aucune étape exécutée).
 - Aucun paiement Mobile Money, livraison, chat ou notification n'est créé par ce flux. FULFILLED signifie que le vendeur déclare la remise effectuée et déclenche la déduction du stock ; cela ne constitue pas une preuve de paiement.
 
+##### AUD-10.5 — Santé
+
+- Deux migrations appliquées et synchronisées avec GitHub : \`20261107004702_secure_health_prescription_order_workflow\` et \`20261107005325_restrict_health_product_catalog_to_verified_pharmacies\`.
+- Renforcement de la vérification du prestataire de santé : fiche active/vérifiée, référence de licence non vide, prestataire parent actif et vérifié, compte propriétaire ACTIVE.
+- Le catalogue public n'affiche désormais que les produits des pharmacies vérifiées et actives. La lecture passe par une RPC \`SECURITY INVOKER\` et un lecteur privilégié privé ; aucune table de santé n'est directement lisible via anon/authenticated.
+- Ajout de \`health_products.reserved_quantity\` et \`health_order_requests\`. La quantité est réservée à la demande, avec verrouillage transactionnel ; refus, annulation et expiration libèrent la réservation ; la remise enregistrée réduit le stock réel et clôture la demande.
+- Pour les produits avec ordonnance : photo JPEG/PNG obligatoire, bucket privé \`health-prescriptions\`, 10 Mo maximum. Seul le client demandeur et la pharmacie assignée peuvent lire le document, au moyen d'un accès Storage autorisé ; la pharmacie ouvre un lien signé valable 300 secondes. Pas d'URL publique ni de lecture directe par anon.
+- Statuts distincts : \`PENDING_REVIEW\`, \`APPROVED_FOR_DISPENSING\`, \`REQUESTED\`, \`ACCEPTED\`, \`REJECTED\`, \`CANCELLED\`, \`EXPIRED\`, \`DISPENSED\`. L'approbation de l'ordonnance ne vaut pas remise du produit.
+- Dix RPC publiques en \`SECURITY INVOKER\` délèguent aux fonctions privées ; onze fonctions internes de traitement sensibles sont possédées par postgres, SECURITY DEFINER et utilisent un \`search_path\` vide. Aucun droit direct d'écriture client sur les tables médicales ou commandes.
+- Flutter raccordé : catalogue pharmacie, formulaire client avec photo d'ordonnance, suivi/annulation de demandes, boîte de réception pharmacie, lecture temporaire d'ordonnance, validation/refus, confirmation de remise, gestion du catalogue et du stock.
+- 29 assertions pgTAP sont versionnées mais non exécutées car pgTAP n'est pas installé sur la base hébergée. Les vérifications SQL live de structure, RLS, ACL, bucket, lecture catalogue sous anon/authenticated et refus des opérations sans session ont réussi. Aucun produit, prestataire, compte ou dossier médical fictif n'a été créé.
+- Le nettoyage des demandes expirées est opportuniste, déclenché pendant les opérations de lecture/création ; aucun job cron de nettoyage permanent n'a été ajouté. Les photos d'ordonnance PDF ne sont pas encore prises en charge.
+- Aucun paiement Mobile Money ou livraison n'est déclenché. L'ordonnance est présentée à un humain de la pharmacie ; aucun diagnostic ni validation médicale automatique n'est effectué. La référence de licence est contrôlée dans le dossier et le statut administré, sans appel de vérification externe auprès d'un ordre/autorité.
+
 ##### AUD-10 — Travaux restants et limites de validation
 
-- Santé n'a toujours pas de workflow complet raccordé.
-- Les flux créatifs, immobiliers, professionnels et agricoles n'ont pas encore été testés avec de vrais comptes distincts, ni par tests Flutter, analyseur, build mobile ou test automatisé hébergé.
+- Les flux créatifs, immobiliers, professionnels, agricoles et santé n'ont pas encore été testés avec de vrais comptes distincts, ni par tests Flutter, analyseur, build mobile ou test automatisé hébergé.
 - Les fichiers pgTAP sont versionnés mais l'extension n'est pas installée sur la base distante ; les assertions n'ont donc pas été exécutées.
 - Les devis, communications, notifications, scénarios de disponibilité et conflits de créneaux, paiements et journaux complets de transition restent à spécifier.
 
-Runbooks : docs/runbooks/aud-10-creative-bookings-security.md, docs/runbooks/aud-10-2-real-estate-visit-requests-security.md, docs/runbooks/aud-10-3-professional-service-quotes-security.md et docs/runbooks/aud-10-4-agriculture-stock-reservation-security.md.
+Runbooks : docs/runbooks/aud-10-creative-bookings-security.md, docs/runbooks/aud-10-2-real-estate-visit-requests-security.md, docs/runbooks/aud-10-3-professional-service-quotes-security.md, docs/runbooks/aud-10-4-agriculture-stock-reservation-security.md et docs/runbooks/aud-10-5-health-prescription-orders-security.md.
 
 #### AUD-11 — Les routes protégées ne contrôlaient pas la session ou le rôle
 **État : gardes Flutter ajoutés sur main ; parcours administrateur/modérateur séparé ; tests unitaires écrits mais non exécutés.**
