@@ -72,7 +72,7 @@ Vérifications SQL live :
 - EXECUTE authentifié vrai ; EXECUTE anon/PUBLIC faux ;
 - les six corps PL/pgSQL franchissent le garde d'authentification lorsqu'ils sont appelés sans session ; aucun profil ou demande réel n'a été créé.
 
-Le fichier \`supabase/tests/database/professional_service_quotes_security_test.sql\` prévoit 17 assertions pgTAP. Il n'a pas été exécuté : l'extension pgTAP n'est pas installée sur la base hébergée.
+Le fichier \`supabase/tests/database/professional_service_quotes_security_test.sql\` prévoit 18 assertions pgTAP. Il n'a pas été exécuté : l'extension pgTAP n'est pas installée sur la base hébergée.
 
 Non vérifié ici :
 - \`dart format\`, \`flutter analyze\`, tests Flutter et build mobile : le SDK Flutter/Dart n'est pas disponible dans cet environnement ;
