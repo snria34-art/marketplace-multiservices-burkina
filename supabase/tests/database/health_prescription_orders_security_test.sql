@@ -1,5 +1,5 @@
 BEGIN;
-SELECT plan(25);
+SELECT plan(29);
 
 SELECT ok(
   EXISTS (
