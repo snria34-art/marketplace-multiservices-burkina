@@ -72,7 +72,7 @@ Vérifié sur la base hébergée :
 - les cinq corps PL/pgSQL ont franchi le garde d'authentification en appels sans session ; les requêtes SQL internes ont aussi été exécutées en transaction avec identifiants aléatoires et rollback, sans mutation persistante ;
 - les contrôles de disponibilité utilisent des verrous transactionnels sur l'annonce et le prestataire ; le conseiller sécurité signale les cinq RPC dans la catégorie générique « Signed-In Users Can Execute SECURITY DEFINER Function » ; c'est intentionnel puisque ce sont les points d'entrée authentifiés, avec vérification de compte et de propriété. Aucun EXECUTE anon/PUBLIC n'est ouvert.
 
-Le fichier \`supabase/tests/database/real_estate_visit_requests_security_test.sql\` prévoit 12 assertions pgTAP, mais pgTAP n'est pas installé sur la base hébergée et le fichier n'a donc pas été exécuté.
+Le fichier \`supabase/tests/database/real_estate_visit_requests_security_test.sql\` prévoit 13 assertions pgTAP, mais pgTAP n'est pas installé sur la base hébergée et le fichier n'a donc pas été exécuté.
 
 Non vérifié ici :
 - \`dart format\`, \`flutter analyze\`, tests Flutter et build Android/iOS : SDK Dart/Flutter absent de l'environnement ;
