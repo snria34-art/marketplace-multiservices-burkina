@@ -20,13 +20,13 @@ Les constats ci-dessous sont classés par gravité et par dépendance. « Confir
 | Entrées dans l'arbre GitHub | 657 |
 | Fichiers Dart sous `lib/` | 76 |
 | Fichiers de tests Dart | 8 |
-| Tests SQL dans `supabase/tests/database` | 3 |
-| Assertions pgTAP prévues dans ces trois fichiers | 82 (56 + 13 + 13) |
-| Tables Supabase `public` et `private` | 182 |
-| Tables publiques avec RLS | 166/167 |
+| Tests SQL dans `supabase/tests/database` | 5 |
+| Assertions pgTAP prévues dans ces cinq fichiers | 105 (56 + 13 + 13 + 11 + 12) |
+| Tables Supabase `public` et `private` | 183 |
+| Tables publiques avec RLS | 167/168 |
 | Tables privées avec RLS | 15/15 |
-| Migrations SQL présentes dans GitHub | 333 |
-| Migrations consignées dans Supabase | 332 |
+| Migrations SQL présentes dans GitHub | 337 |
+| Migrations consignées dans Supabase | 336 |
 | Fonctions Edge actives dans Supabase | 22 |
 | Dossiers sources Edge avec `index.ts` dans GitHub | 22 |
 | Buckets Storage | 5 |
@@ -187,22 +187,40 @@ Runbook : `docs/runbooks/aud-07-reconcile-toy-weapon-migration-history.md`.
 
 ### P2 — Fonctionnalités, autorisations et fiabilité à compléter
 
-#### AUD-10 — Cinq verticales sont consultables mais leurs parcours restent incomplets
-**État : AUD-10.1 — réservation créative sécurisée côté backend et raccordée à Flutter ; quatre verticales et les scénarios d'intégration restent à faire.**
+#### AUD-10 — Cinq verticales consultables n'avaient pas de parcours d'action complet
+**État : AUD-10.1 Créatifs et AUD-10.2 Immobilier — backend sécurisé et intégration Flutter ajoutés ; Professionnels, Agriculture et Santé restent à traiter. Les essais de bout en bout restent ouverts.**
 
-Les modules immobilier, professionnels, agriculture, santé et créatifs avaient été exclus de `_hasAction`. Une correction ciblée est maintenant appliquée à la verticale Créatifs :
-- migrations Supabase `20261106235154_secure_creative_booking_workflow`, `20261106235226_fix_creative_booking_decision_normalization` et `20261106235601_minimize_creative_booking_provider_payload` ;
-- retrait des écritures directes client sur `creative_bookings` ; lecture limitée aux réservations du client, avec maintien de `active_account_guard` en RESTRICTIVE ;
-- RPC serveur pour demander, annuler une demande en attente, lister les demandes des services détenus par le prestataire, confirmer avec montant ou refuser ;
-- les quatre RPC vérifient la session/compte actif, l'identité propriétaire et l'état attendu ; aucun EXECUTE anon ;
-- interface Flutter raccordée : demande, liste client, annulation d'une demande en attente, liste prestataire et décision avec montant ; l'identifiant du compte client n'est pas renvoyé au prestataire ni affiché par l'interface ;
-- lien public `service_providers(display_name)` retiré de la requête catalogue créatif car anon n'a pas le droit de lire cette table.
+##### AUD-10.1 — Créatifs
 
-**Vérification :** dix contrôles SQL live équivalents aux assertions du nouveau fichier pgTAP sont vrais (10/10), les quatre corps PL/pgSQL ont été compilés par appels sans session contrôlés, et les droits/RLS ont été relus après migration.
+- Migrations Supabase : \`20261106235154_secure_creative_booking_workflow\`, \`20261106235226_fix_creative_booking_decision_normalization\` et \`20261106235601_minimize_creative_booking_provider_payload\`.
+- Retrait des écritures directes client sur \`creative_bookings\` ; lecture limitée au client ; maintien de \`active_account_guard\` en RESTRICTIVE.
+- RPC pour demander, annuler une demande en attente, lister les demandes des services détenus par le prestataire, confirmer avec montant ou refuser.
+- Les RPC vérifient session, compte actif, propriété et transition ; aucun EXECUTE anon ; le fournisseur ne reçoit pas l'UUID du client.
+- Interface Flutter raccordée : demande, liste client, annulation, liste prestataire, acceptation avec montant ou refus.
+- L'embedding public \`service_providers(display_name)\` a été retiré de la requête du catalogue créatif car anon n'a pas le droit de lire cette table.
+- 11 contrôles SQL live équivalents aux assertions pgTAP sont vrais. Les quatre fonctions ont franchi le garde d'authentification sans session ; les opérations n'ont pas créé de données de test.
 
-**Limites :** pgTAP n'a pas été exécuté (extension absente de la base hébergée), aucun test Flutter/Dart n'a été exécuté et aucun utilisateur réel n'existe pour les essais croisés. Devis/communication, créneaux et chevauchements, annulation après confirmation, notifications, journal de transitions et paiement restent à concevoir. Les verticales immobilier, professionnels, agriculture et santé n'ont pas encore de parcours d'action complet.
+##### AUD-10.2 — Immobilier
 
-Runbook : `docs/runbooks/aud-10-creative-bookings-security.md`.
+- Migration appliquée : \`20261106235956_secure_real_estate_visit_request_workflow\`.
+- Ajout de \`real_estate_visit_requests\` avec demandeur, annonce, message, date/heure souhaitée facultative, statut et horodatages ; une seule demande \`REQUESTED\` par demandeur et annonce.
+- RLS activée ; aucun privilège direct Data API pour \`anon\` et \`authenticated\` ; les RPC authentifiées sont les seuls points d'entrée client.
+- Cinq RPC : création, annulation client, liste client, liste propriétaire, acceptation/refus propriétaire.
+- Contrôles serveur : compte actif, annonce active et vérifiée, prestataire actif et vérifié, identité du propriétaire depuis la relation \`service_providers.user_id\`, état de transition, date dans les 180 jours et message de 1 000 caractères maximum.
+- Le résultat propriétaire n'expose pas l'UUID du demandeur. Une personne ne peut pas demander une visite de sa propre annonce.
+- Flutter raccordé : bouton \`Visiter / contacter\`, demande facultative avec préférence de date et message, écran des demandes client, annulation, boîte de réception propriétaire et décision accepter/refuser.
+- 12 contrôles directs de structure/droits/RPC sont prévus dans pgTAP ; ils n'ont pas été exécutés car l'extension pgTAP n'est pas installée. Des vérifications SQL live et des appels contrôlés sans session ont réussi.
+- Le conseiller Supabase ajoute cinq éléments à sa catégorie générique SECURITY DEFINER pour les cinq RPC authentifiées. C'est voulu et documenté : elles ne sont pas exécutables par anon ou PUBLIC et valident identité/compte/propriété.
+- Une acceptation signifie que le propriétaire accepte la demande, pas qu'un créneau est garanti. Pas encore de chat lié, coordonnées téléphoniques, agenda avec conflits, notifications, paiement, ni tests de compilation Flutter.
+
+##### AUD-10 — Travaux restants et limites de validation
+
+- Professionnels, Agriculture et Santé n'ont toujours pas de workflow complet raccordé.
+- Les flux créatifs et immobiliers n'ont pas encore été testés avec de vrais comptes distincts, ni par tests Flutter, analyseur, build mobile ou test automatisé hébergé.
+- Les fichiers pgTAP sont versionnés mais l'extension n'est pas installée sur la base distante ; les assertions n'ont donc pas été exécutées.
+- Les devis, communications, notifications, scénarios de disponibilité et conflits de créneaux, paiements et journaux complets de transition restent à spécifier.
+
+Runbooks : \`docs/runbooks/aud-10-creative-bookings-security.md\` et \`docs/runbooks/aud-10-2-real-estate-visit-requests-security.md\`.
 
 #### AUD-11 — Les routes protégées ne contrôlaient pas la session ou le rôle
 **État : gardes Flutter ajoutés sur main ; parcours administrateur/modérateur séparé ; tests unitaires écrits mais non exécutés.**
