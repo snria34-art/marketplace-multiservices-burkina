@@ -90,7 +90,7 @@ class VerticalRepository {
       table: 'agriculture_listings',
       title: 'Agriculture',
       icon: 7,
-      select: 'id,seller_id,listing_type,name,description,price,unit,quantity,reserved_quantity,active,created_at,sellers!inner(business_name)',
+      select: 'id,seller_id,listing_type,name,description,price,unit,quantity,reserved_quantity,active,created_at',
     ),
     VerticalModule.freight: VerticalConfig(
       table: 'freight_requests',
@@ -147,6 +147,10 @@ class VerticalRepository {
 
   Future<List<Map<String, dynamic>>> list(VerticalModule module) async {
     final config = configs[module]!;
+    if (module == VerticalModule.agriculture) {
+      final rows = await client.rpc('get_public_agriculture_listings');
+      return _maps(rows);
+    }
     if (config.ownOnly) {
       final user = client.auth.currentUser;
       if (user == null) return const [];
