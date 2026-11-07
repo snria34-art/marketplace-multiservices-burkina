@@ -95,7 +95,7 @@ La validation de l'ordonnance est une action humaine de la pharmacie. L'applicat
 - Aucun paiement, remboursement, Mobile Money ou frais de livraison n'est déclenché ici.
 - La délivrance enregistrée \`DISPENSED\` signifie que la pharmacie déclare avoir remis le produit et que le stock est décrémenté ; ce n'est pas une preuve de paiement.
 - Le contrôle de licence repose sur la référence conservée et le statut \`verified\` géré par le processus de vérification administratif existant. Cette migration ne valide pas juridiquement la licence auprès d'une autorité externe et ne crée pas d'auto-onboarding santé.
-- Le test SQL \`supabase/tests/database/health_prescription_orders_security_test.sql\` prévoit 25 assertions pgTAP ; non exécuté car pgTAP n'est pas installé sur la base hébergée.
+- Le test SQL \`supabase/tests/database/health_prescription_orders_security_test.sql\` prévoit 29 assertions pgTAP ; non exécuté car pgTAP n'est pas installé sur la base hébergée.
 - Les contrôles SQL live de structure, de permissions, de catalogue sous anon/authenticated et de refus des RPC sans session ont réussi ; les tables de santé étaient vides.
 - \`dart format\`, \`flutter analyze\`, tests Flutter et build mobile ne sont pas validés dans cet environnement. Les GitHub Actions précédentes échouaient avant l'attribution d'un runner.
 - Chat/pharmacie, livraison, intégration au registre financier, audit trail clinique plus détaillé, rappels d'expiration et revue juridique locale restent à traiter avant lancement commercial.
