@@ -20,18 +20,18 @@ Les constats ci-dessous sont classés par gravité et par dépendance. « Confir
 | Entrées dans l'arbre GitHub | 657 |
 | Fichiers Dart sous `lib/` | 76 |
 | Fichiers de tests Dart | 8 |
-| Tests SQL dans `supabase/tests/database` | 5 |
-| Assertions pgTAP prévues dans ces cinq fichiers | 106 (56 + 13 + 13 + 11 + 13) |
+| Tests SQL dans `supabase/tests/database` | 6 |
+| Assertions pgTAP prévues dans ces six fichiers | 123 (56 + 13 + 13 + 11 + 13 + 17) |
 | Tables Supabase `public` et `private` | 183 |
 | Tables publiques avec RLS | 167/168 |
 | Tables privées avec RLS | 15/15 |
-| Migrations SQL présentes dans GitHub | 338 |
-| Migrations consignées dans Supabase | 337 |
+| Migrations SQL présentes dans GitHub | 339 |
+| Migrations consignées dans Supabase | 338 |
 | Fonctions Edge actives dans Supabase | 22 |
 | Dossiers sources Edge avec `index.ts` dans GitHub | 22 |
 | Buckets Storage | 5 |
 
-Les mesures de quantité ne prouvent pas la qualité fonctionnelle. Les 82 assertions pgTAP prévues couvrent notamment des permissions, les protections RLS et des contrats de commande/livraison ; elles ne constituent pas une suite de tests de bout en bout pour les parcours commerciaux.
+Les mesures de quantité ne prouvent pas la qualité fonctionnelle. Les 123 assertions pgTAP prévues couvrent notamment des permissions, les protections RLS et des contrats de commande/livraison ; elles ne constituent pas une suite de tests de bout en bout pour les parcours commerciaux.
 
 ## 2. Registre des anomalies — ordre de correction proposé
 
@@ -188,7 +188,7 @@ Runbook : `docs/runbooks/aud-07-reconcile-toy-weapon-migration-history.md`.
 ### P2 — Fonctionnalités, autorisations et fiabilité à compléter
 
 #### AUD-10 — Cinq verticales consultables n'avaient pas de parcours d'action complet
-**État : AUD-10.1 Créatifs et AUD-10.2 Immobilier — backend sécurisé et intégration Flutter ajoutés ; Professionnels, Agriculture et Santé restent à traiter. Les essais de bout en bout restent ouverts.**
+**État : AUD-10.1 Créatifs, AUD-10.2 Immobilier et AUD-10.3 Professionnels — backend sécurisé et intégration Flutter ajoutés ; Agriculture et Santé restent à traiter. Les essais de bout en bout restent ouverts.**
 
 ##### AUD-10.1 — Créatifs
 
@@ -214,14 +214,28 @@ Runbook : `docs/runbooks/aud-07-reconcile-toy-weapon-migration-history.md`.
 - Le conseiller Supabase ajoute cinq éléments à sa catégorie générique SECURITY DEFINER pour les cinq RPC authentifiées. C'est voulu et documenté : elles ne sont pas exécutables par anon ou PUBLIC et valident identité/compte/propriété.
 - Une acceptation signifie que le propriétaire accepte la demande, pas qu'un créneau est garanti. Pas encore de chat lié, coordonnées téléphoniques, agenda avec conflits, notifications, paiement, ni tests de compilation Flutter.
 
+##### AUD-10.3 — Professionnels
+
+- Migration appliquée et synchronisée avec GitHub : \`20261107001051_secure_professional_quote_request_workflow\`.
+- Correction du catalogue public : les profils professionnels ne sont visibles que si le profil est actif et que le prestataire lié est actif et vérifié.
+- Pour l'affichage public, \`anon\` ne reçoit que SELECT sur \`service_providers.id\`, \`display_name\`, \`active\` et \`verification_status\`. Les colonnes \`user_id\`, \`provider_type\` et \`description\` restent non lisibles par \`anon\`.
+- Réutilisation de \`service_requests\` et \`service_quotes\` ; ajout de \`professional_profile_id\`, contrainte de cible unique (service générique ou profil professionnel) et message de devis.
+- Six RPC sécurisées : créer/annuler une demande, lire les demandes client/prestataire, créer un devis, accepter/refuser un devis.
+- Contrôles serveur : compte actif, profil et prestataire actif/vérifié, propriété du profil par \`service_providers.user_id\`, montant non négatif en XOF, description et commentaires bornés, transitions verrouillées, prévention des propositions de devis simultanées.
+- Les droits directs d'écriture client sur \`service_requests\` et \`service_quotes\` sont retirés. Le prestataire ne reçoit pas l'UUID du demandeur dans sa boîte de réception.
+- Flutter raccordé : bouton \`Demander un devis\`, formulaire du besoin avec date facultative, historique de demandes et devis côté client, acceptation/refus, boîte de réception professionnelle et proposition de montant/commentaire.
+- 17 assertions pgTAP sont versionnées mais non exécutées car pgTAP n'est pas installé sur la base hébergée. Les vérifications SQL live de structure, droits et ACL, la requête de catalogue sous le rôle anon et les appels contrôlés sans session ont réussi.
+- Le conseiller sécurité signale les six RPC dans la catégorie générique SECURITY DEFINER pour les utilisateurs authentifiés. C'est intentionnel : elles sont réservées à \`authenticated\`, avec contrôle du compte et de la propriété ; aucune exécution anon/PUBLIC n'est ouverte.
+- L'acceptation du devis n'effectue aucun paiement et ne confirme pas un rendez-vous. Chat, notification push au prestataire, agenda/conflits, paiement, contrat et suivi de l'intervention restent à intégrer.
+
 ##### AUD-10 — Travaux restants et limites de validation
 
-- Professionnels, Agriculture et Santé n'ont toujours pas de workflow complet raccordé.
-- Les flux créatifs et immobiliers n'ont pas encore été testés avec de vrais comptes distincts, ni par tests Flutter, analyseur, build mobile ou test automatisé hébergé.
+- Agriculture et Santé n'ont toujours pas de workflow complet raccordé.
+- Les flux créatifs, immobiliers et professionnels n'ont pas encore été testés avec de vrais comptes distincts, ni par tests Flutter, analyseur, build mobile ou test automatisé hébergé.
 - Les fichiers pgTAP sont versionnés mais l'extension n'est pas installée sur la base distante ; les assertions n'ont donc pas été exécutées.
 - Les devis, communications, notifications, scénarios de disponibilité et conflits de créneaux, paiements et journaux complets de transition restent à spécifier.
 
-Runbooks : \`docs/runbooks/aud-10-creative-bookings-security.md\` et \`docs/runbooks/aud-10-2-real-estate-visit-requests-security.md\`.
+Runbooks : `docs/runbooks/aud-10-creative-bookings-security.md`, `docs/runbooks/aud-10-2-real-estate-visit-requests-security.md` et `docs/runbooks/aud-10-3-professional-service-quotes-security.md`.
 
 #### AUD-11 — Les routes protégées ne contrôlaient pas la session ou le rôle
 **État : gardes Flutter ajoutés sur main ; parcours administrateur/modérateur séparé ; tests unitaires écrits mais non exécutés.**
