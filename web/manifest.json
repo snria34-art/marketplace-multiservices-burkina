@@ -1,0 +1,9 @@
+{
+  "name": "Marketplace Multiservices Burkina",
+  "short_name": "Marketplace BF",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F7F8FA",
+  "theme_color": "#1B5E20",
+  "description": "Marketplace locale et services au Burkina Faso."
+}
