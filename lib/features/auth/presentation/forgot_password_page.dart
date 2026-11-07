@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -12,7 +13,9 @@ class ForgotPasswordPage extends ConsumerStatefulWidget {
 }
 
 class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
-  static const _recoveryRedirect = 'marketplaceburkina://auth/recovery';
+  static String get _recoveryRedirect => kIsWeb
+      ? Uri.base.resolve('/auth/recovery').toString()
+      : 'marketplaceburkina://auth/recovery';
 
   final _email = TextEditingController();
   bool _loading = false;
@@ -76,7 +79,7 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
           Text(
             _sent
                 ? 'Si un compte est associé à cette adresse, un email de '
-                    'récupération a été envoyé. Ouvrez le lien sur ce téléphone '
+                    'récupération a été envoyé. Ouvrez le lien sur le même appareil '
                     'pour créer un nouveau mot de passe.'
                 : 'Saisissez l’adresse email de votre compte. Nous vous '
                     'enverrons un lien sécurisé pour réinitialiser votre mot '
