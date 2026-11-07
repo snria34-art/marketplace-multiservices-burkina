@@ -21,7 +21,7 @@ Les constats ci-dessous sont classés par gravité et par dépendance. « Confir
 | Fichiers Dart sous `lib/` | 76 |
 | Fichiers de tests Dart | 8 |
 | Tests SQL dans `supabase/tests/database` | 6 |
-| Assertions pgTAP prévues dans ces six fichiers | 123 (56 + 13 + 13 + 11 + 13 + 17) |
+| Assertions pgTAP prévues dans ces six fichiers | 124 (56 + 13 + 13 + 11 + 13 + 18) |
 | Tables Supabase `public` et `private` | 183 |
 | Tables publiques avec RLS | 167/168 |
 | Tables privées avec RLS | 15/15 |
@@ -224,7 +224,7 @@ Runbook : `docs/runbooks/aud-07-reconcile-toy-weapon-migration-history.md`.
 - Contrôles serveur : compte actif, profil et prestataire actif/vérifié, propriété du profil par \`service_providers.user_id\`, montant non négatif en XOF, description et commentaires bornés, transitions verrouillées, prévention des propositions de devis simultanées.
 - Les droits directs d'écriture client sur \`service_requests\` et \`service_quotes\` sont retirés. Le prestataire ne reçoit pas l'UUID du demandeur dans sa boîte de réception.
 - Flutter raccordé : bouton \`Demander un devis\`, formulaire du besoin avec date facultative, historique de demandes et devis côté client, acceptation/refus, boîte de réception professionnelle et proposition de montant/commentaire.
-- 17 assertions pgTAP sont versionnées mais non exécutées car pgTAP n'est pas installé sur la base hébergée. Les vérifications SQL live de structure, droits et ACL, la requête de catalogue sous le rôle anon et les appels contrôlés sans session ont réussi.
+- 18 assertions pgTAP sont versionnées mais non exécutées car pgTAP n'est pas installé sur la base hébergée. Les vérifications SQL live de structure, droits et ACL, la requête de catalogue sous le rôle anon et les appels contrôlés sans session ont réussi.
 - Le conseiller sécurité signale les six RPC dans la catégorie générique SECURITY DEFINER pour les utilisateurs authentifiés. C'est intentionnel : elles sont réservées à \`authenticated\`, avec contrôle du compte et de la propriété ; aucune exécution anon/PUBLIC n'est ouverte.
 - L'acceptation du devis n'effectue aucun paiement et ne confirme pas un rendez-vous. Chat, notification push au prestataire, agenda/conflits, paiement, contrat et suivi de l'intervention restent à intégrer.
 
