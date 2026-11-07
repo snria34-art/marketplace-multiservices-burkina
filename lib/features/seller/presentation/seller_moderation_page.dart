@@ -1,11 +1,10 @@
-import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:video_player/video_player.dart';
 
+import '../../../core/media/video_preview_controller_factory.dart';
 import '../../../core/providers/repository_providers.dart';
 
 class SellerModerationPage extends ConsumerStatefulWidget {
@@ -102,7 +101,7 @@ class _SellerModerationPageState extends ConsumerState<SellerModerationPage> {
                         if (picked == null || !context.mounted) return;
 
                         final videoController =
-                            VideoPlayerController.file(File(picked.path));
+                            createVideoPreviewController(picked);
                         try {
                           await videoController.initialize();
                           final seconds =
