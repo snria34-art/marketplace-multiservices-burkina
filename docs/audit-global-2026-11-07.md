@@ -17,21 +17,21 @@ Les constats ci-dessous sont classés par gravité et par dépendance. « Confir
 
 | Mesure | Résultat |
 |---|---:|
-| Entrées dans l'arbre GitHub | 657 |
+| Entrées dans l'arbre GitHub | 739 |
 | Fichiers Dart sous `lib/` | 76 |
 | Fichiers de tests Dart | 8 |
-| Tests SQL dans `supabase/tests/database` | 6 |
-| Assertions pgTAP prévues dans ces six fichiers | 124 (56 + 13 + 13 + 11 + 13 + 18) |
-| Tables Supabase `public` et `private` | 183 |
-| Tables publiques avec RLS | 167/168 |
+| Tests SQL dans `supabase/tests/database` | 7 |
+| Assertions pgTAP prévues dans ces sept fichiers | 149 (56 + 13 + 13 + 11 + 13 + 18 + 25) |
+| Tables Supabase `public` et `private` | 184 |
+| Tables publiques avec RLS | 168/169 |
 | Tables privées avec RLS | 15/15 |
-| Migrations SQL présentes dans GitHub | 339 |
-| Migrations consignées dans Supabase | 338 |
+| Migrations SQL présentes dans GitHub | 344 |
+| Migrations consignées dans Supabase | 343 |
 | Fonctions Edge actives dans Supabase | 22 |
 | Dossiers sources Edge avec `index.ts` dans GitHub | 22 |
 | Buckets Storage | 5 |
 
-Les mesures de quantité ne prouvent pas la qualité fonctionnelle. Les 123 assertions pgTAP prévues couvrent notamment des permissions, les protections RLS et des contrats de commande/livraison ; elles ne constituent pas une suite de tests de bout en bout pour les parcours commerciaux.
+Les mesures de quantité ne prouvent pas la qualité fonctionnelle. Les 149 assertions pgTAP prévues couvrent notamment des permissions, les protections RLS et des contrats de commande/livraison ; elles ne constituent pas une suite de tests de bout en bout pour les parcours commerciaux.
 
 ## 2. Registre des anomalies — ordre de correction proposé
 
@@ -188,7 +188,7 @@ Runbook : `docs/runbooks/aud-07-reconcile-toy-weapon-migration-history.md`.
 ### P2 — Fonctionnalités, autorisations et fiabilité à compléter
 
 #### AUD-10 — Cinq verticales consultables n'avaient pas de parcours d'action complet
-**État : AUD-10.1 Créatifs, AUD-10.2 Immobilier et AUD-10.3 Professionnels — backend sécurisé et intégration Flutter ajoutés ; Agriculture et Santé restent à traiter. Les essais de bout en bout restent ouverts.**
+**État : AUD-10.1 Créatifs, AUD-10.2 Immobilier, AUD-10.3 Professionnels et AUD-10.4 Agriculture — backend sécurisé et intégration Flutter ajoutés ; Santé reste à traiter. Les essais de bout en bout restent ouverts.**
 
 ##### AUD-10.1 — Créatifs
 
@@ -228,14 +228,27 @@ Runbook : `docs/runbooks/aud-07-reconcile-toy-weapon-migration-history.md`.
 - Le conseiller sécurité signale les six RPC dans la catégorie générique SECURITY DEFINER pour les utilisateurs authentifiés. C'est intentionnel : elles sont réservées à \`authenticated\`, avec contrôle du compte et de la propriété ; aucune exécution anon/PUBLIC n'est ouverte.
 - L'acceptation du devis n'effectue aucun paiement et ne confirme pas un rendez-vous. Chat, notification push au prestataire, agenda/conflits, paiement, contrat et suivi de l'intervention restent à intégrer.
 
+##### AUD-10.4 — Agriculture
+
+- Cinq migrations : 20261107001842_secure_agriculture_listing_and_stock_reservation_workflow, 20261107002105_harden_agriculture_order_acceptance_and_fulfillment, 20261107002124_minimize_public_agriculture_catalog_seller_identity, 20261107002316_minimize_public_agriculture_catalog_stock_and_seller_ids et 20261107002512_move_agriculture_catalog_definer_to_private.
+- Le catalogue n'affiche que les annonces actives de vendeurs vérifiés dont le profil est actif. Les champs vendeur publics sont limités ; le catalogue ne révèle ni ID vendeur, ni quantité réservée, ni téléphone ou ID utilisateur.
+- La lecture publique passe par une RPC SECURITY INVOKER qui délègue à un lecteur contrôlé dans le schéma privé ; pas de nouvelle RPC publique SECURITY DEFINER ouverte à anon.
+- Ajout de reserved_quantity et agriculture_order_requests. La réservation verrouille la ligne de l'annonce puis augmente le stock réservé dans la même transaction ; les demandes concurrentes ne peuvent donc pas consommer les mêmes unités.
+- Les états sont REQUESTED, ACCEPTED, REJECTED, CANCELLED et FULFILLED. Annulation client et refus vendeur libèrent le stock ; acceptation maintient la réserve ; remise effectuée déduit la quantité du stock total et du stock réservé.
+- Neuf RPC authentifiées gèrent publication/modification, lecture des annonces du vendeur, création/annulation de commandes, listes client/vendeur, acceptation/refus et clôture. Les écritures directes client sur les annonces et la nouvelle table de commandes sont bloquées.
+- Flutter raccordé : catalogue avec stock disponible, bouton Commander, Mes commandes agricoles, boîte de réception du vendeur, acceptation/refus, clôture, publication et modification d'annonces avec gestion du stock.
+- 25 assertions pgTAP sont versionnées mais non exécutées car pgTAP n'est pas installé sur la base hébergée. Les vérifications SQL live de RLS, ACL, fonctions, lecture catalogue sous anon/authenticated et appels contrôlés sans session ont réussi. Aucun vendeur, listing ou client de test n'a été créé.
+- Le test Flutter/analyseur/build n'est pas validé : le job GitHub Actions échoue avant d'attribuer un runner (runner_id=0, aucune étape exécutée).
+- Aucun paiement Mobile Money, livraison, chat ou notification n'est créé par ce flux. FULFILLED signifie que le vendeur déclare la remise effectuée et déclenche la déduction du stock ; cela ne constitue pas une preuve de paiement.
+
 ##### AUD-10 — Travaux restants et limites de validation
 
-- Agriculture et Santé n'ont toujours pas de workflow complet raccordé.
-- Les flux créatifs, immobiliers et professionnels n'ont pas encore été testés avec de vrais comptes distincts, ni par tests Flutter, analyseur, build mobile ou test automatisé hébergé.
+- Santé n'a toujours pas de workflow complet raccordé.
+- Les flux créatifs, immobiliers, professionnels et agricoles n'ont pas encore été testés avec de vrais comptes distincts, ni par tests Flutter, analyseur, build mobile ou test automatisé hébergé.
 - Les fichiers pgTAP sont versionnés mais l'extension n'est pas installée sur la base distante ; les assertions n'ont donc pas été exécutées.
 - Les devis, communications, notifications, scénarios de disponibilité et conflits de créneaux, paiements et journaux complets de transition restent à spécifier.
 
-Runbooks : `docs/runbooks/aud-10-creative-bookings-security.md`, `docs/runbooks/aud-10-2-real-estate-visit-requests-security.md` et `docs/runbooks/aud-10-3-professional-service-quotes-security.md`.
+Runbooks : docs/runbooks/aud-10-creative-bookings-security.md, docs/runbooks/aud-10-2-real-estate-visit-requests-security.md, docs/runbooks/aud-10-3-professional-service-quotes-security.md et docs/runbooks/aud-10-4-agriculture-stock-reservation-security.md.
 
 #### AUD-11 — Les routes protégées ne contrôlaient pas la session ou le rôle
 **État : gardes Flutter ajoutés sur main ; parcours administrateur/modérateur séparé ; tests unitaires écrits mais non exécutés.**
