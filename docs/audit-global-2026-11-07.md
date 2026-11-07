@@ -21,7 +21,7 @@ Les constats ci-dessous sont classés par gravité et par dépendance. « Confir
 | Fichiers Dart sous `lib/` | 76 |
 | Fichiers de tests Dart | 8 |
 | Tests SQL dans `supabase/tests/database` | 5 |
-| Assertions pgTAP prévues dans ces cinq fichiers | 105 (56 + 13 + 13 + 11 + 12) |
+| Assertions pgTAP prévues dans ces cinq fichiers | 106 (56 + 13 + 13 + 11 + 13) |
 | Tables Supabase `public` et `private` | 183 |
 | Tables publiques avec RLS | 167/168 |
 | Tables privées avec RLS | 15/15 |
@@ -210,7 +210,7 @@ Runbook : `docs/runbooks/aud-07-reconcile-toy-weapon-migration-history.md`.
 - Migration complémentaire `20261107000545_lock_real_estate_listing_state_during_request_transitions` : verrouillage `FOR SHARE` des lignes annonce/prestataire à la création et `FOR UPDATE` lors de la décision, pour prévenir les courses avec leur désactivation ou leur changement de vérification.
 - Le résultat propriétaire n'expose pas l'UUID du demandeur. Une personne ne peut pas demander une visite de sa propre annonce.
 - Flutter raccordé : bouton \`Visiter / contacter\`, demande facultative avec préférence de date et message, écran des demandes client, annulation, boîte de réception propriétaire et décision accepter/refuser.
-- 12 contrôles directs de structure/droits/RPC sont prévus dans pgTAP ; ils n'ont pas été exécutés car l'extension pgTAP n'est pas installée. Des vérifications SQL live et des appels contrôlés sans session ont réussi.
+- 13 contrôles directs de structure/droits/RPC/concurrence sont prévus dans pgTAP ; ils n'ont pas été exécutés car l'extension pgTAP n'est pas installée. Des vérifications SQL live et des appels contrôlés sans session ont réussi.
 - Le conseiller Supabase ajoute cinq éléments à sa catégorie générique SECURITY DEFINER pour les cinq RPC authentifiées. C'est voulu et documenté : elles ne sont pas exécutables par anon ou PUBLIC et valident identité/compte/propriété.
 - Une acceptation signifie que le propriétaire accepte la demande, pas qu'un créneau est garanti. Pas encore de chat lié, coordonnées téléphoniques, agenda avec conflits, notifications, paiement, ni tests de compilation Flutter.
 
