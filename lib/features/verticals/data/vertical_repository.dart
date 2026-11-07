@@ -315,6 +315,52 @@ class VerticalRepository {
     );
   }
 
+  Future<String> requestRealEstateVisit({
+    required String listingId,
+    DateTime? preferredVisitAt,
+    String? message,
+  }) async =>
+      (await client.rpc(
+        'request_real_estate_visit',
+        params: {
+          'p_listing_id': listingId,
+          'p_preferred_visit_at':
+              preferredVisitAt?.toUtc().toIso8601String(),
+          'p_message': message?.trim().isEmpty == true ? null : message?.trim(),
+        },
+      ))
+          .toString();
+
+  Future<void> cancelRealEstateVisit(String requestId) async {
+    await client.rpc(
+      'cancel_real_estate_visit',
+      params: {'p_request_id': requestId},
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> myRealEstateVisitRequests() async {
+    final rows = await client.rpc('get_my_real_estate_visit_requests');
+    return _maps(rows);
+  }
+
+  Future<List<Map<String, dynamic>>> providerRealEstateVisitRequests() async {
+    final rows = await client.rpc('get_provider_real_estate_visit_requests');
+    return _maps(rows);
+  }
+
+  Future<void> respondRealEstateVisit({
+    required String requestId,
+    required String decision,
+  }) async {
+    await client.rpc(
+      'respond_real_estate_visit',
+      params: {
+        'p_request_id': requestId,
+        'p_decision': decision,
+      },
+    );
+  }
+
   Future<String> applyToJob(String jobId) async =>
       (await client.rpc(
         'apply_to_job',
