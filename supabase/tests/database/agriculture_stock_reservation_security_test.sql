@@ -214,14 +214,17 @@ SELECT ok(
 SELECT ok(
   has_function_privilege('anon','public.get_public_agriculture_listings()','EXECUTE')
   AND has_function_privilege('authenticated','public.get_public_agriculture_listings()','EXECUTE')
+  AND NOT (SELECT prosecdef FROM pg_proc WHERE oid='public.get_public_agriculture_listings()'::regprocedure)
+  AND has_function_privilege('anon','private.get_public_agriculture_listings_internal()','EXECUTE')
+  AND has_function_privilege('authenticated','private.get_public_agriculture_listings_internal()','EXECUTE')
   AND (
     SELECT prosecdef
       AND pg_get_userbyid(proowner)='postgres'
       AND proconfig @> ARRAY['search_path=""']::text[]
     FROM pg_proc
-    WHERE oid='public.get_public_agriculture_listings()'::regprocedure
+    WHERE oid='private.get_public_agriculture_listings_internal()'::regprocedure
   ),
-  'public catalog is a dedicated owner-controlled read-only RPC'
+  'public catalog is SECURITY INVOKER and delegates to a locked private read function'
 );
 
 SELECT ok(
