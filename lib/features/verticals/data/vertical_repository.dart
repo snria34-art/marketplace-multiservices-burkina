@@ -361,6 +361,66 @@ class VerticalRepository {
     );
   }
 
+  Future<String> createProfessionalServiceRequest({
+    required String professionalProfileId,
+    required String description,
+    DateTime? scheduledAt,
+  }) async =>
+      (await client.rpc(
+        'create_professional_service_request',
+        params: {
+          'p_professional_profile_id': professionalProfileId,
+          'p_description': description,
+          'p_scheduled_at': scheduledAt?.toUtc().toIso8601String(),
+        },
+      ))
+          .toString();
+
+  Future<void> cancelProfessionalServiceRequest(String requestId) async {
+    await client.rpc(
+      'cancel_professional_service_request',
+      params: {'p_request_id': requestId},
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> myProfessionalServiceRequests() async {
+    final rows = await client.rpc('get_my_professional_service_requests');
+    return _maps(rows);
+  }
+
+  Future<List<Map<String, dynamic>>> providerProfessionalServiceRequests() async {
+    final rows = await client.rpc('get_provider_professional_service_requests');
+    return _maps(rows);
+  }
+
+  Future<String> createProfessionalServiceQuote({
+    required String requestId,
+    required num amount,
+    String? message,
+  }) async =>
+      (await client.rpc(
+        'create_professional_service_quote',
+        params: {
+          'p_request_id': requestId,
+          'p_amount': amount,
+          'p_message': message?.trim().isEmpty == true ? null : message?.trim(),
+        },
+      ))
+          .toString();
+
+  Future<void> respondProfessionalServiceQuote({
+    required String quoteId,
+    required String decision,
+  }) async {
+    await client.rpc(
+      'respond_professional_service_quote',
+      params: {
+        'p_quote_id': quoteId,
+        'p_decision': decision,
+      },
+    );
+  }
+
   Future<String> applyToJob(String jobId) async =>
       (await client.rpc(
         'apply_to_job',
