@@ -1,15 +1,14 @@
 import 'dart:async';
-import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:video_player/video_player.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../../core/media/video_preview_controller_factory.dart';
 import '../../../core/providers/repository_providers.dart';
 
 class OrderDetailsPage extends ConsumerStatefulWidget {
@@ -1047,7 +1046,7 @@ class _ReviewDialogState extends State<_ReviewDialog> {
       );
       if (!mounted || picked == null) return;
 
-      final videoController = VideoPlayerController.file(File(picked.path));
+      final videoController = createVideoPreviewController(picked);
       try {
         await videoController.initialize();
         if (!mounted) return;
