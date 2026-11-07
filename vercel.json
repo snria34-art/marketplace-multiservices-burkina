@@ -1,0 +1,193 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "installCommand": "echo 'Dart and Flutter dependencies are installed by scripts/vercel-build.sh'",
+  "buildCommand": "bash scripts/vercel-build.sh",
+  "outputDirectory": "build/web",
+  "rewrites": [
+    {
+      "source": "/auth",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/auth/:path*",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/recovery",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/access-status",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/cart",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/checkout/:path*",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/orders",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/orders/:path*",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/delivery/:path*",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/courier",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/restaurants",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/transport",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/mechanics",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/expiry",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/follows",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/group-buy",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/services",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/messages",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/notifications",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/notifications/:path*",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/admin",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/admin/:path*",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/seller",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/seller/:path*",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/promotions",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/rides",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/rentals",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/real-estate",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/accommodations",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/events",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/jobs",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/professionals",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/agriculture",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/freight",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/health",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/beauty",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/home-services",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/digital",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/training",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/creative",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/parcels",
+      "destination": "/index.html"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/index.html",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, no-store, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/flutter_bootstrap.js",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache"
+        }
+      ]
+    }
+  ]
+}
