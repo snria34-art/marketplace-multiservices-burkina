@@ -80,7 +80,7 @@ Fonctionnalités raccordées :
 - Aucun paiement Mobile Money, acompte ou débit n'est déclenché par ce workflow.
 - \`FULFILLED\` signifie que le vendeur marque la remise/commande comme honorée et que le stock est consommé dans l'inventaire. Cela ne certifie pas un paiement.
 - La livraison GPS, l'expédition, le chat acheteur-vendeur, les notifications et l'intégration au grand livre financier ne sont pas inclus dans cette correction.
-- Le fichier \`supabase/tests/database/agriculture_stock_reservation_security_test.sql\` prévoit 23 assertions pgTAP ; il n'a pas été exécuté car pgTAP n'est pas installé sur la base hébergée.
+- Le fichier \`supabase/tests/database/agriculture_stock_reservation_security_test.sql\` prévoit 25 assertions pgTAP ; il n'a pas été exécuté car pgTAP n'est pas installé sur la base hébergée.
 - Les contrôles SQL live de droits, RLS, RPC, catalogue public et exécution des gardes sans session ont réussi. Aucun listing, vendeur ou compte de test n'a été créé.
 - \`dart format\`, \`flutter analyze\`, tests Flutter et build mobile ne sont pas validés ; les jobs GitHub Actions se terminent actuellement sans runner attribué (\`runner_id=0\`, aucune étape exécutée).
 
