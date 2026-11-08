@@ -27,6 +27,10 @@ if [[ ! -x "${SDK_ROOT}/bin/flutter" ]]; then
   mv "${TMP_DIR}/unpack/flutter" "${SDK_ROOT}"
 fi
 
+# Flutter's SDK contains a Git checkout. Vercel's build user may not own the
+# extracted cache directory, so Git's safe.directory check must be explicit.
+git config --global --add safe.directory "${SDK_ROOT}"
+
 export PATH="${SDK_ROOT}/bin:${PATH}"
 export CI=true
 flutter config --enable-web
