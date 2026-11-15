@@ -1,4 +1,6 @@
 import 'package:image_picker/image_picker.dart';
+
+import '../../../core/media/upload_media_validator.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class SellerProductsRepository {
@@ -140,6 +142,7 @@ class SellerProductsRepository {
         'Format non pris en charge. Utilisez une image JPEG, PNG ou WebP.',
       );
     }
+    UploadMediaValidator.requireMimeType(bytes, mime);
 
     final path =
         'products/$productId/${DateTime.now().microsecondsSinceEpoch}.$extension';

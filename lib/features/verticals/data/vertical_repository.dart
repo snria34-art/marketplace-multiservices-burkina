@@ -2,6 +2,8 @@ import 'dart:typed_data';
 
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../../core/media/upload_media_validator.dart';
+
 enum VerticalModule {
   rides,
   rentals,
@@ -607,6 +609,7 @@ class VerticalRepository {
           'Prescription photos must not exceed 10 MB.',
         );
       }
+      UploadMediaValidator.requireMimeType(prescriptionBytes, mimeType);
       final extension = mimeType == 'image/png' ? 'png' : 'jpg';
       prescriptionPath = user.id +
           '/' +

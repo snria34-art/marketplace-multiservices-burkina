@@ -9,6 +9,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/media/video_preview_controller_factory.dart';
+import '../../../core/media/upload_media_validator.dart';
 import '../../../core/providers/repository_providers.dart';
 
 class OrderDetailsPage extends ConsumerStatefulWidget {
@@ -568,6 +569,7 @@ class _OrderDetailsPageState extends ConsumerState<OrderDetailsPage> {
         if (mime == null || !allowedMimes.contains(mime)) {
           throw StateError('Format du média non pris en charge.');
         }
+        UploadMediaValidator.requireMimeType(mediaBytes, mime);
         final extension = extensionByMime[mime]!;
         uploadedPath =
             user.id + '/reviews/' + createdReviewId.toString() + '_' +

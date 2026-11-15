@@ -4,6 +4,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/media/video_preview_controller_factory.dart';
+import '../../../core/media/upload_media_validator.dart';
 import '../../../core/providers/repository_providers.dart';
 
 class SellerModerationPage extends ConsumerStatefulWidget {
@@ -220,6 +221,7 @@ class _SellerModerationPageState extends ConsumerState<SellerModerationPage> {
         if (mime == null || !allowedMimes.contains(mime)) {
           throw StateError('Format du média non pris en charge.');
         }
+        UploadMediaValidator.requireMimeType(bytes, mime);
         final extension = extensionByMime[mime]!;
         mediaPath = '${user.id}/moderation/${finding['finding_id']}_${DateTime.now().microsecondsSinceEpoch}.$extension';
         await client.storage.from('order-feedback-media').uploadBinary(

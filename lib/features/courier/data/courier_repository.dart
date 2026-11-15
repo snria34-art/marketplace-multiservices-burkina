@@ -1,4 +1,6 @@
 import 'package:image_picker/image_picker.dart';
+
+import '../../../core/media/upload_media_validator.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class CourierRepository {
@@ -70,6 +72,7 @@ class CourierRepository {
     if (mime == null || !extensionByMime.containsKey(mime)) {
       throw StateError('Format de preuve non pris en charge.');
     }
+    UploadMediaValidator.requireMimeType(bytes, mime);
     final extension = extensionByMime[mime]!;
     final path = '${user.id}/delivery/$packageId/${DateTime.now().microsecondsSinceEpoch}.$extension';
     await client.storage.from('order-feedback-media').uploadBinary(
