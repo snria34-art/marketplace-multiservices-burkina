@@ -563,7 +563,7 @@ class _CourierPageState extends ConsumerState<CourierPage> {
               subtitle: Text(
                 'État : ' +
                     (status ?? '-') +
-                    '\\nAffecté le : ' +
+                    '\nAffecté le : ' +
                     (item['assigned_at']?.toString() ?? '-'),
               ),
               trailing: _actions(item, status),
@@ -618,12 +618,6 @@ class _CourierPageState extends ConsumerState<CourierPage> {
               ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _actions(          );
-        },
       ),
     );
   }
