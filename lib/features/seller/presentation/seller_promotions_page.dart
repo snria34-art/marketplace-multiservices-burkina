@@ -182,7 +182,7 @@ class _SellerPromotionsPageState
           return ListView.separated(
             padding: const EdgeInsets.fromLTRB(12, 12, 12, 88),
             itemCount: promotions.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 8),
+            separatorBuilder: (_, _) => const SizedBox(height: 8),
             itemBuilder: (_, index) {
               final p = promotions[index];
               return Card(

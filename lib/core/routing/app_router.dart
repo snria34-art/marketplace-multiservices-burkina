@@ -190,23 +190,23 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     navigatorKey: appNavigatorKey,
     initialLocation: '/',
     routes: [
-      GoRoute(path: '/', builder: (_, __) => const HomePage()),
-      GoRoute(path: '/whatsapp', builder: (_, __) => const WhatsAppAssistantPage()),
-      GoRoute(path: '/wallet', builder: (_, __) => const CustomerWalletPage()),
-      GoRoute(path: '/auth', builder: (_, __) => const SignInPage()),
+      GoRoute(path: '/', builder: (_, _) => const HomePage()),
+      GoRoute(path: '/whatsapp', builder: (_, _) => const WhatsAppAssistantPage()),
+      GoRoute(path: '/wallet', builder: (_, _) => const CustomerWalletPage()),
+      GoRoute(path: '/auth', builder: (_, _) => const SignInPage()),
       GoRoute(
         path: '/auth/forgot-password',
-        builder: (_, __) => const ForgotPasswordPage(),
+        builder: (_, _) => const ForgotPasswordPage(),
       ),
       GoRoute(
         path: '/auth/recovery',
-        builder: (_, __) => const AuthRecoveryPage(),
+        builder: (_, _) => const AuthRecoveryPage(),
       ),
       // Some platform deep-link handlers expose only the URI path (/recovery)
       // and omit the custom-scheme host (auth). Keep this equivalent route.
       GoRoute(
         path: '/recovery',
-        builder: (_, __) => const AuthRecoveryPage(),
+        builder: (_, _) => const AuthRecoveryPage(),
       ),
       GoRoute(
         path: '/access-status',
@@ -214,7 +214,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           reason: state.uri.queryParameters['reason'],
         ),
       ),
-      GoRoute(path: '/cart', builder: (_, __) => const CartPage()),
+      GoRoute(path: '/cart', builder: (_, _) => const CartPage()),
       GoRoute(
         path: '/checkout/:cartId',
         builder: (_, state) {
@@ -230,7 +230,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           return CheckoutPage(cartId: cartId);
         },
       ),
-      GoRoute(path: '/orders', builder: (_, __) => const OrdersPage()),
+      GoRoute(path: '/orders', builder: (_, _) => const OrdersPage()),
       GoRoute(
         path: '/orders/:orderId',
         builder: (_, state) {
@@ -259,111 +259,111 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           return DeliveryTrackingPage(orderId: orderId);
         },
       ),
-      GoRoute(path: '/courier', builder: (_, __) => const CourierPage()),
+      GoRoute(path: '/courier', builder: (_, _) => const CourierPage()),
       GoRoute(
         path: '/restaurants',
-        builder: (_, __) => const RestaurantsPage(),
+        builder: (_, _) => const RestaurantsPage(),
       ),
       GoRoute(
         path: '/transport',
-        builder: (_, __) => const TransportPage(),
+        builder: (_, _) => const TransportPage(),
       ),
       GoRoute(
         path: '/mechanics',
-        builder: (_, __) => const MechanicsPage(),
+        builder: (_, _) => const MechanicsPage(),
       ),
       GoRoute(
         path: '/expiry',
-        builder: (_, __) => const ExpiryPage(),
+        builder: (_, _) => const ExpiryPage(),
       ),
       GoRoute(
         path: '/follows',
-        builder: (_, __) => const FollowsPage(),
+        builder: (_, _) => const FollowsPage(),
       ),
       GoRoute(
         path: '/group-buy',
-        builder: (_, __) => const GroupBuyPage(),
+        builder: (_, _) => const GroupBuyPage(),
       ),
       GoRoute(
         path: '/services',
-        builder: (_, __) => const ServicesPage(),
+        builder: (_, _) => const ServicesPage(),
       ),
       GoRoute(
         path: '/messages',
-        builder: (_, __) => const MessagesPage(),
+        builder: (_, _) => const MessagesPage(),
       ),
       GoRoute(
         path: '/notifications',
-        builder: (_, __) => const NotificationsPage(),
+        builder: (_, _) => const NotificationsPage(),
       ),
       GoRoute(
         path: '/notifications/preferences',
-        builder: (_, __) => const NotificationPreferencesPage(),
+        builder: (_, _) => const NotificationPreferencesPage(),
       ),
       GoRoute(
         path: '/admin/partner-network',
-        builder: (_, __) => const AdminPartnerNetworkPage(),
+        builder: (_, _) => const AdminPartnerNetworkPage(),
       ),
       GoRoute(
         path: '/admin',
-        builder: (_, __) => const AdminDashboardPage(),
+        builder: (_, _) => const AdminDashboardPage(),
       ),
       GoRoute(
         path: '/admin/catalog-moderation',
-        builder: (_, __) => const AdminCatalogModerationPage(),
+        builder: (_, _) => const AdminCatalogModerationPage(),
       ),
       GoRoute(
         path: '/admin/return-policies',
-        builder: (_, __) => const AdminReturnPoliciesPage(),
+        builder: (_, _) => const AdminReturnPoliciesPage(),
       ),
       GoRoute(
         path: '/admin/assistant',
-        builder: (_, __) => const AdminAssistantPage(),
+        builder: (_, _) => const AdminAssistantPage(),
       ),
       GoRoute(
         path: '/admin/platform-health',
-        builder: (_, __) => const AdminPlatformHealthPage(),
+        builder: (_, _) => const AdminPlatformHealthPage(),
       ),
       GoRoute(
         path: '/admin/reviews',
-        builder: (_, __) => const AdminReviewModerationPage(),
+        builder: (_, _) => const AdminReviewModerationPage(),
       ),
       GoRoute(
         path: '/admin/accounts',
-        builder: (_, __) => const AdminAccountsPage(),
+        builder: (_, _) => const AdminAccountsPage(),
       ),
       GoRoute(
         path: '/admin/refunds',
-        builder: (_, __) => const AdminRefundsPage(),
+        builder: (_, _) => const AdminRefundsPage(),
       ),
       GoRoute(
         path: '/seller',
-        builder: (_, __) => const SellerToolsPage(),
+        builder: (_, _) => const SellerToolsPage(),
       ),
       GoRoute(
         path: '/seller/moderation',
-        builder: (_, __) => const SellerModerationPage(),
+        builder: (_, _) => const SellerModerationPage(),
       ),
       GoRoute(
         path: '/seller/dashboard',
-        builder: (_, __) => const SellerDashboardPage(),
+        builder: (_, _) => const SellerDashboardPage(),
       ),
       GoRoute(
         path: '/seller/products',
-        builder: (_, __) => const SellerProductsPage(),
+        builder: (_, _) => const SellerProductsPage(),
       ),
       GoRoute(
         path: '/seller/orders',
-        builder: (_, __) => const SellerOrdersPage(),
+        builder: (_, _) => const SellerOrdersPage(),
       ),
-      GoRoute(path: '/promotions', builder: (_, __) => const PromotionsPage()),
-      GoRoute(path: '/seller/shop', builder: (_, __) => const SellerShopPage()),
-      GoRoute(path: '/seller/coupons', builder: (_, __) => const SellerCouponsPage()),
-      GoRoute(path: '/seller/promotions', builder: (_, __) => const SellerPromotionsPage()),
-      GoRoute(path: '/seller/clients', builder: (_, __) => const SellerClientsPage()),
-      GoRoute(path: '/seller/reviews', builder: (_, __) => const SellerReviewsPage()),
-      GoRoute(path: '/seller/stats', builder: (_, __) => const SellerStatsPage()),
-      GoRoute(path: '/seller/finance', builder: (_, __) => const SellerFinancePage()),
+      GoRoute(path: '/promotions', builder: (_, _) => const PromotionsPage()),
+      GoRoute(path: '/seller/shop', builder: (_, _) => const SellerShopPage()),
+      GoRoute(path: '/seller/coupons', builder: (_, _) => const SellerCouponsPage()),
+      GoRoute(path: '/seller/promotions', builder: (_, _) => const SellerPromotionsPage()),
+      GoRoute(path: '/seller/clients', builder: (_, _) => const SellerClientsPage()),
+      GoRoute(path: '/seller/reviews', builder: (_, _) => const SellerReviewsPage()),
+      GoRoute(path: '/seller/stats', builder: (_, _) => const SellerStatsPage()),
+      GoRoute(path: '/seller/finance', builder: (_, _) => const SellerFinancePage()),
       for (final item in const <({String path, VerticalModule module})>[
         (path: '/rides', module: VerticalModule.rides),
         (path: '/rentals', module: VerticalModule.rentals),
@@ -384,12 +384,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ])
         GoRoute(
           path: item.path,
-          builder: (_, __) => VerticalDiscoveryPage(module: item.module),
+          builder: (_, _) => VerticalDiscoveryPage(module: item.module),
         ),
-      GoRoute(path: '/seller/stock', builder: (_, __) => const SellerProductsPage()),
-      GoRoute(path: '/seller/payouts', builder: (_, __) => const SellerFinancePage()),
-      GoRoute(path: '/seller/commissions', builder: (_, __) => const SellerFinancePage()),
-      GoRoute(path: '/seller/settings', builder: (_, __) => const SellerSettingsPage()),
+      GoRoute(path: '/seller/stock', builder: (_, _) => const SellerProductsPage()),
+      GoRoute(path: '/seller/payouts', builder: (_, _) => const SellerFinancePage()),
+      GoRoute(path: '/seller/commissions', builder: (_, _) => const SellerFinancePage()),
+      GoRoute(path: '/seller/settings', builder: (_, _) => const SellerSettingsPage()),
     ],
   );
 

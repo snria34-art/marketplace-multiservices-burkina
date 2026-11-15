@@ -148,7 +148,7 @@ class _DeliveryTrackingPageState
           return ListView.separated(
             padding: const EdgeInsets.all(12),
             itemCount: packages.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 10),
+            separatorBuilder: (_, _) => const SizedBox(height: 10),
             itemBuilder: (_, index) {
               final package = packages[index];
               final assignment = package['assignment'] is Map

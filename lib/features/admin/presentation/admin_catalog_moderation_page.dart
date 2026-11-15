@@ -167,7 +167,7 @@ class _AdminCatalogModerationPageState
           return ListView.separated(
             padding: const EdgeInsets.all(12),
             itemCount: rows.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 10),
+            separatorBuilder: (_, _) => const SizedBox(height: 10),
             itemBuilder: (context, index) {
               final row = rows[index];
               final product = row['product'] is Map
@@ -234,7 +234,7 @@ class _AdminCatalogModerationPageState
                                   width: 112,
                                   height: 112,
                                   fit: BoxFit.cover,
-                                  errorBuilder: (_, __, ___) => const SizedBox(
+                                  errorBuilder: (_, _, _) => const SizedBox(
                                     width: 112,
                                     child: Center(child: Icon(Icons.broken_image_outlined)),
                                   ),
@@ -329,7 +329,7 @@ class _ModerationMediaPreviewState extends State<_ModerationMediaPreview> {
           height: 160,
           width: double.infinity,
           fit: BoxFit.contain,
-          errorBuilder: (_, __, ___) => const Text('Photo indisponible.'),
+          errorBuilder: (_, _, _) => const Text('Photo indisponible.'),
         ),
       );
     }

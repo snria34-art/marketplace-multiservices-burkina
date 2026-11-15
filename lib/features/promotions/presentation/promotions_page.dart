@@ -72,7 +72,7 @@ class _PromotionsPageState extends ConsumerState<PromotionsPage> {
           return ListView.separated(
             padding: const EdgeInsets.all(12),
             itemCount: promotions.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 10),
+            separatorBuilder: (_, _) => const SizedBox(height: 10),
             itemBuilder: (_, index) {
               final item = promotions[index];
               final type = item['promotion_type']?.toString() ?? 'OFFRE';

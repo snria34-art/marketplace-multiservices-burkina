@@ -82,7 +82,7 @@ class _ExpiryPageState extends ConsumerState<ExpiryPage> {
           return ListView.separated(
             padding: const EdgeInsets.all(12),
             itemCount: products.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 8),
+            separatorBuilder: (_, _) => const SizedBox(height: 8),
             itemBuilder: (_, index) {
               final product = products[index];
 

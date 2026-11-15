@@ -72,7 +72,7 @@ class _OrdersPageState extends ConsumerState<OrdersPage> {
             child: ListView.separated(
               padding: const EdgeInsets.all(12),
               itemCount: orders.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 8),
+              separatorBuilder: (_, _) => const SizedBox(height: 8),
               itemBuilder: (_, index) {
                 final order = orders[index];
                 final rawStatus = order['status']?.toString() ?? '';

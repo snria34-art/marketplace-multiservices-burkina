@@ -159,7 +159,7 @@ class _AdminAccountsPageState extends ConsumerState<AdminAccountsPage> {
                 return ListView.separated(
                   padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
                   itemCount: rows.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 8),
+                  separatorBuilder: (_, _) => const SizedBox(height: 8),
                   itemBuilder: (_, index) {
                     final user = rows[index];
                     final current = user['status']?.toString() ?? 'ACTIVE';

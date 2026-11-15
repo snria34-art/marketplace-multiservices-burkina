@@ -826,7 +826,7 @@ class _OrderDetailsPageState extends ConsumerState<OrderDetailsPage> {
                                 height: 180,
                                 width: double.infinity,
                                 fit: BoxFit.contain,
-                                errorBuilder: (_, __, ___) =>
+                                errorBuilder: (_, _, _) =>
                                     const Text('Photo indisponible.'),
                               ),
                             )

@@ -309,7 +309,7 @@ class _VerticalDiscoveryPageState
             child: ListView.separated(
               shrinkWrap: true,
               itemCount: requests.length,
-              separatorBuilder: (_, __) => const Divider(),
+              separatorBuilder: (_, _) => const Divider(),
               itemBuilder: (_, index) {
                 final request = requests[index];
                 final status = request['status']?.toString() ?? '-';
@@ -385,7 +385,7 @@ class _VerticalDiscoveryPageState
             child: ListView.separated(
               shrinkWrap: true,
               itemCount: requests.length,
-              separatorBuilder: (_, __) => const Divider(),
+              separatorBuilder: (_, _) => const Divider(),
               itemBuilder: (_, index) {
                 final request = requests[index];
                 final status = request['status']?.toString() ?? '-';
@@ -799,7 +799,7 @@ class _VerticalDiscoveryPageState
                 : ListView.separated(
                     shrinkWrap: true,
                     itemCount: listings.length,
-                    separatorBuilder: (_, __) => const Divider(),
+                    separatorBuilder: (_, _) => const Divider(),
                     itemBuilder: (_, index) {
                       final listing = listings[index];
                       return ListTile(
@@ -878,7 +878,7 @@ class _VerticalDiscoveryPageState
             child: ListView.separated(
               shrinkWrap: true,
               itemCount: orders.length,
-              separatorBuilder: (_, __) => const Divider(),
+              separatorBuilder: (_, _) => const Divider(),
               itemBuilder: (_, index) {
                 final order = orders[index];
                 final status = order['status']?.toString() ?? '-';
@@ -941,7 +941,7 @@ class _VerticalDiscoveryPageState
             child: ListView.separated(
               shrinkWrap: true,
               itemCount: orders.length,
-              separatorBuilder: (_, __) => const Divider(),
+              separatorBuilder: (_, _) => const Divider(),
               itemBuilder: (_, index) {
                 final order = orders[index];
                 final status = order['status']?.toString() ?? '-';
@@ -1257,7 +1257,7 @@ class _VerticalDiscoveryPageState
             child: ListView.separated(
               shrinkWrap: true,
               itemCount: orders.length,
-              separatorBuilder: (_, __) => const Divider(),
+              separatorBuilder: (_, _) => const Divider(),
               itemBuilder: (_, index) {
                 final order = orders[index];
                 final status = order['status']?.toString() ?? '-';
@@ -1457,7 +1457,7 @@ class _VerticalDiscoveryPageState
             child: ListView.separated(
               shrinkWrap: true,
               itemCount: orders.length,
-              separatorBuilder: (_, __) => const Divider(),
+              separatorBuilder: (_, _) => const Divider(),
               itemBuilder: (_, index) {
                 final order = orders[index];
                 final status = order['status']?.toString() ?? '-';
@@ -1749,7 +1749,7 @@ class _VerticalDiscoveryPageState
                 : ListView.separated(
                     shrinkWrap: true,
                     itemCount: products.length,
-                    separatorBuilder: (_, __) => const Divider(),
+                    separatorBuilder: (_, _) => const Divider(),
                     itemBuilder: (_, index) {
                       final product = products[index];
                       return ListTile(
@@ -1972,7 +1972,7 @@ class _VerticalDiscoveryPageState
             child: ListView.separated(
               shrinkWrap: true,
               itemCount: rows.length,
-              separatorBuilder: (_, __) => const Divider(),
+              separatorBuilder: (_, _) => const Divider(),
               itemBuilder: (_, index) {
                 final request = rows[index];
                 final status = request['request_status']?.toString() ?? '-';
@@ -2063,7 +2063,7 @@ class _VerticalDiscoveryPageState
             child: ListView.separated(
               shrinkWrap: true,
               itemCount: bookings.length,
-              separatorBuilder: (_, __) => const Divider(),
+              separatorBuilder: (_, _) => const Divider(),
               itemBuilder: (_, index) {
                 final booking = bookings[index];
                 final rawService = booking['creative_services'];
@@ -2138,7 +2138,7 @@ class _VerticalDiscoveryPageState
             child: ListView.separated(
               shrinkWrap: true,
               itemCount: bookings.length,
-              separatorBuilder: (_, __) => const Divider(),
+              separatorBuilder: (_, _) => const Divider(),
               itemBuilder: (_, index) {
                 final booking = bookings[index];
                 final status = booking['status']?.toString() ?? '-';
@@ -3157,7 +3157,7 @@ class _VerticalDiscoveryPageState
           return ListView.separated(
             padding: const EdgeInsets.all(12),
             itemCount: items.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 10),
+            separatorBuilder: (_, _) => const SizedBox(height: 10),
             itemBuilder: (_, index) {
               final item = items[index];
               final action = _hasAction(widget.module);

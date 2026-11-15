@@ -14,7 +14,7 @@ class ServiceModuleSliver extends ConsumerWidget {
 
     return state.when(
       loading: () => const SliverToBoxAdapter(child: SizedBox(height: 0)),
-      error: (_, __) => const SliverToBoxAdapter(child: SizedBox(height: 0)),
+      error: (_, _) => const SliverToBoxAdapter(child: SizedBox(height: 0)),
       data: (modules) {
         final visible = modules
             .where((module) => _supportedRoutes.contains(module.route))

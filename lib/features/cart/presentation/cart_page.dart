@@ -123,7 +123,7 @@ class _CartPageState extends ConsumerState<CartPage> {
                 return ListView.separated(
                   padding: const EdgeInsets.all(12),
                   itemCount: items.length + 2,
-                  separatorBuilder: (_, __) => const SizedBox(height: 8),
+                  separatorBuilder: (_, _) => const SizedBox(height: 8),
                   itemBuilder: (_, index) {
                     if (index == items.length) {
                       return ListTile(

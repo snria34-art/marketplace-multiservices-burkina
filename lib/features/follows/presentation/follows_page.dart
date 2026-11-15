@@ -157,7 +157,7 @@ class _FollowsPageState extends ConsumerState<FollowsPage> {
                   child: ListView.separated(
                     padding: const EdgeInsets.fromLTRB(12, 0, 12, 20),
                     itemCount: items.length,
-                    separatorBuilder: (_, __) =>
+                    separatorBuilder: (_, _) =>
                         const SizedBox(height: 8),
                     itemBuilder: (_, index) {
                       final item = items[index];

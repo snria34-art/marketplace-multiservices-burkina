@@ -378,7 +378,7 @@ class _CatalogHeaderDelegate extends SliverPersistentHeaderDelegate {
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
                 itemCount: types.length,
-                separatorBuilder: (_, __) => const SizedBox(width: 8),
+                separatorBuilder: (_, _) => const SizedBox(width: 8),
                 itemBuilder: (_, index) {
                   final type = types[index];
                   final id = type['id']?.toString();
@@ -396,7 +396,7 @@ class _CatalogHeaderDelegate extends SliverPersistentHeaderDelegate {
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
                 itemCount: categories.length,
-                separatorBuilder: (_, __) => const SizedBox(width: 12),
+                separatorBuilder: (_, _) => const SizedBox(width: 12),
                 itemBuilder: (_, index) {
                   final category = categories[index];
                   final id = category['id']?.toString();
@@ -484,7 +484,7 @@ class _ProductCard extends StatelessWidget {
                 return Image.network(
                   url,
                   fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) =>
+                  errorBuilder: (_, _, _) =>
                       const _ProductImagePlaceholder(),
                 );
               },

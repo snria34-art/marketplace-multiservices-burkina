@@ -57,7 +57,7 @@ class _RestaurantsPageState extends ConsumerState<RestaurantsPage> {
           return ListView.separated(
             padding: const EdgeInsets.all(12),
             itemCount: restaurants.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 10),
+            separatorBuilder: (_, _) => const SizedBox(height: 10),
             itemBuilder: (_, index) {
               final restaurant = restaurants[index];
               final shop = restaurant['shops'] is Map

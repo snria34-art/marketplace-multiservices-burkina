@@ -184,7 +184,7 @@ class _NotificationsPageState
           return ListView.separated(
             padding: const EdgeInsets.all(12),
             itemCount: items.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 8),
+            separatorBuilder: (_, _) => const SizedBox(height: 8),
             itemBuilder: (_, index) {
               final item = items[index];
               final unread = item['read_at'] == null;

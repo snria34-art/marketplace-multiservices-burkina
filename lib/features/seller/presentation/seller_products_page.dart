@@ -253,7 +253,7 @@ class _SellerProductsPageState
           child: ListView.separated(
             shrinkWrap: true,
             itemCount: variants.length,
-            separatorBuilder: (_, __) => const Divider(),
+            separatorBuilder: (_, _) => const Divider(),
             itemBuilder: (_, index) {
               final variant = variants[index];
               final quantity = int.tryParse(
@@ -491,7 +491,7 @@ class _SellerProductsPageState
             child: ListView.separated(
               padding: const EdgeInsets.all(12),
               itemCount: products.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 8),
+              separatorBuilder: (_, _) => const SizedBox(height: 8),
               itemBuilder: (_, index) {
                 final product = products[index];
                 final inventory = product['inventory'] is Map

@@ -122,7 +122,7 @@ class _SellerReviewsPageState extends ConsumerState<SellerReviewsPage> {
           return ListView.separated(
             padding: const EdgeInsets.all(12),
             itemCount: rows.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 8),
+            separatorBuilder: (_, _) => const SizedBox(height: 8),
             itemBuilder: (_, index) {
               final row = rows[index];
               final product = row['products'] is Map
@@ -235,7 +235,7 @@ class _SellerReviewMediaState extends State<_SellerReviewMedia> {
             height: 160,
             width: double.infinity,
             fit: BoxFit.contain,
-            errorBuilder: (_, __, ___) => const Text('Photo indisponible.'),
+            errorBuilder: (_, _, _) => const Text('Photo indisponible.'),
           ),
         ),
       );

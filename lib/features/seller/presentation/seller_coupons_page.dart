@@ -142,7 +142,7 @@ class _SellerCouponsPageState extends ConsumerState<SellerCouponsPage> {
           return ListView.separated(
             padding: const EdgeInsets.fromLTRB(12, 12, 12, 88),
             itemCount: coupons.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 8),
+            separatorBuilder: (_, _) => const SizedBox(height: 8),
             itemBuilder: (_, index) {
               final coupon = coupons[index];
               final value = coupon['discount_value']?.toString() ?? '0';

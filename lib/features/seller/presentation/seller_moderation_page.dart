@@ -287,7 +287,7 @@ class _SellerModerationPageState extends ConsumerState<SellerModerationPage> {
           return ListView.separated(
             padding: const EdgeInsets.all(12),
             itemCount: rows.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 8),
+            separatorBuilder: (_, _) => const SizedBox(height: 8),
             itemBuilder: (context, index) {
               final row = rows[index];
               final status = row['status']?.toString() ?? '';

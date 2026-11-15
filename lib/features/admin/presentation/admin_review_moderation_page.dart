@@ -158,7 +158,7 @@ class _AdminReviewModerationPageState
           return ListView.separated(
             padding: const EdgeInsets.all(12),
             itemCount: rows.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 8),
+            separatorBuilder: (_, _) => const SizedBox(height: 8),
             itemBuilder: (context, index) {
               final row = rows[index];
               final media = row['media'] as List? ?? const [];
@@ -268,7 +268,7 @@ class _ReviewMediaPreviewState extends State<_ReviewMediaPreview> {
           height: 180,
           width: double.infinity,
           fit: BoxFit.contain,
-          errorBuilder: (_, __, ___) => const Text('Photo indisponible.'),
+          errorBuilder: (_, _, _) => const Text('Photo indisponible.'),
         ),
       );
     }

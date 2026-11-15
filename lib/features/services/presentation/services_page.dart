@@ -156,7 +156,7 @@ class _ServicesPageState extends ConsumerState<ServicesPage> {
                     padding: const EdgeInsets.symmetric(horizontal: 12),
                     scrollDirection: Axis.horizontal,
                     itemCount: categories.length + 1,
-                    separatorBuilder: (_, __) => const SizedBox(width: 8),
+                    separatorBuilder: (_, _) => const SizedBox(width: 8),
                     itemBuilder: (_, index) {
                       if (index == 0) {
                         return ChoiceChip(
@@ -210,7 +210,7 @@ class _ServicesPageState extends ConsumerState<ServicesPage> {
                     return ListView.separated(
                       padding: const EdgeInsets.all(12),
                       itemCount: items.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 8),
+                      separatorBuilder: (_, _) => const SizedBox(height: 8),
                       itemBuilder: (_, index) {
                         final service = items[index];
                         final rawProvider = service['service_providers'];
