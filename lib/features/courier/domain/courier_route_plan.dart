@@ -31,9 +31,18 @@ class CourierRoutePlan {
   /// The courier assignment RPC exposes the primary key as assignment_id.
   /// Accept the legacy id key only for callers using an older read model.
   static String requireAssignmentId(Map<String, dynamic> assignment) {
-    final value = (assignment['assignment_id'] ?? assignment['id'])?.toString();
-    if (value == null || value.trim().isEmpty || value == 'null') {
+    final raw = assignment['assignment_id'] ?? assignment['id'];
+    final value = raw?.toString().trim();
+    if (value == null || value.isEmpty || value.toLowerCase() == 'null') {
       throw const FormatException('Identifiant de mission indisponible.');
+    }
+    return value;
+  }
+
+  static double? _validCoordinate(Object? raw, {required double min, required double max}) {
+    final value = double.tryParse(raw?.toString().trim() ?? '');
+    if (value == null || !value.isFinite || value < min || value > max) {
+      return null;
     }
     return value;
   }
@@ -48,30 +57,48 @@ class CourierRoutePlan {
     List<Map<String, dynamic>> assignments,
   ) {
     final active = assignments.where((row) {
-      final status = row['status']?.toString().toUpperCase();
-      final id = row['package_id']?.toString() ?? '';
-      return id.isNotEmpty && activeStatuses.contains(status);
+      final status = row['status']?.toString().trim().toUpperCase();
+      final id = row['package_id']?.toString().trim() ?? '';
+      return id.isNotEmpty && id.toLowerCase() != 'null' &&
+          activeStatuses.contains(status);
     }).toList()
       ..sort((a, b) {
         final left = DateTime.tryParse(a['assigned_at']?.toString() ?? '');
         final right = DateTime.tryParse(b['assigned_at']?.toString() ?? '');
-        if (left == null && right == null) return 0;
+        if (left == null && right == null) {
+          return (a['package_id']?.toString() ?? '')
+              .compareTo(b['package_id']?.toString() ?? '');
+        }
         if (left == null) return 1;
         if (right == null) return -1;
-        return left.compareTo(right);
+        final byDate = left.compareTo(right);
+        if (byDate != 0) return byDate;
+        return (a['package_id']?.toString() ?? '')
+            .compareTo(b['package_id']?.toString() ?? '');
       });
 
     final pickups = <CourierRouteStop>[];
     final dropoffs = <CourierRouteStop>[];
 
     for (final assignment in active) {
-      final packageId = assignment['package_id'].toString();
-      final status = assignment['status']?.toString().toUpperCase() ?? '';
+      final packageId = assignment['package_id'].toString().trim();
+      final status = assignment['status']?.toString().trim().toUpperCase() ?? '';
       final shopAddress = assignment['shop_address']?.toString().trim() ?? '';
       final deliveryAddress = [
         assignment['delivery_address_line']?.toString().trim() ?? '',
         assignment['delivery_city']?.toString().trim() ?? '',
       ].where((part) => part.isNotEmpty).join(', ');
+      final latitude = _validCoordinate(
+        assignment['delivery_latitude'],
+        min: -90,
+        max: 90,
+      );
+      final longitude = _validCoordinate(
+        assignment['delivery_longitude'],
+        min: -180,
+        max: 180,
+      );
+      final hasValidCoordinates = latitude != null && longitude != null;
 
       pickups.add(
         CourierRouteStop(
@@ -90,8 +117,8 @@ class CourierRoutePlan {
           packageId: packageId,
           kind: 'DROPOFF',
           address: deliveryAddress,
-          latitude: assignment['delivery_latitude']?.toString(),
-          longitude: assignment['delivery_longitude']?.toString(),
+          latitude: hasValidCoordinates ? latitude.toString() : null,
+          longitude: hasValidCoordinates ? longitude.toString() : null,
           completed: false,
         ),
       );
