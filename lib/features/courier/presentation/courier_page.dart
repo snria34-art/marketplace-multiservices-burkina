@@ -120,7 +120,17 @@ class _CourierPageState extends ConsumerState<CourierPage> {
         },
       );
     } catch (error) {
+      final subscription = _locationSubscription;
+      _locationSubscription = null;
+      await subscription?.cancel();
+
       if (!mounted) return;
+      // A stream factory/listen error (for example on a web build) must not
+      // leave the UI showing an active GPS session without a live subscription.
+      if (_sharingLocation) {
+        setState(() => _sharingLocation = false);
+      }
+      _locationInFlight = false;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Localisation indisponible : $error'),
