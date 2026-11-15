@@ -111,3 +111,10 @@ Statut : code corrigé et commité ; validation Deno et tests de webhook en atte
 - Les webhooks vérifient leurs propres signatures/secrets dans le code avant toute mutation. La désactivation du contrôle JWT à la passerelle n'enlève donc pas le contrôle d'authenticité métier ; les callbacks non signés sont rejetés.
 - Les événements Wave `checkout.session.payment_failed` sont maintenant transmis comme `FAILED` et non `PROCESSING`, afin de suivre la machine d'état SQL.
 - Le contrôle Deno des fonctions Edge a réussi dans la CI du commit `7c3739f1d3`. Les tests SQL Supabase et les tests Flutter ont également réussi sur ce commit ; les builds Android/iOS sont encore en cours.
+
+### Limite Wave Checkout pour les remboursements partiels — 15 novembre 2026
+
+- L'endpoint Wave `POST /v1/checkout/sessions/:id/refund` rembourse le paiement associé à la session Checkout dans son intégralité ; il ne prend aucun paramètre de montant.
+- L'Edge Function vérifie désormais le montant et la devise du paiement local avant tout appel Wave. Si le montant demandé ne correspond pas exactement au paiement XOF capturé, elle remet la demande à `APPROVED`, n'appelle pas Wave et exige un traitement manuel.
+- Cette garde évite qu'une demande locale partielle déclenche un remboursement intégral chez Wave. Elle ne fournit pas de remboursement partiel Wave : il faut confirmer le canal contractuel alternatif avec le marchand.
+- Le contrôle statique Deno/CI doit encore confirmer cette modification. Aucun remboursement réel ni appel fournisseur n'a été effectué.
