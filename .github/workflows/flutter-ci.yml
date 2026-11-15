@@ -49,7 +49,7 @@ jobs:
         run: flutter --version
 
       - name: Resolve dependencies
-        run: flutter pub get
+        run: flutter pub get --enforce-lockfile
 
       - name: Ensure dependency files remain unchanged
         run: git diff --exit-code -- pubspec.yaml pubspec.lock
