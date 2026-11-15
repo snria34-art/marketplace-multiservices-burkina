@@ -30,7 +30,7 @@ function serviceKey(): string {
 }
 
 async function readRows(
-  admin: ReturnType<typeof createClient>,
+  admin: any, // Dynamic table reads stay inside this server-only aggregation helper.
   table: string,
   columns: string,
   filter?: (query: any) => any,
@@ -96,7 +96,7 @@ Deno.serve(async (request: Request) => {
       providers,
       roles,
       activeAssignments,
-      completedAssignments,
+      deliveredAssignments,
       deliveredPackages,
       completedRequests,
     ] = await Promise.all([
@@ -108,7 +108,7 @@ Deno.serve(async (request: Request) => {
       readRows(admin, "delivery_assignments", "courier_id,status", (query) =>
         query.in("status", ["ASSIGNED", "ACCEPTED", "PICKED_UP", "IN_TRANSIT"])),
       readRows(admin, "delivery_assignments", "courier_id,status", (query) =>
-        query.eq("status", "COMPLETED")),
+        query.eq("status", "DELIVERED")),
       readRows(admin, "order_packages", "order_group_id", (query) =>
         query.eq("status", "DELIVERED")),
       readRows(admin, "service_requests", "service_id,status", (query) =>
