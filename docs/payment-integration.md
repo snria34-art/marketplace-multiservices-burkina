@@ -117,4 +117,5 @@ Statut : code corrigé et commité ; validation Deno et tests de webhook en atte
 - L'endpoint Wave `POST /v1/checkout/sessions/:id/refund` rembourse le paiement associé à la session Checkout dans son intégralité ; il ne prend aucun paramètre de montant.
 - L'Edge Function vérifie désormais le montant et la devise du paiement local avant tout appel Wave. Si le montant demandé ne correspond pas exactement au paiement XOF capturé, elle remet la demande à `APPROVED`, n'appelle pas Wave et exige un traitement manuel.
 - Cette garde évite qu'une demande locale partielle déclenche un remboursement intégral chez Wave. Elle ne fournit pas de remboursement partiel Wave : il faut confirmer le canal contractuel alternatif avec le marchand.
+- Le corps brut des erreurs Wave n'est pas enregistré dans `refunds.reason`, car ce champ est également retourné au client par `get_customer_refunds` ; seul le code HTTP est conservé.
 - Le contrôle statique Deno/CI doit encore confirmer cette modification. Aucun remboursement réel ni appel fournisseur n'a été effectué.
