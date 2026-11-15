@@ -75,7 +75,33 @@ Liens des runs concernés :
 - https://github.com/snria34-art/marketplace-multiservices-burkina/actions/runs/42323347582
 - https://github.com/snria34-art/marketplace-multiservices-burkina/actions/runs/42304226461
 
-## 5. Validation et limites
+
+## 6. Résultats des validations après correction
+
+### Flutter
+
+- Run : https://github.com/snria34-art/marketplace-multiservices-burkina/actions/runs/43717217145
+- Commit : `5428bc9255d52559bbacfaa47e3e4cde26f3318a`
+- Conclusion : `success`
+- `flutter analyze --no-fatal-infos` : réussi ; aucune erreur ni avertissement bloquant.
+- `flutter test` : 29 réussites, 0 échec.
+- `flutter build web --debug` : réussi.
+
+### Supabase Edge Functions
+
+- Run : https://github.com/snria34-art/marketplace-multiservices-burkina/actions/runs/43717824685
+- Commit : `f2384dbfbb7ffbcd6bb6b1f8a4d6ff817caf65d7`
+- Conclusion : `success`
+- `deno check` : les 22 points d'entrée Edge Function ont tous été contrôlés ; le job a terminé avec succès.
+
+### État restant
+
+- Les huit suites pgTAP (179 assertions) n'ont pas été exécutées dans une base Supabase locale reconstruite.
+- Les builds Android/iOS Debug ne sont pas encore validés sur des runners natifs.
+- Les tests E2E métier, paiements sandbox, notifications FCM et GPS sur appareils physiques restent distincts.
+- Aucun déploiement, build Release, test remote SQL ou opération de paiement/remboursement n'a été effectué.
+
+## 7. Validation et limites
 
 - Les deux fichiers YAML ont été relus après enregistrement sur la branche de maintenance.
 - Aucune nouvelle exécution n'a été déclenchée par cette modification de workflow.
