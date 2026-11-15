@@ -1,14 +1,11 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { paymentReturnMessage } from "../_shared/payment_return_message.ts";
 
 Deno.serve((req: Request) => {
   const url = new URL(req.url);
   const status = (url.searchParams.get("status") ?? "pending").toLowerCase();
   const orderId = url.searchParams.get("order_id") ?? "";
-  const message = status === "success"
-    ? "Paiement traité. Revenez dans l’application pour consulter votre commande."
-    : status === "error"
-      ? "Le paiement n’a pas été validé. Revenez dans l’application pour vérifier son état ou réessayer."
-      : "Retour du guichet de paiement. Revenez dans l’application pour vérifier l’état de votre commande.";
+  const message = paymentReturnMessage(status);
   const deepLink = orderId
     ? "marketplaceburkina://orders/" + encodeURIComponent(orderId)
     : "marketplaceburkina://orders";
