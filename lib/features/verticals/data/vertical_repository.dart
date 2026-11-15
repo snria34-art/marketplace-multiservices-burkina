@@ -594,8 +594,9 @@ class VerticalRepository {
 
     String? prescriptionPath;
     if (prescriptionBytes != null) {
-      final mimeType = prescriptionMimeType;
-      if (mimeType != 'image/jpeg' && mimeType != 'image/png') {
+      final mimeType = prescriptionMimeType?.toLowerCase().trim();
+      if (mimeType == null ||
+          (mimeType != 'image/jpeg' && mimeType != 'image/png')) {
         throw ArgumentError.value(
           prescriptionMimeType,
           'prescriptionMimeType',
