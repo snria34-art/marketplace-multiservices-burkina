@@ -86,6 +86,12 @@ Si les secrets nécessaires sont absents, l'application bloque le checkout avant
 - Pour CinetPay, le checkout public actuel ne fournit pas un endpoint de remboursement direct documenté comparable à Wave. L'application conserve donc la demande dans le workflow admin et permet de confirmer manuellement le remboursement après exécution par le canal CinetPay prévu par le contrat.
 - Un remboursement terminé met à jour le paiement en PARTIALLY_REFUNDED ou REFUNDED. **Attention :** la version actuellement déployée de `complete_refund` répartit encore le débit du ledger au prorata de tous les groupes de la commande ; ce comportement n'est pas une règle comptable approuvée et peut débiter des vendeurs non concernés. Voir `docs/runbooks/aud-02-refund-allocation.md`. Ne pas considérer l'allocation des remboursements partiels comme prête pour la production.
 
+### Gestion des résultats ambigus du remboursement Wave — 15 novembre 2026
+
+- Les erreurs de mise à jour du statut Supabase après un remboursement manuel, une configuration Wave absente ou une réponse Wave négative sont maintenant remontées explicitement ; l'Edge Function ne prétend plus que le statut a été enregistré lorsque l'écriture DB a échoué.
+- Si la connexion échoue pendant l'appel de remboursement Wave, le résultat fournisseur est considéré comme **inconnu**. La demande reste en `PROCESSING` afin d'empêcher une nouvelle soumission aveugle ; une réconciliation avec le tableau de bord Wave est nécessaire avant toute nouvelle action.
+- Cette correction réduit le risque de double remboursement mais ne résout pas l'allocation comptable multi-vendeurs documentée dans `docs/runbooks/aud-02-refund-allocation.md`. Les remboursements restent un parcours non certifié jusqu'à la correction et aux tests isolés du ledger.
+
 ## Activation production
 
 Le code d'intégration est en place, mais les comptes marchands/KYC, clés API, secrets de signature et URLs webhook doivent être fournis par les comptes fournisseur avant tout paiement réel.
