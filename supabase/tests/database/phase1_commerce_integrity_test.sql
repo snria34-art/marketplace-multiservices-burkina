@@ -1,5 +1,5 @@
 begin;
-select plan(19);
+select plan(20);
 select ok(exists(select 1 from information_schema.columns where table_schema='public' and table_name='payment_events' and column_name='provider_event_id'),'event identity column exists');
 select ok(exists(select 1 from pg_indexes where schemaname='public' and indexname='uq_payment_events_provider_event_id') and exists(select 1 from pg_indexes where schemaname='public' and indexname='uq_payment_events_legacy_idempotency') and not exists(select 1 from pg_indexes where schemaname='public' and indexname='uq_payment_events_provider_ref'),'event id unique; stable payment reference reusable');
 select ok(to_regprocedure('public.process_payment_event(uuid,text,public.payment_status,text,numeric,text,jsonb)') is not null and to_regprocedure('public.process_payment_event(uuid,text,public.payment_status,text,numeric,jsonb)') is not null and has_function_privilege('service_role','public.process_payment_event(uuid,text,public.payment_status,text,numeric,text,jsonb)','EXECUTE') and not has_function_privilege('authenticated','public.process_payment_event(uuid,text,public.payment_status,text,numeric,text,jsonb)','EXECUTE') and not has_function_privilege('anon','public.process_payment_event(uuid,text,public.payment_status,text,numeric,text,jsonb)','EXECUTE'),'processor overloads and service-only permissions');
@@ -47,6 +47,13 @@ select ok(
 select ok(
   position('r.amount=trunc(r.amount)' in pg_get_functiondef('public.admin_begin_refund(uuid)'::regprocedure)) > 0,
   'provider refund claim rejects fractional XOF before moving the refund to processing'
+);
+
+select ok(
+  position('p_amount <> trunc(p_amount)' in pg_get_functiondef('public.request_refund(uuid,numeric,text)'::regprocedure)) > 0
+  and position('private.require_active_account()' in pg_get_functiondef('public.request_refund(uuid,numeric,text)'::regprocedure)) > 0
+  and position('refund_currency_not_supported' in pg_get_functiondef('public.request_refund(uuid,numeric,text)'::regprocedure)) > 0,
+  'customer refund requests reject fractional XOF and preserve the active-account guard'
 );
 select * from finish();
 rollback;
