@@ -26,3 +26,31 @@ Thumbs.db
 # Android signing material
 android/key.properties
 android/app/upload-keystore.jks
+
+# Flutter platform-generated/local files
+android/local.properties
+**/Generated.xcconfig
+**/flutter_export_environment.sh
+**/ephemeral/
+**/.symlinks/
+**/Pods/
+**/DerivedData/
+**/.swiftpm/
+**/.gradle/
+android/app/.cxx/
+android/app/.externalNativeBuild/
+
+# Supabase local state
+supabase/.temp/
+supabase/.branches/
+supabase/.env
+
+# Signing material and private credentials
+*.jks
+*.keystore
+*.p12
+*.mobileprovision
+*.p8
+*.pem
+**/*service-account*.json
+**/*service_account*.json
