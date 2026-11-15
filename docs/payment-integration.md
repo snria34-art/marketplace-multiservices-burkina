@@ -9,7 +9,7 @@
 - Orange Money et Moov Money au Burkina sont proposés via CinetPay Collect.
 - CinetPay reçoit une notification x-www-form-urlencoded signée par x-token, puis le serveur vérifie toujours la transaction via l'API de vérification.
 - Une notification CinetPay `WAITING_FOR_CUSTOMER` reste en `PROCESSING`.
-- Un événement Wave `checkout.session.payment_failed` reste en `PROCESSING` : Wave précise qu'une même session peut recevoir plusieurs échecs avant une réussite. Cela évite d'annuler prématurément la commande et de libérer son stock entre deux tentatives.
+- Un événement Wave `checkout.session.payment_failed` est actuellement transmis comme `FAILED` au RPC `process_payment_event`. Ce comportement doit rester aligné sur la machine d'état SQL et être confirmé par des notifications sandbox signées avant activation réelle.
 - Les événements de paiement sont traités par un RPC idempotent qui valide le montant et la devise avant de modifier la commande.
 
 ## Fonctions Edge actives
@@ -111,6 +111,13 @@ Statut : code corrigé et commité ; validation Deno et tests de webhook en atte
 - Les webhooks vérifient leurs propres signatures/secrets dans le code avant toute mutation. La désactivation du contrôle JWT à la passerelle n'enlève donc pas le contrôle d'authenticité métier ; les callbacks non signés sont rejetés.
 - Les événements Wave `checkout.session.payment_failed` sont maintenant transmis comme `FAILED` et non `PROCESSING`, afin de suivre la machine d'état SQL.
 - Le contrôle Deno des fonctions Edge a réussi dans la CI du commit `7c3739f1d3`. Les tests SQL Supabase et les tests Flutter ont également réussi sur ce commit ; les builds Android/iOS sont encore en cours.
+
+### Contrôles stricts des webhooks de paiement — 15 novembre 2026
+
+- Wave : un callback de succès doit contenir un montant fournisseur entier positif et sûr, une devise XOF, et correspondre exactement au montant, à la devise et au fournisseur du paiement local. L'absence du montant fournisseur n'est jamais compensée par le montant attendu en base.
+- CinetPay : après vérification serveur de la transaction, le montant fournisseur doit être un entier positif sûr égal au montant local ; la devise du fournisseur et celle du paiement local doivent toutes deux être XOF.
+- Ces contrôles rejettent les callbacks incomplets ou incohérents avant l'appel à `process_payment_event`. Ils ne remplacent pas les tests de contrat avec des exemples réels de notifications sandbox signées, ni la vérification des règles de rejeu et d'idempotence.
+- La CI Deno a réussi sur le commit `8faf7d9851aecb688a329edd93325d18fb89fefd`. Cela confirme le typage des fonctions Edge, pas le comportement des API marchandes en environnement sandbox ou production.
 
 ### Limite Wave Checkout pour les remboursements partiels — 15 novembre 2026
 
