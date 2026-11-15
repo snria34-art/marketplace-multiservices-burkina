@@ -8,7 +8,7 @@ import 'package:marketplace_multiservices_burkina/features/courier/data/courier_
 import 'package:marketplace_multiservices_burkina/features/courier/presentation/courier_page.dart';
 
 class _NoMissionCourierRepository extends CourierRepository {
-  _NoMissionCourierRepository(SupabaseClient client) : super(client);
+  _NoMissionCourierRepository(super.client);
 
   @override
   Future<List<Map<String, dynamic>>> assignments() async => const [];

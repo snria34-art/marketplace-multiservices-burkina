@@ -103,7 +103,7 @@ void main() {
 
       final backslash = String.fromCharCode(92);
       expect(
-        sanitizeInternalLocation('/orders${backslash}..${backslash}admin'),
+        sanitizeInternalLocation('/orders$backslash..${backslash}admin'),
         isNull,
       );
       expect(sanitizeInternalLocation('/orders/%ZZ/admin'), isNull);
