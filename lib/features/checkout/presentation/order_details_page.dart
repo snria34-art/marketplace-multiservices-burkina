@@ -11,6 +11,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/media/video_preview_controller_factory.dart';
 import '../../../core/media/upload_media_validator.dart';
 import '../../../core/providers/repository_providers.dart';
+import '../models/xof_amount.dart';
 
 class OrderDetailsPage extends ConsumerStatefulWidget {
   const OrderDetailsPage({required this.orderId, super.key});
@@ -320,7 +321,7 @@ class _OrderDetailsPageState extends ConsumerState<OrderDetailsPage> {
           children: [
             TextField(
               controller: amountController,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              keyboardType: TextInputType.number,
               decoration: const InputDecoration(labelText: 'Montant (XOF)'),
             ),
             const SizedBox(height: 8),
@@ -343,11 +344,11 @@ class _OrderDetailsPageState extends ConsumerState<OrderDetailsPage> {
         ],
       ),
     );
-    final amount = num.tryParse(amountController.text.trim());
+    final amount = XofAmount.parsePositiveInteger(amountController.text);
     final reason = reasonController.text.trim();
     amountController.dispose();
     reasonController.dispose();
-    if (!mounted || values != true || amount == null || amount <= 0 || amount > maxAmount) return;
+    if (!mounted || values != true || amount == null || amount > maxAmount) return;
 
     try {
       final client = ref.read(supabaseProvider);
