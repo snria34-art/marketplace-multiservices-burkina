@@ -46,21 +46,21 @@ fun validateReleaseSigningConfiguration() {
     }
 }
 
-// Validate only when Gradle has actually selected a Release packaging task.
-// Android evaluates every build type during configuration, including Debug;
-// throwing inside buildTypes.release therefore incorrectly blocks Debug builds.
-gradle.taskGraph.whenReady { taskGraph ->
-    val releasePackagingRequested = taskGraph.allTasks.any { task ->
-        val taskName = task.name.lowercase()
-        taskName.contains("release") &&
+// Validate signing from the requested task names. Android evaluates every build
+// type during configuration, including Debug; a guard inside buildTypes.release
+// would therefore incorrectly block an unsigned Debug build.
+val requestedGradleTasks = gradle.startParameter.taskNames.map { taskName ->
+    taskName.substringAfterLast(':').lowercase()
+}
+val releasePackagingRequested = requestedGradleTasks.any { taskName ->
+    taskName in setOf("build", "assemble", "bundle") ||
+        (taskName.contains("release") &&
             (taskName.startsWith("assemble") ||
                 taskName.startsWith("bundle") ||
-                taskName.startsWith("package"))
-    }
-
-    if (releasePackagingRequested) {
-        validateReleaseSigningConfiguration()
-    }
+                taskName.startsWith("package")))
+}
+if (releasePackagingRequested) {
+    validateReleaseSigningConfiguration()
 }
 
 android {
