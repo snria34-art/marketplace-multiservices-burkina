@@ -114,6 +114,16 @@ export function shouldPersistPaymentEvent(
     status === "CANCELLED";
 }
 
+/**
+ * CinetPay XOF checkout amounts must be positive whole amounts, at least
+ * 100 XOF, and divisible by five.
+ */
+export function parseCinetPayXofAmount(value: unknown): number | null {
+  const amount = parsePositiveSafeIntegerAmount(value);
+  if (amount === null || amount < 100 || amount % 5 !== 0) return null;
+  return amount;
+}
+
 /** Accept the provider currency only when it explicitly identifies XOF. */
 export function isXofCurrency(value: unknown): boolean {
   return typeof value === "string" && value.trim().toUpperCase() === "XOF";

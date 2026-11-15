@@ -1,6 +1,7 @@
 import {
   isReusableWaveCheckoutSession,
   isXofCurrency,
+  parseCinetPayXofAmount,
   parsePositiveSafeIntegerAmount,
   prepareWavePaymentEvent,
   shouldPersistPaymentEvent,
@@ -41,6 +42,30 @@ Deno.test("rejects missing, coercible and non-integer provider amounts", () => {
     assert(
       parsePositiveSafeIntegerAmount(value) === null,
       `expected amount to be rejected: ${String(value)}`,
+    );
+  }
+});
+
+Deno.test("CinetPay XOF amounts respect the provider minimum and increment", () => {
+  assert(parseCinetPayXofAmount(100) === 100, "minimum amount");
+  assert(parseCinetPayXofAmount("125") === 125, "multiple of five");
+
+  const invalid: unknown[] = [
+    0,
+    5,
+    95,
+    99,
+    101,
+    "100.00",
+    "1e2",
+    true,
+    null,
+    Number.MAX_SAFE_INTEGER + 1,
+  ];
+  for (const value of invalid) {
+    assert(
+      parseCinetPayXofAmount(value) === null,
+      `expected CinetPay amount to be rejected: ${String(value)}`,
     );
   }
 });

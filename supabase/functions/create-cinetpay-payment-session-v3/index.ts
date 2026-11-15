@@ -1,5 +1,6 @@
 // deno-lint-ignore no-import-prefix no-unversioned-import
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { parseCinetPayXofAmount } from "../_shared/payment_validation.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
 const json = (body: unknown, status = 200) =>
@@ -118,15 +119,12 @@ Deno.serve(async (req: Request) => {
     });
   }
 
-  const amount = Number(existing.amount);
-  const currency = String(existing.currency ?? "");
-  if (
-    !Number.isInteger(amount) || amount <= 0 || currency !== "XOF" ||
-    amount % 5 !== 0
-  ) {
+  const amount = parseCinetPayXofAmount(existing.amount);
+  const currency = String(existing.currency ?? "").trim().toUpperCase();
+  if (amount === null || currency !== "XOF") {
     return json({
       error: "payment_amount_invalid",
-      detail: "CinetPay XOF amount must be a positive multiple of 5",
+      detail: "CinetPay XOF amount must be a positive integer of at least 100 and a multiple of 5",
     }, 409);
   }
 

@@ -14,6 +14,10 @@
 
 ## Fonctions Edge actives
 
+### Validation du montant CinetPay XOF — 15 novembre 2026
+
+Le checkout CinetPay v3 refuse maintenant avant l'appel fournisseur tout montant qui n'est pas un entier XOF sûr, inférieur à 100 XOF ou non divisible par 5. Le contrôle est partagé et couvert par des tests Deno, afin de ne pas laisser l'API refuser tardivement une commande dont le montant ne respecte pas le minimum documenté par le package d'intégration CinetPay ([référence CinetPay](https://pub.dev/documentation/cinetpay/latest/index.html)).
+
 ### Création
 
 - create-wave-payment-session-v3
