@@ -125,9 +125,8 @@ class PushNotificationService {
           break;
         case AuthChangeEvent.passwordRecovery:
           break;
-        case AuthChangeEvent.userDeleted:
-          // The account no longer exists; avoid an RPC with a deleted session.
-          _currentToken = null;
+        default:
+          // Unknown or provider-specific auth events do not change token ownership.
           break;
         case AuthChangeEvent.mfaChallengeVerified:
           // MFA verification does not change push-token ownership.

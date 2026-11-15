@@ -696,7 +696,7 @@ class _VerticalDiscoveryPageState
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   DropdownButtonFormField<String>(
-                    value: listingType,
+                    initialValue: listingType,
                     decoration: const InputDecoration(labelText: 'Catégorie'),
                     items: const [
                       DropdownMenuItem(value: 'PRODUCE', child: Text('Produits agricoles')),

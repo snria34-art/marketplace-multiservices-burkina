@@ -343,26 +343,40 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
                   ),
                 )
               else
-                ...addresses.map(
-                  (item) => Card(
-                    child: RadioListTile<String>(
-                      value: item['id'].toString(),
-                      groupValue: _selectedAddressId,
-                      onChanged: (_) => _selectAddress(item),
-                      title: Text(
-                        item['label']?.toString() ??
-                            item['recipient_name']?.toString() ??
-                            'Adresse',
+                RadioGroup<String>(
+                  groupValue: _selectedAddressId,
+                  onChanged: (value) {
+                    if (value == null) return;
+                    for (final item in addresses) {
+                      if (item['id'].toString() == value) {
+                        _selectAddress(item);
+                        break;
+                      }
+                    }
+                  },
+                  child: Column(
+                    children: [
+                      ...addresses.map(
+                        (item) => Card(
+                          child: RadioListTile<String>(
+                            value: item['id'].toString(),
+                            title: Text(
+                              item['label']?.toString() ??
+                                  item['recipient_name']?.toString() ??
+                                  'Adresse',
+                            ),
+                            subtitle: Text(
+                              (item['recipient_name']?.toString() ?? '') +
+                                  '\n' +
+                                  (item['address_line']?.toString() ?? '') +
+                                  (item['city']?.toString().isEmpty == true
+                                      ? ''
+                                      : ' — ' + (item['city']?.toString() ?? '')),
+                            ),
+                          ),
+                        ),
                       ),
-                      subtitle: Text(
-                        (item['recipient_name']?.toString() ?? '') +
-                            '\n' +
-                            (item['address_line']?.toString() ?? '') +
-                            (item['city']?.toString().isEmpty == true
-                                ? ''
-                                : ' — ' + (item['city']?.toString() ?? '')),
-                      ),
-                    ),
+                    ],
                   ),
                 ),
               const SizedBox(height: 18),
