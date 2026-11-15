@@ -291,3 +291,25 @@ Le workflow local Supabase Database Tests [run 43754031145](https://github.com/s
 **Limite impérative :** cette validation est locale/CI. Elle ne prouve pas que la migration est appliquée à la base Supabase hébergée. La connexion Supabase ne retourne aucun projet accessible dans cette session. Aucun changement distant n'a été exécuté.
 
 Le gel reste nécessaire jusqu'à l'approbation des règles d'allocation par article/quantité, vendeur, commission, coupons et livraison, puis jusqu'à la conception et aux tests d'une procédure d'allocation immuable.
+
+
+## Addendum complémentaire — distinction entre mitigation des remboursements et finalisation des ventes (16 novembre 2026)
+
+Les descriptions des anciennes sections 3.6 et 3.9 décrivent le comportement historique de `complete_refund` avant la migration `20261115191336_phase1_commerce_integrity_final.sql`. Elles ne décrivent plus la fonction actuellement définie sur la branche de maintenance :
+
+- `complete_refund` ne parcourt plus les groupes pour y écrire des lignes `REFUND` dans `seller_ledger` ;
+- la table privée `refund_accounting_reconciliations` et son trigger gardent les vendeurs concernés en `PENDING_ALLOCATION` ;
+- `request_seller_payout_secure` bloque les retraits des vendeurs concernés tant que le rapprochement est en attente ;
+- `admin_begin_refund` bloque une nouvelle tentative fournisseur sur le même paiement tant qu'un remboursement antérieur doit encore être ventilé.
+
+Ainsi, le risque de double écriture/refund décrit dans les sections historiques est mitigé par le gel comptable : il ne faut pas le présenter comme une écriture effectuée par la version actuelle de `complete_refund`. La contrainte unique de `seller_ledger` reste néanmoins à prendre en compte lors de la conception future des allocations.
+
+### Point encore ouvert : créditer les ventes livrées
+
+La vérification du 16 novembre 2026 a aussi confirmé que `20261115191336_phase1_commerce_integrity_final.sql` ne contient aucun appel à `finalize_seller_group` ou `finalize_seller_group_financials`. La fonction `sync_after_package_delivery` synchronise l'affectation de livraison et le statut parent ; elle ne crée pas les écritures de vente/commission.
+
+Les deux fonctions de finalisation ont des conventions incompatibles :
+- `finalize_seller_group` enregistre une vente brute, puis une commission négative distincte ;
+- `finalize_seller_group_financials` enregistre directement une vente nette et conserve la commission dans un état séparé.
+
+Aucun appelant versionné dans les sources applicatives récentes n'a été identifié pendant l'audit. Un orchestrateur externe reste possible et doit être vérifié. Tant que ce point n'est pas établi et qu'une convention n'est pas choisie, ne pas ajouter un appel automatique ni supposer qu'un groupe `DELIVERED` a déjà crédité le solde vendeur.
