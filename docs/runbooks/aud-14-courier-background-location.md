@@ -1,8 +1,9 @@
 # AUD-14 — Suivi GPS livreur pendant une mission active
 
 **Projet Supabase :** `dzhhsoikzxibmngjzcch`  
-**Dépôt :** `adjasanou49-max/marketplace-multiservices-burkina` — branche `main`  
-**État au 7 novembre 2026 :** flux mobile et protection serveur ajoutés ; tests sur appareils physiques et validation App Store / Google Play restant requis.
+**Dépôt :** `snria34-art/marketplace-multiservices-burkina`  
+**Branche de travail :** `maintenance/audit-01-07-2026-11-15` (ne pas modifier `main`)  
+**État révisé au 15 novembre 2026 :** flux mobile et garde serveur présents ; la CI Flutter a exécuté les tests automatisés sur le commit de maintenance précédent. Le test sur appareils physiques et la validation App Store / Google Play restent requis.
 
 ## 1. Architecture mise en place
 
@@ -16,7 +17,7 @@
 - Sur iOS, `AppleSettings.allowBackgroundLocationUpdates=true`, la mise en pause automatique est désactivée pendant le suivi, et l'indicateur système d'activité de localisation est demandé.
 - Un seul flux GPS est accepté à la fois ; l'interface empêche les doubles appuis pendant le démarrage.
 - L'action « arrêter le partage » annule l'abonnement natif et fait cesser le service.
-- Après chaque transition d'état d'un colis, l'application recharge les affectations. Si aucune mission active ne reste, elle arrête le partage.
+- Après chaque transition d'état d'un colis, l'application recharge les affectations. Si aucune mission active ne reste, elle arrête le partage. Le test repose sur `CourierRoutePlan.build(...)`, pas sur la seule vacuité de la liste renvoyée.
 - Si le serveur renvoie `active_courier_assignment_required`, le suivi s'arrête immédiatement.
 - À la destruction de la page (par exemple après déconnexion), l'abonnement est annulé.
 
@@ -101,10 +102,10 @@ Un test widget est ajouté pour vérifier qu'en l'absence d'affectation active, 
 
 ## 6. Limites de réalisation
 
-- Code de flux continu et paramètres natifs ajoutés sur `main`.
-- Contrôle serveur d'affectation active appliqué et vérifié.
-- Test de refus sans mission ajouté.
-- Aucun test Flutter exécuté : les premiers runs GitHub Actions ne démarraient pas de runner.
+- Le code de flux continu et les paramètres natifs sont présents dans la branche de maintenance ; `main` n'a pas été modifiée pendant cette passe.
+- Le contrôle serveur d'affectation active est présent dans les migrations versionnées ; aucune nouvelle migration GPS n'a été appliquée durant cette passe.
+- Le test widget de refus sans mission a réussi dans le run Flutter `43734260276`.
+- La correction qui arrête le suivi lorsque la liste contient uniquement des missions terminées a été ajoutée dans `cebbe868`; la CI de ce commit doit encore confirmer le résultat.
 - Aucun APK/IPA n'a été construit ni installé sur un appareil pendant cet audit.
 - App Store / Google Play : les permissions de localisation en arrière-plan demandent un examen dédié et une justification conforme à la fonction principale de livraison. La présence des clés natives ne garantit pas l'approbation des stores.
 - La politique de conservation GPS est encore à définir (RIA-31).
