@@ -129,7 +129,7 @@ Deno.serve(async (request: Request) => {
 
     const profiles = accountIds.length === 0
       ? []
-      : await readRows(admin, "profiles", "id,status", (query) =>
+      : await readRows(admin, "profiles", "id,status,verification_status", (query) =>
         query.in("id", accountIds));
 
     const activeProfiles = new Set(
@@ -166,8 +166,13 @@ Deno.serve(async (request: Request) => {
       activeProfiles.has(String(row.user_id)) &&
       activeServiceProviderIds.has(String(row.id))
     );
+    const verifiedActiveProfiles = new Set(
+      profiles.filter((row) =>
+        row.status === "ACTIVE" && row.verification_status === "VERIFIED"
+      ).map((row) => String(row.id)),
+    );
     const activeCouriers = new Set(
-      courierUserIds.filter((id) => activeProfiles.has(id)),
+      courierUserIds.filter((id) => verifiedActiveProfiles.has(id)),
     );
     const couriersOnMission = new Set(
       activeAssignments.map((row) => String(row.courier_id))
@@ -241,7 +246,7 @@ Deno.serve(async (request: Request) => {
         active_provider:
           "Compte actif, prestataire vérifié, avec au moins une prestation active publiée.",
         active_courier:
-          "Compte actif avec rôle COURIER. Cela ne signifie pas qu'il est disponible en ligne.",
+          "Compte actif et vérifié avec rôle COURIER. Cela ne signifie pas qu'il est disponible en ligne.",
         operational:
           "Au moins une vente livrée, prestation terminée ou livraison terminée dans les données conservées.",
       },
