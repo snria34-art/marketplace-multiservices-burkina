@@ -38,11 +38,24 @@ Les causes possibles encore à vérifier sont les permissions/limitations GitHub
 
 Ces changements rendent la branche de maintenance vérifiable lors des prochains changements de code. L'image runner fixe élimine l'ambiguïté de l'alias `ubuntu-latest`, mais ne contourne pas une restriction de compte, une limite de facturation ou une panne du service d'attribution des runners.
 
+### Résultat de la CI Flutter — validation réussie
+
+Le run `43717217145` sur le commit `5428bc9255d52559bbacfaa47e3e4cde26f3318a` s'est terminé avec succès. Le runner a exécuté toutes les étapes : Flutter 3.47.2, dépendances verrouillées, analyse, tests et compilation Web Debug.
+
+- `flutter analyze --no-fatal-infos` : réussi (aucune erreur ni avertissement bloquant ; les infos sont conservées).
+- `flutter test` : 29 réussites, aucun échec.
+- `flutter build web --debug` : réussi.
+- Lockfile : aucun changement.
+
+Run : https://github.com/snria34-art/marketplace-multiservices-burkina/actions/runs/43717217145
+
+Les deux régressions testées ont été corrigées : tentative de redirection via segments `..` (y compris encodages et entrée malformée) et fuite de timer d'auto-refresh Supabase dans le test GPS.
+
 
 ### Validation native et SDK Flutter
 
 - `native-build.yml` est passé d'un build AAB Android `--release` non signable sans keystore à deux builds de validation non signés : Android APK `--debug` et iOS Simulator `--debug`.
-- `flutter.yml` utilise `flutter analyze` sans `--no-fatal-warnings`/ `--no-fatal-infos`, puis `flutter test`.
+- `flutter.yml` reste un workflow de validation manuel strict ; la CI automatique Flutter utilise `flutter analyze --no-fatal-infos`, ce qui garde les erreurs et avertissements bloquants tout en laissant les diagnostics de niveau info non bloquants.
 - `pubspec.yaml` exige Dart >=3.13.0 et Flutter >=3.47.2 <3.50.0 ; le lockfile existant indique Dart >=3.13.0 et Flutter >=3.47.0. Le plafond Flutter est temporaire : le dépôt utilise AGP 9.1.0 / Gradle 9.3.1, tandis que les nouveaux projets Flutter 3.50 documentés utilisent AGP 9.3.1 / Gradle 9.5.0. La migration vers cette nouvelle chaîne doit être testée avant d'élargir la contrainte.
 - `.gitignore` couvre les fichiers locaux Android/iOS/Flutter, l'état Supabase local et les clés/certificats de signature.
 
@@ -66,9 +79,9 @@ Liens des runs concernés :
 
 - Les deux fichiers YAML ont été relus après enregistrement sur la branche de maintenance.
 - Aucune nouvelle exécution n'a été déclenchée par cette modification de workflow.
-- Aucun test Flutter, Deno ou SQL n'a été déclaré réussi : les jobs précédents n'ont exécuté aucune étape et les exécutables Flutter, Dart, Deno, Supabase CLI et PostgreSQL ne sont pas présents dans l'environnement de travail.
+- Les anciens jobs ont échoué avant attribution du runner. Depuis, le runner a été attribué et la validation Flutter est passée sur le run `43717217145` (29/29 tests et Web Debug). Aucun résultat Deno, pgTAP ou SQL n'est déclaré dans cette passe.
 - Aucun workflow n'a été lancé ou relancé manuellement.
 - Aucun build de publication, déploiement GitHub/Vercel, changement de base Supabase, migration distante, secret, donnée métier, paiement ou remboursement n'a été touché.
 - `main` est restée inchangée.
 
-**État :** la configuration CI de la branche de maintenance est corrigée. Le blocage d'attribution des runners est externe au dépôt et nécessite la vérification des paramètres GitHub ci-dessus ; il ne peut pas être réparé par une modification de code dans ce dépôt seul.
+**État :** la CI Flutter de la branche de maintenance a été exécutée avec succès. Le problème historique d'attribution runner n'empêche plus cette validation. La CI Edge Functions et les tests Supabase locaux restent à exécuter dans leurs validations dédiées.
