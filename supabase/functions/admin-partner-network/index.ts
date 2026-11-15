@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js@^2.116.0/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { readRowsInPages } from "../_shared/read_rows_in_pages.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -34,14 +35,21 @@ async function readRows(
   table: string,
   columns: string,
   filter?: (query: any) => any,
+  orderBy: string[] = ["id"],
 ): Promise<Record<string, unknown>[]> {
-  let query: any = admin.from(table).select(columns).limit(10001);
-  if (filter) query = filter(query);
-  const { data, error } = await query;
-  if (error) {
-    throw new Error("PARTNER_NETWORK_QUERY_FAILED:" + table);
-  }
-  return (data ?? []) as Record<string, unknown>[];
+  return await readRowsInPages(async (offset, pageSize) => {
+    let query: any = admin.from(table).select(columns);
+    for (const column of orderBy) {
+      query = query.order(column, { ascending: true });
+    }
+    query = query.range(offset, offset + pageSize - 1);
+    if (filter) query = filter(query);
+    const { data, error } = await query;
+    if (error) {
+      throw new Error("PARTNER_NETWORK_QUERY_FAILED:" + table);
+    }
+    return (data ?? []) as Record<string, unknown>[];
+  }, { pageSize: 500, maxRows: 10001 });
 }
 
 Deno.serve(async (request: Request) => {
@@ -107,7 +115,7 @@ Deno.serve(async (request: Request) => {
       readRows(admin, "services", "id,provider_id", (query) =>
         query.eq("active", true)),
       readRows(admin, "user_roles", "user_id,role", (query) =>
-        query.eq("role", "COURIER")),
+        query.eq("role", "COURIER"), ["user_id", "role"]),
       readRows(admin, "delivery_assignments", "courier_id,status", (query) =>
         query.in("status", ["ASSIGNED", "ACCEPTED", "PICKED_UP", "IN_TRANSIT"])),
       readRows(admin, "delivery_assignments", "courier_id,status", (query) =>
