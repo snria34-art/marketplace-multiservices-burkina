@@ -5,6 +5,7 @@ on:
     branches: [main, 'maintenance/audit-01-07-2026-11-15']
     paths:
       - 'supabase/functions/**'
+      - '.github/workflows/supabase-functions-ci.yml'
   pull_request:
     branches: [main]
     paths:
@@ -26,7 +27,7 @@ jobs:
     timeout-minutes: 25
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           persist-credentials: false
 
