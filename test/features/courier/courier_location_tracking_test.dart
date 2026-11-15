@@ -23,8 +23,6 @@ void main() {
         'test-anon-key',
         authOptions: const AuthClientOptions(autoRefreshToken: false),
       );
-      addTearDown(testClient.dispose);
-
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
