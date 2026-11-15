@@ -94,6 +94,7 @@ Deno.serve(async (request: Request) => {
       sellers,
       shops,
       providers,
+      activeServices,
       roles,
       activeAssignments,
       deliveredAssignments,
@@ -103,6 +104,8 @@ Deno.serve(async (request: Request) => {
       readRows(admin, "sellers", "id,user_id,verification_status"),
       readRows(admin, "shops", "id,seller_id,status,verification_status"),
       readRows(admin, "service_providers", "id,user_id,active,verification_status"),
+      readRows(admin, "services", "id,provider_id", (query) =>
+        query.eq("active", true)),
       readRows(admin, "user_roles", "user_id,role", (query) =>
         query.eq("role", "COURIER")),
       readRows(admin, "delivery_assignments", "courier_id,status", (query) =>
@@ -154,10 +157,14 @@ Deno.serve(async (request: Request) => {
       }).filter((id) => id.length > 0),
     );
 
+    const activeServiceProviderIds = new Set(
+      activeServices.map((row) => String(row.provider_id)),
+    );
     const activeVerifiedProviders = providers.filter((row) =>
       row.active === true &&
       row.verification_status === "VERIFIED" &&
-      activeProfiles.has(String(row.user_id))
+      activeProfiles.has(String(row.user_id)) &&
+      activeServiceProviderIds.has(String(row.id))
     );
     const activeCouriers = new Set(
       courierUserIds.filter((id) => activeProfiles.has(id)),
@@ -220,7 +227,7 @@ Deno.serve(async (request: Request) => {
     ]);
 
     const truncated = [
-      sellers, shops, providers, roles, activeAssignments,
+      sellers, shops, providers, activeServices, roles, activeAssignments,
       deliveredAssignments, deliveredPackages, completedRequests, profiles,
       deliveredGroups, completedServices,
     ].some((rows) => rows.length > 10000);
@@ -232,7 +239,7 @@ Deno.serve(async (request: Request) => {
         active_seller:
           "Compte actif, vendeur vérifié et au moins une boutique active et vérifiée.",
         active_provider:
-          "Compte actif, prestataire activé et vérifié.",
+          "Compte actif, prestataire vérifié, avec au moins une prestation active publiée.",
         active_courier:
           "Compte actif avec rôle COURIER. Cela ne signifie pas qu'il est disponible en ligne.",
         operational:
