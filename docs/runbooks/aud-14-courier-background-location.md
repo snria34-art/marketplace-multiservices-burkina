@@ -12,7 +12,7 @@
 - `DeviceLocationService.positionStream()` utilise le flux natif continu `Geolocator.getPositionStream()` au lieu d'un `Timer.periodic` attaché à la page.
 - La fréquence Android souhaitée est de 15 secondes et la distance minimale de 25 mètres.
 - L'activation du suivi est volontaire, depuis l'espace livreur, et précédée d'un écran d'explication.
-- Le partage n'est pas activable lorsque `get_courier_assignments()` retourne zéro mission active.
+- Le partage n'est pas activable lorsque `get_courier_assignments()` ne contient aucune mission active selon `CourierRoutePlan.build(...)`.
 - Sur Android, Geolocator démarre un service de premier plan avec notification persistante `Suivi de livraison actif`.
 - Sur iOS, `AppleSettings.allowBackgroundLocationUpdates=true`, la mise en pause automatique est désactivée pendant le suivi, et l'indicateur système d'activité de localisation est demandé.
 - Un seul flux GPS est accepté à la fois ; l'interface empêche les doubles appuis pendant le démarrage.
@@ -20,6 +20,7 @@
 - Après chaque transition d'état d'un colis, l'application recharge les affectations. Si aucune mission active ne reste, elle arrête le partage. Le test repose sur `CourierRoutePlan.build(...)`, pas sur la seule vacuité de la liste renvoyée.
 - Si le serveur renvoie `active_courier_assignment_required`, le suivi s'arrête immédiatement.
 - À la destruction de la page (par exemple après déconnexion), l'abonnement est annulé.
+- Si la création du flux natif échoue après l'autorisation (plateforme non prise en charge, permission révoquée ou erreur du plugin), l'abonnement éventuel est annulé et l'état visuel `_sharingLocation` est remis à `false` ; l'interface ne prétend pas partager sans flux actif.
 
 ### Autorisations Android
 
@@ -104,8 +105,8 @@ Un test widget est ajouté pour vérifier qu'en l'absence d'affectation active, 
 
 - Le code de flux continu et les paramètres natifs sont présents dans la branche de maintenance ; `main` n'a pas été modifiée pendant cette passe.
 - Le contrôle serveur d'affectation active est présent dans les migrations versionnées ; aucune nouvelle migration GPS n'a été appliquée durant cette passe.
-- Le test widget de refus sans mission a réussi dans le run Flutter `43734260276`.
-- La correction qui arrête le suivi lorsque la liste contient uniquement des missions terminées a été ajoutée dans `cebbe868`; la CI de ce commit doit encore confirmer le résultat.
-- Aucun APK/IPA n'a été construit ni installé sur un appareil pendant cet audit.
+- Le test widget de refus sans mission et les tests de parcours coursier ont réussi dans le run Flutter `43735673176` (47 tests, compilation Web réussie).
+- La correction qui arrête le suivi lorsque la liste contient uniquement des missions terminées est dans `cebbe868`; la correction qui remet l'état de partage à l'arrêt après une erreur d'ouverture du flux est dans `9980093e`.
+- Le build Android debug du run `43735673369` était encore en cours lors de la dernière vérification ; le build Android du commit antérieur `cebbe868` avait réussi. Aucun APK n'a été testé sur un téléphone réel ; le build iOS n'a pas été lancé (job manuel sur macOS).
 - App Store / Google Play : les permissions de localisation en arrière-plan demandent un examen dédié et une justification conforme à la fonction principale de livraison. La présence des clés natives ne garantit pas l'approbation des stores.
 - La politique de conservation GPS est encore à définir (RIA-31).
