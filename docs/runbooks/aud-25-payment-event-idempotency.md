@@ -65,12 +65,22 @@ Créer une nouvelle migration au moyen de la Supabase CLI, sans réécrire les m
 
 Rejouer `supabase db reset --local`, `supabase test db --local` et les tests Edge avant de discuter d'une application distante.
 
-## 4. Références de contrat fournisseur
+## 4. Mitigation temporaire appliquée dans les webhooks
+
+Les fonctions `wave-payment-webhook-v3` et `cinetpay-webhook-v3` ne transmettent plus les notifications `PROCESSING` au RPC financier. Elles répondent HTTP 200 après authentification/vérification fournisseur, sans consommer l'index unique `payment_events.provider_reference`. Les statuts terminaux restent traités par le RPC avec la référence fournisseur d'origine, déjà enregistrée lors du checkout.
+
+Cette mesure supprime le conflit sur les séquences normales :
+- Wave : `payment_failed` (non terminal) puis `checkout.session.completed` ;
+- CinetPay : `WAITING_FOR_CUSTOMER` (non terminal) puis `ACCEPTED` ou `REFUSED`.
+
+Elle ne conserve pas l'historique détaillé de chaque tentative intermédiaire. Le modèle cible (identifiant d'événement distinct de la référence de paiement) reste nécessaire pour une traçabilité complète et pour gérer d'éventuels états terminaux contradictoires.
+
+## 5. Références de contrat fournisseur
 
 - Wave documente explicitement que plusieurs événements `checkout.session.payment_failed` peuvent précéder une réussite et que l'identifiant d'événement `id` est unique : [Wave — Webhooks / Checkout Events](https://docs.wave.com/webhook).
 - La documentation CinetPay indique que l'URL de notification peut être appelée à chaque mise à jour de l'état : [CinetPay Support — intégration PayIn](https://support.cinetpay.com/d/81-comment-integrer-lapi-de-paiement-payin).
 
-## 5. Limites de cette passe
+## 6. Limites de cette passe
 
 - Le constat est issu des migrations versionnées ; aucune écriture ni requête SQL distante n'a été exécutée durant cette passe.
 - Aucun événement marchand réel ni transaction sandbox n'a été émis.

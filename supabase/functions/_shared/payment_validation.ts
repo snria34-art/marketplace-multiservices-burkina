@@ -101,6 +101,19 @@ export function isReusableWaveCheckoutSession(
   return checkoutStatus === "open" && paymentStatus === "processing";
 }
 
+/**
+ * Only terminal payment states should be sent to the SQL event processor.
+ * Intermediate PROCESSING notifications are acknowledged by the webhook but
+ * do not consume the unique provider_reference slot in payment_events.
+ */
+export function shouldPersistPaymentEvent(
+  status: unknown,
+): status is "SUCCEEDED" | "FAILED" | "CANCELLED" {
+  return status === "SUCCEEDED" ||
+    status === "FAILED" ||
+    status === "CANCELLED";
+}
+
 /** Accept the provider currency only when it explicitly identifies XOF. */
 export function isXofCurrency(value: unknown): boolean {
   return typeof value === "string" && value.trim().toUpperCase() === "XOF";

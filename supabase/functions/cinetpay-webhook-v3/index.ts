@@ -1,6 +1,6 @@
 // deno-lint-ignore no-import-prefix no-unversioned-import
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { isXofCurrency, parsePositiveSafeIntegerAmount } from "../_shared/payment_validation.ts";
+import { isXofCurrency, parsePositiveSafeIntegerAmount, shouldPersistPaymentEvent } from "../_shared/payment_validation.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
 const json = (body: unknown, status = 200) =>
@@ -158,6 +158,19 @@ Deno.serve(async (req: Request) => {
   } else {
     internalStatus = "PROCESSING";
     eventType = "cinetpay." + (providerStatus || "pending").toLowerCase();
+  }
+
+  if (!shouldPersistPaymentEvent(internalStatus)) {
+    // Checkout creation has already marked this payment PROCESSING and saved
+    // the provider transaction reference. Intermediate notifications are
+    // acknowledged but must not consume the unique payment_events reference.
+    return json({
+      ok: true,
+      status: internalStatus,
+      recorded: false,
+      reason: "non_terminal_provider_status",
+      event_type: eventType,
+    }, 200);
   }
 
   const providerReference = transactionId;

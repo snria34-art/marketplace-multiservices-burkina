@@ -3,6 +3,7 @@ import {
   isXofCurrency,
   parsePositiveSafeIntegerAmount,
   prepareWavePaymentEvent,
+  shouldPersistPaymentEvent,
   waveCheckoutEventStatus,
 } from "./payment_validation.ts";
 
@@ -160,4 +161,13 @@ Deno.test("Wave checkout reuse requires a valid unexpired session", () => {
       "terminal, expired or untrusted checkout must not be reused",
     );
   }
+});
+
+Deno.test("only terminal payment states are sent to the SQL event processor", () => {
+  assert(shouldPersistPaymentEvent("SUCCEEDED"), "success is terminal");
+  assert(shouldPersistPaymentEvent("FAILED"), "failure is terminal");
+  assert(shouldPersistPaymentEvent("CANCELLED"), "cancellation is terminal");
+  assert(!shouldPersistPaymentEvent("PROCESSING"), "processing is non-terminal");
+  assert(!shouldPersistPaymentEvent(null), "missing state is rejected");
+  assert(!shouldPersistPaymentEvent("UNKNOWN"), "unknown state is rejected");
 });

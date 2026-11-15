@@ -93,6 +93,14 @@ Si les secrets nécessaires sont absents, l'application bloque le checkout avant
 - Si la connexion échoue pendant l'appel de remboursement Wave, le résultat fournisseur est considéré comme **inconnu**. La demande reste en `PROCESSING` afin d'empêcher une nouvelle soumission aveugle ; une réconciliation avec le tableau de bord Wave est nécessaire avant toute nouvelle action.
 - Cette correction réduit le risque de double remboursement mais ne résout pas l'allocation comptable multi-vendeurs documentée dans `docs/runbooks/aud-02-refund-allocation.md`. Les remboursements restent un parcours non certifié jusqu'à la correction et aux tests isolés du ledger.
 
+### Mitigation appliquée pour les notifications intermédiaires — 15 novembre 2026
+
+- Les webhooks Wave et CinetPay n'appellent plus `process_payment_event` pour un statut `PROCESSING`. Ces notifications non terminales sont acquittées en HTTP 200 sans écrire dans `payment_events`.
+- Cette règle évite qu'un événement d'attente ou un échec d'essai Wave consomme l'unique slot de `provider_reference` avant l'événement final. La référence de session/transaction reste celle enregistrée lors de la création du checkout.
+- Seuls les statuts terminaux `SUCCEEDED` et `FAILED` sont envoyés au RPC avec la référence fournisseur. Le RPC existant reste responsable de l'idempotence de ces événements terminaux.
+- Des tests Deno couvrent la règle commune. Cette mitigation protège le passage normal `PROCESSING` puis état terminal ; elle ne remplace pas une clé d'idempotence par événement si le fournisseur envoie plusieurs états terminaux contradictoires pour la même référence.
+- La nouvelle CI doit encore confirmer cette modification.
+
 ### Blocage restant : idempotence des événements multiples — 15 novembre 2026
 
 - Un contrôle complémentaire des migrations a révélé que `payment_events.provider_reference` possède un index unique global. Le processeur actuel déduplique pourtant par paiement + type + référence ; ces deux règles ne sont pas cohérentes lorsque plusieurs événements distincts utilisent la même session Wave ou transaction CinetPay.

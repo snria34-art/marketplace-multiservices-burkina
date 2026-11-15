@@ -1,7 +1,7 @@
 // deno-lint-ignore no-import-prefix no-unversioned-import
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
-import { isXofCurrency, parsePositiveSafeIntegerAmount, prepareWavePaymentEvent, waveCheckoutEventStatus } from "../_shared/payment_validation.ts";
+import { isXofCurrency, parsePositiveSafeIntegerAmount, prepareWavePaymentEvent, shouldPersistPaymentEvent, waveCheckoutEventStatus } from "../_shared/payment_validation.ts";
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
@@ -175,6 +175,16 @@ Deno.serve(async (req: Request) => {
     return json({ error: "payment_local_data_invalid" }, 409);
   }
   const amountForRpc = preparedEvent.amount;
+
+  if (!shouldPersistPaymentEvent(preparedEvent.status)) {
+    return json({
+      ok: true,
+      status: preparedEvent.status,
+      recorded: false,
+      reason: "non_terminal_payment_attempt",
+      event_id: typeof event.id === "string" ? event.id : null,
+    });
+  }
 
   const providerReference = sessionId || transactionId || clientReference ||
     null;
