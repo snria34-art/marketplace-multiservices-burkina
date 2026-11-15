@@ -3,14 +3,6 @@ name: Supabase database tests
 # Manual validation only. Every database command is explicitly local.
 # This workflow must never link to, reset, or test a hosted Supabase project.
 on:
-  push:
-    branches: ['maintenance/audit-01-07-2026-11-15']
-    paths:
-      - 'supabase/migrations/**'
-      - 'supabase/tests/**'
-      - 'supabase/seed.sql'
-      - 'supabase/config.toml'
-      - '.github/workflows/supabase-db-tests.yml'
   workflow_dispatch:
 
 permissions:
@@ -32,9 +24,12 @@ jobs:
           persist-credentials: false
 
       - name: Set up pinned Supabase CLI
-        uses: supabase/setup-cli@v1
+        uses: supabase/setup-cli@v3
         with:
           version: 2.122.1
+
+      - name: Verify pinned Supabase CLI
+        run: supabase --version
 
       # A fresh GitHub-hosted runner has no linked project or local stack.
       # Both commands explicitly target local containers only.
