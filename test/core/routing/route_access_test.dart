@@ -6,6 +6,7 @@ void main() {
     test('protects customer routes', () {
       for (final path in [
         '/cart',
+        '/wallet',
         '/checkout/cart-1',
         '/orders',
         '/orders/order-1',
@@ -23,6 +24,7 @@ void main() {
     test('protects role-specific route families', () {
       expect(routeRequiresAuthentication('/admin'), isTrue);
       expect(routeRequiresAuthentication('/admin/refunds'), isTrue);
+      expect(routeRequiresAuthentication('/admin/partner-network'), isTrue);
       expect(routeRequiresAuthentication('/seller'), isTrue);
       expect(routeRequiresAuthentication('/seller/products'), isTrue);
       expect(routeRequiresAuthentication('/courier'), isTrue);
@@ -31,6 +33,7 @@ void main() {
     test('keeps public discovery routes browseable', () {
       for (final path in [
         '/',
+        '/whatsapp',
         '/auth/forgot-password',
         '/auth/recovery',
         '/recovery',
