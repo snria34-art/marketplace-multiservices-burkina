@@ -6,7 +6,18 @@ class XofAmount {
   /// number round-tripping across the Edge Function boundary.
   static int? parsePositiveInteger(String value) {
     final normalized = value.trim();
-    if (!RegExp(r'^\\d+$').hasMatch(normalized)) return null;
+    if (!RegExp(r'^\d+).hasMatch(normalized)) return null;
+
+    final amount = int.tryParse(normalized);
+    if (amount == null ||
+        amount <= 0 ||
+        amount > 9007199254740991) {
+      return null;
+    }
+    return amount;
+  }
+}
+).hasMatch(normalized)) return null;
 
     final amount = int.tryParse(normalized);
     if (amount == null ||
