@@ -99,6 +99,8 @@ class _MechanicsPageState extends ConsumerState<MechanicsPage> {
         },
       );
 
+      if (!mounted) return;
+
       final vacation = await showDateRangePicker(
         context: context,
         firstDate: DateTime.now(),
