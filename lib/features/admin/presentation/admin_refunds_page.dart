@@ -211,6 +211,8 @@ class _AdminRefundsPageState extends ConsumerState<AdminRefundsPage> {
               final provider = row['provider']?.toString() ?? '-';
               final amount = row['amount']?.toString() ?? '0';
               final reason = row['reason']?.toString() ?? '';
+              final accountingStatus = row['accounting_status']?.toString();
+              final accountingNote = row['accounting_note']?.toString() ?? '';
               final id = row['refund_id']?.toString() ?? '';
 
               return Card(
@@ -218,9 +220,11 @@ class _AdminRefundsPageState extends ConsumerState<AdminRefundsPage> {
                   isThreeLine: true,
                   leading: CircleAvatar(
                     child: Icon(
-                      status == 'COMPLETED'
-                          ? Icons.check_circle_outline
-                          : Icons.currency_exchange_outlined,
+                      accountingStatus == 'PENDING_ALLOCATION'
+                          ? Icons.pending_actions_outlined
+                          : status == 'COMPLETED'
+                              ? Icons.check_circle_outline
+                              : Icons.currency_exchange_outlined,
                     ),
                   ),
                   title: Text(
@@ -235,8 +239,14 @@ class _AdminRefundsPageState extends ConsumerState<AdminRefundsPage> {
                         status +
                         ' • Fournisseur : ' +
                         provider +
+                        (accountingStatus == 'PENDING_ALLOCATION'
+                            ? '\nRapprochement comptable requis'
+                            : '') +
                         '\n' +
-                        reason,
+                        reason +
+                        (accountingNote.isNotEmpty
+                            ? '\n' + accountingNote
+                            : ''),
                   ),
                   trailing: PopupMenuButton<String>(
                     enabled: !_working && id.isNotEmpty,

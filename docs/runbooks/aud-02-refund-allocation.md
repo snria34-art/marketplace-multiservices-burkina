@@ -270,7 +270,7 @@ Avant d'appliquer une migration :
 - Absence de ventilation des remises par ligne : confirmée.
 - Deux conventions de ledger présentes : confirmées.
 - Proposition de schéma et invariants : documentés dans ce runbook.
-- **Code financier de production : non modifié.**
+- **Mesure de sécurité ajoutée :** la finalisation fournisseur ne débite plus les vendeurs au prorata. Un rapprochement privé `PENDING_ALLOCATION` est créé pour chaque remboursement ; les retraits des vendeurs impliqués et un second remboursement sur le même paiement restent bloqués jusqu'à la ventilation vérifiée. Les montants exacts par article/quantité, remise, livraison et commission restent à définir et à approuver avant de lever ce gel.
 - **Soldes, remboursements et paiements : aucune donnée touchée.**
 - Validation finale de la règle de financement des coupons, des frais de livraison et de la commission : encore nécessaire.
 

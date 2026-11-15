@@ -1,7 +1,8 @@
 // deno-lint-ignore no-import-prefix no-unversioned-import
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
-import { isXofCurrency, parsePositiveSafeIntegerAmount, prepareWavePaymentEvent, shouldPersistPaymentEvent, waveCheckoutEventStatus } from "../_shared/payment_validation.ts";
+import { isXofCurrency, parsePositiveSafeIntegerAmount, prepareWavePaymentEvent, waveCheckoutEventStatus } from "../_shared/payment_validation.ts";
+import { buildProviderEventId } from "../_shared/provider_event_identity.ts";
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
@@ -180,57 +181,23 @@ Deno.serve(async (req: Request) => {
   }
   const amountForRpc = preparedEvent.amount;
 
-  if (!shouldPersistPaymentEvent(preparedEvent.status)) {
-    return json({
-      ok: true,
-      status: preparedEvent.status,
-      recorded: false,
-      reason: "non_terminal_payment_attempt",
-      event_id: typeof event.id === "string" ? event.id : null,
-    });
-  }
-
-  // The stable Wave session reference is already stored in
-  // payments.provider_reference by prepare_payment_processing. Do not reuse
-  // it in payment_events.provider_reference: that column has a global unique
-  // index and a prior callback may already have occupied it.
+  const providerEventId = await buildProviderEventId("wave", rawBody, event.id);
   const eventPayload = {
     ...data,
     gateway_reference: sessionId,
     wave_event_id: typeof event.id === "string" ? event.id : null,
   };
-  const findRecordedEvent = async () =>
-    await supabase
-      .from("payment_events")
-      .select("id")
-      .eq("payment_id", paymentId)
-      .eq("event_type", eventType)
-      .is("provider_reference", null)
-      .limit(1);
-
-  const existingEvent = await findRecordedEvent();
-  if (existingEvent.error) {
-    return json({ error: "payment_event_lookup_failed" }, 503);
-  }
-  if (existingEvent.data?.length) {
-    return json({ ok: true, duplicate: true, status: preparedEvent.status });
-  }
 
   const { data: result, error } = await supabase.rpc("process_payment_event", {
     p_payment_id: paymentId,
     p_event_type: eventType,
     p_status: preparedEvent.status,
-    p_provider_reference: null,
+    p_provider_reference: sessionId,
     p_amount: amountForRpc,
+    p_provider_event_id: providerEventId,
     p_payload: eventPayload,
   });
   if (error) {
-    // A concurrent delivery may have inserted the same (payment,type,NULL)
-    // row after the preflight lookup. Confirm the unique-index winner.
-    const concurrentDuplicate = await findRecordedEvent();
-    if (!concurrentDuplicate.error && concurrentDuplicate.data?.length) {
-      return json({ ok: true, duplicate: true, status: preparedEvent.status });
-    }
     return json({ error: "payment_event_processing_failed" }, 409);
   }
 

@@ -3,7 +3,7 @@
 **Date du constat :** 15 novembre 2026  
 **Branche :** `maintenance/audit-01-07-2026-11-15`  
 **Sévérité :** P1 — callbacks paiement pouvant se succéder sur une même session  
-**Statut :** conflit d'index confirmé dans l'historique SQL versionné ; correction DB requise, non appliquée.
+**Statut :** migration versionnée `20261115184115_phase1_commerce_integrity.sql` ; validations SQL/Edge déclenchées sur le nouveau commit, aucune base hébergée modifiée.
 
 ## 1. Constat SQL
 
@@ -82,7 +82,15 @@ Elle ne conserve pas l'historique détaillé de chaque tentative intermédiaire.
 - Wave documente explicitement que plusieurs événements `checkout.session.payment_failed` peuvent précéder une réussite et que l'identifiant d'événement `id` est unique : [Wave — Webhooks / Checkout Events](https://docs.wave.com/webhook).
 - La documentation CinetPay indique que l'URL de notification peut être appelée à chaque mise à jour de l'état : [CinetPay Support — intégration PayIn](https://support.cinetpay.com/d/81-comment-integrer-lapi-de-paiement-payin).
 
-## 6. Limites de cette passe
+## 6. Correction versionnée
+
+La migration ajoute `payment_events.provider_event_id`, retire l'unicité globale sur `provider_reference` et la remplace par une unicité sur l'identité d'événement. La référence stable de transaction est conservée dans `payment_events.provider_reference` et dans `payments.provider_reference`. Le processeur à sept arguments est utilisé par les webhooks ; la signature à six arguments reste comme wrapper de compatibilité.
+
+Wave utilise `event.id` et CinetPay une empreinte SHA-256 des champs signés canoniques incluant le statut vérifié. Les notifications intermédiaires sont désormais enregistrées sans empêcher l'événement terminal suivant.
+
+Tests Deno : `_shared/provider_event_identity_test.ts`. Tests SQL : `phase1_commerce_integrity_test.sql`.
+
+## 7. Limites de cette passe
 
 - Le constat est issu des migrations versionnées ; aucune écriture ni requête SQL distante n'a été exécutée durant cette passe.
 - Aucun événement marchand réel ni transaction sandbox n'a été émis.

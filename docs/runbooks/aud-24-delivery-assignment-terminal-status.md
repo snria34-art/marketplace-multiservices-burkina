@@ -3,7 +3,7 @@
 **Date de constat :** 15 novembre 2026  
 **Branche :** `maintenance/audit-01-07-2026-11-15`  
 **Sévérité :** P1 — parcours de livraison / confirmation client  
-**Statut :** anomalie SQL statique confirmée ; aucune correction de base distante appliquée.
+**Statut :** correction versionnée dans `20261115184115_phase1_commerce_integrity.sql` ; tests SQL locaux à exécuter sur le nouveau commit. Aucune base Supabase hébergée modifiée.
 
 ## 1. Constat
 
@@ -36,7 +36,7 @@ Deux autres définitions utilisent cependant la valeur inexistante `COMPLETED` :
 
 ```sql
 where package_id = p_package_id
-  and status not in ('CANCELLED','COMPLETED')
+  and status not in ('CANCELLED','DELIVERED')
 ```
 
 La comparaison d'une colonne `public.delivery_status` à `COMPLETED` peut lever `invalid input value for enum delivery_status: "COMPLETED"` et empêcher l'affectation d'un colis.
@@ -45,7 +45,7 @@ La comparaison d'une colonne `public.delivery_status` à `COMPLETED` peut lever 
 
 ```sql
 update public.delivery_assignments
-set status = 'COMPLETED', completed_at = now()
+set status = 'DELIVERED', completed_at = now()
 where package_id = p_package_id
   and status in ('IN_TRANSIT','PICKED_UP','ACCEPTED');
 ```
@@ -90,7 +90,13 @@ Sur la base locale reconstruite uniquement :
 
 Ensuite exécuter `supabase db reset --local` et `supabase test db --local` sur le nouveau commit avant toute discussion de migration distante.
 
-## 5. Limites de cette passe
+## 5. Correction versionnée
+
+La migration `20261115184115_phase1_commerce_integrity.sql` redéfinit `assign_package_to_courier` et `sync_after_package_delivery` afin d'utiliser `DELIVERED`, statut valide de l'enum. Les gardes du chauffeur, des états de commande et des ACL sont conservés.
+
+Les assertions de contrat sont dans `supabase/tests/database/phase1_commerce_integrity_test.sql` et doivent encore être exécutées sur une base locale reconstruite.
+
+## 6. Limites de cette passe
 
 - Le constat provient de la comparaison statique des migrations versionnées ; aucun SQL live n'a été exécuté.
 - Aucun projet Supabase n'était disponible via le connecteur durant cette session.
