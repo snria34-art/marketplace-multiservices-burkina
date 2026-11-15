@@ -477,6 +477,8 @@ language plpgsql
 security definer
 set search_path to pg_catalog, public
 as $function$
+declare
+  v_payment_id uuid;
 begin
   if not private.is_admin() then
     raise exception 'ADMIN_REQUIRED' using errcode='42501';
@@ -484,6 +486,27 @@ begin
 
   if p_refund_id is null then
     raise exception 'refund_id_required';
+  end if;
+
+  -- Lock in a stable order: the refund row, then its payment row. This
+  -- serializes separate refund requests for the same payment so concurrent
+  -- requests cannot both pass the reconciliation preflight.
+  select r.payment_id into v_payment_id
+  from public.refunds r
+  where r.id=p_refund_id
+  for update;
+
+  if not found or v_payment_id is null then
+    raise exception 'refund_not_found';
+  end if;
+
+  select p.id into v_payment_id
+  from public.payments p
+  where p.id=v_payment_id
+  for update;
+
+  if not found then
+    raise exception 'payment_not_found';
   end if;
 
   -- Validate all provider data before moving the refund to PROCESSING.
