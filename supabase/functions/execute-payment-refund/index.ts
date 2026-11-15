@@ -119,6 +119,7 @@ Deno.serve(async (req: Request) => {
     const capturedAmount = Number(payment.amount);
     if (
       payment.currency !== "XOF" ||
+      refund.currency !== payment.currency ||
       !Number.isFinite(capturedAmount) ||
       capturedAmount !== amount
     ) {
@@ -152,7 +153,7 @@ Deno.serve(async (req: Request) => {
   }
 
   if (provider !== "WAVE") {
-    const { error: manualUpdateError } = await adminClient
+    const { data: manualReset, error: manualUpdateError } = await adminClient
       .from("refunds")
       .update({
         status: "APPROVED",
@@ -163,9 +164,12 @@ Deno.serve(async (req: Request) => {
           "; traitement fournisseur manuel requis."
         ).slice(0, 1000),
       })
-      .eq("id", refundId);
+      .eq("id", refundId)
+      .eq("status", "PROCESSING")
+      .select("id")
+      .maybeSingle();
 
-    if (manualUpdateError) {
+    if (manualUpdateError || !manualReset) {
       return json({
         error: "refund_state_update_failed",
         refund_id: refundId,
@@ -183,11 +187,14 @@ Deno.serve(async (req: Request) => {
 
   const waveApiKey = Deno.env.get("WAVE_API_KEY");
   if (!waveApiKey) {
-    const { error: resetError } = await adminClient
+    const { data: resetRow, error: resetError } = await adminClient
       .from("refunds")
       .update({ status: "APPROVED" })
-      .eq("id", refundId);
-    if (resetError) {
+      .eq("id", refundId)
+      .eq("status", "PROCESSING")
+      .select("id")
+      .maybeSingle();
+    if (resetError || !resetRow) {
       return json({
         error: "refund_state_update_failed",
         refund_id: refundId,
@@ -218,21 +225,28 @@ Deno.serve(async (req: Request) => {
   }
 
   if (!waveResponse.ok) {
-    // Do not persist provider response bodies in the customer-visible reason field.
-    const { error: failureUpdateError } = await adminClient
+    // A 5xx may be returned after the provider has accepted the refund.
+    // Keep it PROCESSING for manual reconciliation; never blindly retry it.
+    const providerResultUnknown = waveResponse.status >= 500;
+    const { data: failureUpdate, error: failureUpdateError } = await adminClient
       .from("refunds")
       .update({
-        status: "FAILED",
+        status: providerResultUnknown ? "PROCESSING" : "FAILED",
         reason: (
           String(refund.reason ?? "") +
-          " | Wave refund failed with HTTP status " +
+          " | Wave refund returned HTTP status " +
           waveResponse.status +
-          "."
+          (providerResultUnknown
+            ? "; provider result requires manual reconciliation."
+            : ".")
         ).slice(0, 1000),
       })
-      .eq("id", refundId);
+      .eq("id", refundId)
+      .eq("status", "PROCESSING")
+      .select("id")
+      .maybeSingle();
 
-    if (failureUpdateError) {
+    if (failureUpdateError || !failureUpdate) {
       return json({
         error: "refund_state_update_failed",
         provider_status: waveResponse.status,
@@ -241,9 +255,12 @@ Deno.serve(async (req: Request) => {
     }
 
     return json({
-      error: "wave_refund_failed",
+      error: providerResultUnknown
+        ? "wave_refund_result_unknown"
+        : "wave_refund_failed",
       provider_status: waveResponse.status,
       refund_id: refundId,
+      manual_reconciliation_required: providerResultUnknown,
     }, 502);
   }
 
