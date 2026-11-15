@@ -34,12 +34,12 @@ Correction :
 
 Une première inspection de la version antérieure des migrations a fait suspecter qu'un second appel pouvait remplacer les métadonnées d'une session de paiement déjà préparée. La vérification de la migration plus récente `20261115191336_phase1_commerce_integrity_final.sql` a montré que ce cas est déjà traité : la fonction `prepare_payment_processing` verrouille la ligne de paiement, conserve la première référence fournisseur et rejette une référence concurrente avec `payment_checkout_reference_conflict`. Elle traite aussi de manière idempotente une notification de paiement réussi pour la même référence.
 
-Le test `supabase/tests/database/phase1_commerce_integrity_test.sql` vérifie déjà ce contrat. Une migration supplémentaire créée pendant cette passe a été supprimée après cette découverte, afin de ne pas écraser le comportement plus complet déjà présent ; l'assertion supplémentaire ajoutée à `order_delivery_contract_test.sql` a également été retirée. **Aucun nouveau correctif SQL de session de paiement ne subsiste dans cette passe.**
+Le test `supabase/tests/database/phase1_commerce_integrity_test.sql` vérifie déjà ce contrat. Le fichier `order_delivery_contract_test.sql` contient également une assertion qui contrôle l'immuabilité de la référence enregistrée. Une migration supplémentaire candidate créée pendant cette passe a été supprimée après cette découverte, afin de ne pas écraser le comportement plus complet déjà présent. **Aucun nouveau correctif SQL de session de paiement ne subsiste dans cette passe.**
 
 ## Validation et limites
 
 - Les fichiers modifiés ont été relus depuis GitHub après écriture.
-- Le fichier `order_delivery_contract_test.sql` conserve son plan de 13 assertions ; le contrat de concurrence est déjà couvert dans `phase1_commerce_integrity_test.sql` (plan annoncé : 20 assertions).
+- Le fichier `order_delivery_contract_test.sql` annonce 14 assertions, dont une sur l'immuabilité de la référence fournisseur ; `phase1_commerce_integrity_test.sql` annonce 20 assertions complémentaires. Ces fichiers n'ont pas été exécutés dans cette passe.
 - Aucun lancement local de `flutter analyze`, `flutter test`, Deno tests ou pgTAP n'a été effectué dans cette passe.
 - Le dernier statut combiné GitHub consulté pour le commit de travail ne rapporte aucun status check (`statuses: []`). Il ne faut donc pas considérer cette passe comme validée par CI.
 - Aucun paiement réel, remboursement ou mouvement financier n'a été effectué.
@@ -47,8 +47,8 @@ Le test `supabase/tests/database/phase1_commerce_integrity_test.sql` vérifie d�
 
 ## État de la branche
 
-Comparaison avec `main` au commit `9b70580f322814d6decf9eeac2e5d93aa01e44e9), avant l'ajout de ce rapport :
-- branche de maintenance : 194 commits en avance ;
+Dernière comparaison vérifiée avec `main` au commit `9b70580f322814d6decf9eeac2e5d93aa01e44e9` (avant le dernier addendum documentaire) :
+- branche de maintenance : 207 commits en avance ;
 - branche de maintenance : 1 commit en retard ;
 - état : divergé.
 
@@ -58,9 +58,9 @@ Ne pas fusionner automatiquement. Une revue de synchronisation de l'unique commi
 
 Relecture de l'arbre Git de la branche après l'ajout de cet audit :
 
-- Le fichier `supabase/migrations/20261116120000_prevent_competing_payment_sessions.sql` cité dans la section PAY-01 **n'est pas présent dans l'arbre de la branche** ; aucune migration portant ce nom n'a été créée ou validée dans le dépôt au moment de cette vérification.
+- Le fichier `supabase/migrations/20261116120000_prevent_competing_payment_sessions.sql` **n'est pas présent dans l'arbre actuel**. Une migration candidate de ce nom a été créée temporairement pendant l'audit, puis supprimée après découverte du garde plus complet déjà présent.
 - La migration existante `20261115191336_phase1_commerce_integrity_final.sql` définit déjà `prepare_payment_processing` avec un verrou `FOR UPDATE` et une garde qui refuse toute nouvelle référence quand `provider_reference` est déjà non vide, quel que soit le statut courant, via `payment_checkout_reference_conflict`. Cette garde ne doit pas être remplacée par une condition limitée à `PROCESSING`.
-- Le contrat pgTAP `order_delivery_contract_test.sql` est maintenant porté à **14 assertions** et inclut un contrôle statique de cette immutabilité. Ce test n'a pas encore été exécuté après cette modification : le workflow DB est volontairement manuel/local et aucun nouveau run n'a été déclenché.
+- Le contrat pgTAP `order_delivery_contract_test.sql` annonce **14 assertions** et inclut un contrôle statique de cette immutabilité. Ce test n'a pas été exécuté dans cette passe ; aucun nouveau run n'a été déclenché.
 
 ### Risque fournisseur résiduel
 
@@ -68,4 +68,4 @@ La création de session Wave/CinetPay précède l'appel à `prepare_payment_proc
 
 Les chemins de réutilisation des sessions existantes dans les Edge Functions v3 sont actuellement déclenchés lorsque le paiement est `PROCESSING`. Une référence non vide avec un statut incohérent `PENDING` doit être traitée comme un état de rapprochement, pas comme une autorisation de créer une nouvelle session. Ce cas doit être couvert dans les prochains tests d'intégration.
 
-**Portée :** audit et test pgTAP ajouté uniquement sur la branche de maintenance. Aucune migration Supabase distante, session fournisseur, transaction financière ou donnée utilisateur n'a été modifiée.
+**Portée :** audit, correction Flutter du panier et assertion pgTAP de contrat conservés sur la branche de maintenance. Aucune migration Supabase distante, session fournisseur, transaction financière ou donnée utilisateur n'a été modifiée.
