@@ -72,7 +72,8 @@ Deno.test("only unsettled payments can start or reuse checkout", () => {
     );
   }
 });
-\nDeno.test("CinetPay XOF amounts respect the provider minimum and increment", () => {
+
+Deno.test("CinetPay XOF amounts respect the provider minimum and increment", () => {
   assert(parseCinetPayXofAmount(100) === 100, "minimum amount");
   assert(parseCinetPayXofAmount("125") === 125, "multiple of five");
 
