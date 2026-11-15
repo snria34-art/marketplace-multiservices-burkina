@@ -1,5 +1,5 @@
 begin;
-select plan(56);
+select plan(57);
 
 select ok(
   not has_table_privilege('anon','private.catalog_moderation_findings','SELECT')
@@ -550,6 +550,14 @@ select ok(
   and not has_function_privilege('authenticated','public.process_payment_provider_event(uuid,text,text,jsonb)','EXECUTE')
   and has_function_privilege('service_role','public.process_payment_provider_event(uuid,text,text,jsonb)','EXECUTE'),
   'payment provider event processing resolves payment_status through a protected search path and remains service-role only'
+);
+
+
+select ok(
+  position('r.status in (''REQUESTED'',''APPROVED'')' in pg_get_functiondef('public.admin_begin_refund(uuid)'::regprocedure)) > 0
+  and position('r.status in (''REQUESTED'',''APPROVED'',''FAILED'',''PROCESSING'')' in pg_get_functiondef('public.admin_begin_refund(uuid)'::regprocedure)) = 0
+  and not has_function_privilege('anon','public.admin_begin_refund(uuid)','EXECUTE'),
+  'refund execution can be claimed only once from REQUESTED or APPROVED; in-flight and failed refunds cannot be blindly retried'
 );
 
 select * from finish();
