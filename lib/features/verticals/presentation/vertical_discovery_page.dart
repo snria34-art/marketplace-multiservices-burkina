@@ -184,8 +184,6 @@ class _VerticalDiscoveryPageState
           );
           _success('Demande envoyée au prestataire : $id');
           break;
-        default:
-          break;
       }
     } catch (error) {
       _info('Opération impossible : $error');
@@ -2936,8 +2934,6 @@ class _VerticalDiscoveryPageState
         return 'Demander';
       case VerticalModule.parcels:
         return 'Envoyer';
-      default:
-        return 'Voir';
     }
   }
 
