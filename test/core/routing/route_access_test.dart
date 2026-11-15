@@ -97,7 +97,13 @@ void main() {
       expect(sanitizeInternalLocation('/orders/../admin'), isNull);
       expect(sanitizeInternalLocation('/orders/%2e%2e/admin'), isNull);
       expect(sanitizeInternalLocation('/orders/%252e%252e/admin'), isNull);
-      expect(sanitizeInternalLocation(r'/orders\\..\\admin'), isNull);
+
+      final backslash = String.fromCharCode(92);
+      expect(
+        sanitizeInternalLocation('/orders$backslash..$backslashadmin'),
+        isNull,
+      );
+      expect(sanitizeInternalLocation('/orders/%ZZ/admin'), isNull);
     });
   });
 }

@@ -37,9 +37,10 @@ String? sanitizeInternalLocation(String? value) {
   // Validate the raw path before Uri.tryParse: Dart normalizes literal dot
   // segments, so checking only uri.pathSegments misses "/a/../admin".
   final rawPath = value.split(RegExp(r'[?#]')).first;
+  final backslash = String.fromCharCode(92);
   if (!rawPath.startsWith('/') ||
       rawPath.startsWith('//') ||
-      rawPath.contains(r'\\')) {
+      rawPath.contains(backslash)) {
     return null;
   }
 
@@ -48,9 +49,15 @@ String? sanitizeInternalLocation(String? value) {
     for (var attempt = 0; attempt < 3; attempt++) {
       if (segment == '.' || segment == '..') return null;
 
-      final decoded = Uri.decodeComponent(segment);
+      String decoded;
+      try {
+        decoded = Uri.decodeComponent(segment);
+      } on FormatException {
+        return null;
+      }
+
       if (decoded == segment) break;
-      if (decoded.contains('/') || decoded.contains(r'\\')) return null;
+      if (decoded.contains('/') || decoded.contains(backslash)) return null;
       segment = decoded;
     }
     if (segment == '.' || segment == '..') return null;

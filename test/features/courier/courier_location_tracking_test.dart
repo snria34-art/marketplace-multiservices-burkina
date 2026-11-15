@@ -18,12 +18,19 @@ void main() {
   testWidgets(
     'does not request GPS permission when the courier has no active mission',
     (tester) async {
+      final testClient = SupabaseClient(
+        'http://localhost:54321',
+        'test-anon-key',
+        authOptions: const AuthClientOptions(autoRefreshToken: false),
+      );
+      addTearDown(testClient.dispose);
+
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
             supabaseProvider.overrideWithValue(null),
             courierRepositoryProvider.overrideWithValue(
-              _NoMissionCourierRepository(),
+              _NoMissionCourierRepository(testClient),
             ),
           ],
           child: const MaterialApp(
