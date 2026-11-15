@@ -1,6 +1,7 @@
 // deno-lint-ignore no-import-prefix no-unversioned-import
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { isReusableWaveCheckoutSession } from "../_shared/payment_validation.ts";
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
@@ -157,12 +158,23 @@ Deno.serve(async (req: Request) => {
 
   if (payment.status === "PROCESSING" && payment.provider_reference) {
     const existing = await waveGet(
-      `/v1/checkout/sessions/${payment.provider_reference}`,
+      `/v1/checkout/sessions/${encodeURIComponent(String(payment.provider_reference))}`,
       apiKey,
       signingSecret,
     );
     const existingJson = await existing.json().catch(() => null);
-    if (existing.ok && existingJson?.wave_launch_url) {
+
+    // Never create a second checkout session while the saved provider session
+    // cannot be verified. prepare_payment_processing keeps a non-null
+    // provider_reference, so an untracked replacement could become orphaned.
+    if (!existing.ok) {
+      return json({
+        error: "wave_existing_session_lookup_failed",
+        provider_status: existing.status,
+      }, 502);
+    }
+
+    if (isReusableWaveCheckoutSession(existingJson)) {
       return json({
         payment_id: paymentId,
         provider: "WAVE",
@@ -174,6 +186,31 @@ Deno.serve(async (req: Request) => {
         reused: true,
       });
     }
+
+    const checkoutStatus = String(existingJson?.checkout_status ?? "")
+      .trim().toLowerCase();
+    const paymentStatus = String(existingJson?.payment_status ?? "")
+      .trim().toLowerCase();
+    if (checkoutStatus === "complete" || paymentStatus === "succeeded") {
+      return json({
+        error: "wave_payment_already_completed",
+        payment_id: paymentId,
+        reconciliation_required: true,
+      }, 409);
+    }
+    if (checkoutStatus === "expired" || paymentStatus === "cancelled") {
+      return json({
+        error: "wave_checkout_session_expired_manual_reissue_required",
+        payment_id: paymentId,
+        reconciliation_required: true,
+      }, 409);
+    }
+
+    return json({
+      error: "wave_existing_session_not_reusable",
+      payment_id: paymentId,
+      reconciliation_required: true,
+    }, 409);
   }
 
   const requestBody = JSON.stringify({

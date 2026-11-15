@@ -63,6 +63,43 @@ export function prepareWavePaymentEvent(
   return { status, amount: actualAmount };
 }
 
+/**
+ * Reuse a Wave checkout only while its provider session is still valid.
+ *
+ * A failed attempt may still be retried on the same checkout session. A
+ * completed/expired/cancelled session must not be handed back to the customer.
+ */
+export function isReusableWaveCheckoutSession(
+  value: unknown,
+  nowMs = Date.now(),
+): value is Record<string, unknown> & { wave_launch_url: string } {
+  if (typeof value !== "object" || value === null) return false;
+
+  const session = value as Record<string, unknown>;
+  const launchUrl = session.wave_launch_url;
+  if (
+    typeof launchUrl !== "string" ||
+    !launchUrl.startsWith("https://pay.wave.com/")
+  ) {
+    return false;
+  }
+
+  const expiry = Date.parse(String(session.when_expires ?? ""));
+  if (!Number.isFinite(expiry) || expiry <= nowMs) return false;
+
+  const checkoutStatus = String(session.checkout_status ?? "")
+    .trim()
+    .toLowerCase();
+  const paymentStatus = String(session.payment_status ?? "")
+    .trim()
+    .toLowerCase();
+
+  return checkoutStatus !== "complete" &&
+    checkoutStatus !== "expired" &&
+    paymentStatus !== "succeeded" &&
+    paymentStatus !== "cancelled";
+}
+
 /** Accept the provider currency only when it explicitly identifies XOF. */
 export function isXofCurrency(value: unknown): boolean {
   return typeof value === "string" && value.trim().toUpperCase() === "XOF";

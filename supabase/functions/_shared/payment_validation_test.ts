@@ -1,4 +1,5 @@
 import {
+  isReusableWaveCheckoutSession,
   isXofCurrency,
   parsePositiveSafeIntegerAmount,
   prepareWavePaymentEvent,
@@ -113,6 +114,45 @@ Deno.test("Wave completed event requires exact provider amount and XOF", () => {
         localAmount,
       ) === null,
       "invalid successful callback data must be rejected",
+    );
+  }
+});
+
+Deno.test("Wave checkout reuse requires a valid unexpired session", () => {
+  const now = Date.UTC(2026, 0, 1);
+  const reusable = {
+    id: "cos-test",
+    wave_launch_url: "https://pay.wave.com/c/cos-test",
+    checkout_status: "open",
+    payment_status: "processing",
+    when_expires: "2026-01-01T01:00:00Z",
+  };
+  assert(isReusableWaveCheckoutSession(reusable, now), "open session reused");
+
+  const retryableFailure = {
+    ...reusable,
+    checkout_status: "failed",
+    payment_status: "failed",
+  };
+  assert(
+    isReusableWaveCheckoutSession(retryableFailure, now),
+    "failed attempt can still be retried before session expiry",
+  );
+
+  const terminalStates = [
+    { ...reusable, checkout_status: "complete" },
+    { ...reusable, checkout_status: "expired" },
+    { ...reusable, payment_status: "succeeded" },
+    { ...reusable, payment_status: "cancelled" },
+    { ...reusable, when_expires: "2025-12-31T23:59:59Z" },
+    { ...reusable, wave_launch_url: "https://example.com/fake" },
+    { ...reusable, when_expires: undefined },
+  ];
+
+  for (const session of terminalStates) {
+    assert(
+      !isReusableWaveCheckoutSession(session, now),
+      "terminal, expired or untrusted checkout must not be reused",
     );
   }
 });
