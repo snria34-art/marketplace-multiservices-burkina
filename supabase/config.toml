@@ -16,6 +16,10 @@ verify_jwt = false
 [functions.payment-return]
 verify_jwt = false
 
+# Admin-only aggregated counts for verified marketplace partners.
+[functions.admin-partner-network]
+verify_jwt = true
+
 # Customers must have a valid Supabase session to check whether a payment provider
 # is configured. The function returns only a boolean and never exposes secrets.
 [functions.check-payment-provider-config]
