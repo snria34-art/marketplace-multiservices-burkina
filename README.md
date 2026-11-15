@@ -7,7 +7,7 @@ Application mobile Flutter pour marketplace locale et services associés au Burk
 
 ## Stack
 
-Flutter stable 3.47+, Dart 3.12+, Supabase, Riverpod, go_router, Geolocator et Firebase Messaging.
+Flutter stable 3.47+, Dart 3.13+, Supabase, Riverpod, go_router, Geolocator et Firebase Messaging.
 
 ## État du projet
 
