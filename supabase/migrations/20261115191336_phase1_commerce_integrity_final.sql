@@ -706,6 +706,8 @@ begin
     raise exception 'not_authenticated';
   end if;
 
+  perform private.require_active_account();
+
   if p_payment_id is null or nullif(trim(p_provider_reference),'') is null then
     raise exception 'payment_session_invalid';
   end if;
@@ -753,7 +755,7 @@ begin
 
   update public.payments
   set status='PROCESSING',
-      provider_reference=coalesce(provider_reference,trim(p_provider_reference)),
+      provider_reference=coalesce(nullif(trim(provider_reference),''),trim(p_provider_reference)),
       metadata=coalesce(metadata,'{}'::jsonb) || coalesce(p_metadata,'{}'::jsonb),
       updated_at=now()
   where id=p_payment_id;
