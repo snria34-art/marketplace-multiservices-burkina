@@ -305,7 +305,7 @@ class _CouponDialogState extends State<_CouponDialog> {
               lastDate: DateTime.now().add(const Duration(days: 3650)),
               initialDate: DateTime.now().add(const Duration(days: 30)),
             );
-            if (ends == null || !mounted) return;
+            if (ends == null || !mounted || !context.mounted) return;
 
             Navigator.pop(
               context,
