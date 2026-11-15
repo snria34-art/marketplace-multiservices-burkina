@@ -117,6 +117,7 @@ Statut : code corrigé et commité ; validation Deno et tests de webhook en atte
 - Wave : un callback de succès doit contenir un montant fournisseur entier positif et sûr, une devise XOF, et correspondre exactement au montant, à la devise et au fournisseur du paiement local. L'absence du montant fournisseur n'est jamais compensée par le montant attendu en base.
 - CinetPay : après vérification serveur de la transaction, le montant fournisseur doit être un entier positif sûr égal au montant local ; la devise du fournisseur et celle du paiement local doivent toutes deux être XOF.
 - Ces contrôles rejettent les callbacks incomplets ou incohérents avant l'appel à `process_payment_event`. Ils ne remplacent pas les tests de contrat avec des exemples réels de notifications sandbox signées, ni la vérification des règles de rejeu et d'idempotence.
+- Le parseur partagé rejette aussi les types JSON inattendus (booléens, `null`), les décimaux, les notations exponentielles et les entiers hors plage sûre. Des tests Deno couvrent les montants et la devise XOF ; ils ont réussi avec le typage de toutes les fonctions Edge dans le run CI `43735230698` sur le commit `77d08d11`.
 - La CI Deno a réussi sur le commit `8faf7d9851aecb688a329edd93325d18fb89fefd`. Cela confirme le typage des fonctions Edge, pas le comportement des API marchandes en environnement sandbox ou production.
 
 ### Limite Wave Checkout pour les remboursements partiels — 15 novembre 2026
