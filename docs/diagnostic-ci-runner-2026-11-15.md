@@ -27,7 +27,7 @@ Les causes possibles encore à vérifier sont les permissions/limitations GitHub
 - Ajout de `maintenance/audit-01-07-2026-11-15` aux branches suivies par le déclencheur `push`.
 - Image runner épinglée à `ubuntu-24.04` au lieu de l'alias mobile `ubuntu-latest`.
 - Suppression du workflow lui-même de la liste des chemins du déclencheur `push`, afin qu'une simple mise à jour de configuration ne lance pas un job coûteux sans changement de code à contrôler.
-- Les contrôles restent : dépendances verrouillées, `flutter analyze`, `flutter test` et compilation de validation Flutter Web avec valeurs Supabase factices. Il n'y a aucune étape de publication ou de déploiement.
+- Les contrôles restent : `flutter pub get --enforce-lockfile`, `flutter analyze`, `flutter test` et compilation Flutter Web `--debug` avec valeurs Supabase factices. Il n'y a aucune étape de publication ou de déploiement.
 
 ### `.github/workflows/supabase-functions-ci.yml`
 
@@ -38,7 +38,15 @@ Les causes possibles encore à vérifier sont les permissions/limitations GitHub
 
 Ces changements rendent la branche de maintenance vérifiable lors des prochains changements de code. L'image runner fixe élimine l'ambiguïté de l'alias `ubuntu-latest`, mais ne contourne pas une restriction de compte, une limite de facturation ou une panne du service d'attribution des runners.
 
-## 3. Action requise dans les paramètres GitHub — sans frais
+
+### Validation native et SDK Flutter
+
+- `native-build.yml` est passé d'un build AAB Android `--release` non signable sans keystore à deux builds de validation non signés : Android APK `--debug` et iOS Simulator `--debug`.
+- `flutter.yml` utilise `flutter analyze` sans `--no-fatal-warnings`/ `--no-fatal-infos`, puis `flutter test`.
+- `pubspec.yaml` exige Dart >=3.13.0 et Flutter >=3.47.2 <3.50.0 ; le lockfile existant indique Dart >=3.13.0 et Flutter >=3.47.0. Le plafond Flutter est temporaire : le dépôt utilise AGP 9.1.0 / Gradle 9.3.1, tandis que les nouveaux projets Flutter 3.50 documentés utilisent AGP 9.3.1 / Gradle 9.5.0. La migration vers cette nouvelle chaîne doit être testée avant d'élargir la contrainte.
+- `.gitignore` couvre les fichiers locaux Android/iOS/Flutter, l'état Supabase local et les clés/certificats de signature.
+
+## 4. Action requise dans les paramètres GitHub — sans frais
 
 L'accès de ce connecteur permet la lecture et les changements de fichiers, mais pas la lecture ni la modification des paramètres Actions/Billing du compte. Il est donc impossible de lever un blocage de facturation, une restriction de compte ou une politique d'organisation depuis un commit.
 
@@ -54,7 +62,7 @@ Liens des runs concernés :
 - https://github.com/snria34-art/marketplace-multiservices-burkina/actions/runs/42323347582
 - https://github.com/snria34-art/marketplace-multiservices-burkina/actions/runs/42304226461
 
-## 4. Validation et limites
+## 5. Validation et limites
 
 - Les deux fichiers YAML ont été relus après enregistrement sur la branche de maintenance.
 - Aucune nouvelle exécution n'a été déclenchée par cette modification de workflow.
