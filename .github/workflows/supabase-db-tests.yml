@@ -29,10 +29,12 @@ jobs:
           version: 2.122.1
 
       # A fresh GitHub-hosted runner has no linked project or local stack.
-      # 'supabase start' creates the isolated local stack, applies migrations,
-      # and loads only supabase/seed.test.sql configured in supabase/config.toml.
+      # Both commands explicitly target local containers only.
       - name: Start isolated local Supabase stack
         run: supabase start
+
+      - name: Rebuild local database from every migration and test seed
+        run: supabase db reset --local
 
       - name: Run pgTAP tests against the local database only
         run: supabase test db --local
