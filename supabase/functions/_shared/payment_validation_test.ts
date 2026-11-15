@@ -1,5 +1,6 @@
 import {
   isCinetPayPendingStatus,
+  isPaymentCheckoutEligibleStatus,
   isReusableCinetPayPaymentCheck,
   isReusableWaveCheckoutSession,
   isTrustedCinetPayCheckoutUrl,
@@ -49,7 +50,29 @@ Deno.test("rejects missing, coercible and non-integer provider amounts", () => {
   }
 });
 
-Deno.test("CinetPay XOF amounts respect the provider minimum and increment", () => {
+
+Deno.test("only unsettled payments can start or reuse checkout", () => {
+  assert(isPaymentCheckoutEligibleStatus("PENDING"), "pending payment is eligible");
+  assert(isPaymentCheckoutEligibleStatus("processing"), "processing payment is eligible");
+
+  for (const status of [
+    "SUCCEEDED",
+    "PARTIALLY_REFUNDED",
+    "REFUNDED",
+    "FAILED",
+    "CANCELLED",
+    "UNKNOWN",
+    "",
+    null,
+    1,
+  ]) {
+    assert(
+      !isPaymentCheckoutEligibleStatus(status),
+      `${String(status)} must not start a new checkout`,
+    );
+  }
+});
+\nDeno.test("CinetPay XOF amounts respect the provider minimum and increment", () => {
   assert(parseCinetPayXofAmount(100) === 100, "minimum amount");
   assert(parseCinetPayXofAmount("125") === 125, "multiple of five");
 
