@@ -39,7 +39,7 @@ Des statuts GitHub `Vercel: failure` ont été observés sur les commits Flutter
 
 ### Limites qui restent ouvertes
 
-L'environnement de travail courant ne contient ni Docker, ni Supabase CLI, ni PostgreSQL ; le connecteur Supabase ne retourne aucun projet accessible. Le workflow SQL n'a donc pas été exécuté dans cette passe. Les éléments suivants restent non certifiés :
+L'environnement de travail courant ne contient ni Docker, ni Supabase CLI, ni PostgreSQL ; le connecteur Supabase ne retourne aucun projet accessible. Le workflow SQL n'a donc pas été exécuté dans cette passe. Le dernier run Flutter complet, [43721183766](https://github.com/snria34-art/marketplace-multiservices-burkina/actions/runs/43721183766) sur le commit `5d48c00`, a réussi : analyse terminée, 29 tests, build Web Debug. Il reste 373 diagnostics `info` de style, mais les 23 diagnostics `BuildContext` précédemment observés ont disparu. Les éléments suivants restent non certifiés :
 
 1. reconstruction complète des 347 migrations et exécution des 179 assertions pgTAP sur une base locale isolée ;
 2. builds Android APK Debug et iOS Simulator Debug, puis essais GPS en arrière-plan sur appareils ;
