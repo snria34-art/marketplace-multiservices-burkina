@@ -14,15 +14,17 @@ Cette passe a corrigé les incohérences sûres et confirmables dans la configur
 ### Toolchain Flutter
 
 - Le minimum Dart de `pubspec.yaml` est maintenant `>=3.13.0 <4.0.0`, aligné sur la contrainte Dart inscrite dans `pubspec.lock`.
-- Le README annonce désormais Dart 3.13+.
+- La contrainte Flutter est temporairement bornée à `>=3.47.2 <3.50.0`, car cette branche valide la chaîne Flutter 3.47.2 / AGP 9.1.0 / Gradle 9.3.1. Flutter 3.50 documente de nouveaux defaults Android (AGP 9.3.1 / Gradle 9.5.0) ; la mise à niveau coordonnée n'a pas été testée. Ce verrouillage est une protection contre une toolchain non validée, pas la preuve que Flutter 3.50 échoue dans tous les cas. (Documentation : https://flutter.dev/blog/whats-new-in-flutter-3-50)
+- Le README annonce désormais le SDK Flutter/Dart retenu.
 - La CI Flutter utilise `flutter pub get --enforce-lockfile`, de sorte que la CI échoue si le lockfile n'est pas cohérent au lieu de réécrire implicitement la résolution.
 
 ### CI — validation, pas publication
 
 - Les workflows Flutter CI et Supabase Edge Functions CI surveillent également la branche de maintenance.
 - Les runners Linux des validations sont épinglés sur `ubuntu-24.04`.
-- Le workflow Flutter compile le Web en `--debug`, jamais en `--release` dans cette phase.
+- Le workflow Flutter compile le Web en `--debug`, jamais en `--release` dans cette phase, et applique `pub get --enforce-lockfile`.
 - Le workflow natif ne tente plus de créer un AAB Android `--release` sans keystore : il fait uniquement une validation Android APK Debug et iOS Simulator Debug, non signées.
+- La documentation native a été corrigée pour ne plus décrire l'ancien job AAB Release.
 - Le workflow Flutter manuel applique le même contrôle strict que la CI : analyse et tests sans options qui rendent les warnings/informations non fatals.
 - Aucun workflow n'a été lancé, aucun runner n'a été relancé et aucune compilation n'a été exécutée pendant cette passe.
 
