@@ -32,20 +32,14 @@ Correction :
 
 ### PAY-01 — Préparation concurrente de plusieurs sessions pour un même paiement
 
-Les Edge Functions Wave/CinetPay peuvent être appelées concurremment. Avant ce correctif, deux appels pouvaient lire un paiement à l'état `PENDING`, créer une session fournisseur chacun, puis entrer successivement dans `prepare_payment_processing`. La RPC verrouillait la ligne, mais acceptait encore un paiement déjà `PROCESSING` avec une référence différente : le champ de référence conservait la première valeur via `coalesce`, tandis que les métadonnées pouvaient être remplacées par celles du second appel.
+Une première inspection de la version antérieure des migrations a fait suspecter qu'un second appel pouvait remplacer les métadonnées d'une session de paiement déjà préparée. La vérification de la migration plus récente `20261115191336_phase1_commerce_integrity_final.sql` a montré que ce cas est déjà traité : la fonction `prepare_payment_processing` verrouille la ligne de paiement, conserve la première référence fournisseur et rejette une référence concurrente avec `payment_checkout_reference_conflict`. Elle traite aussi de manière idempotente une notification de paiement réussi pour la même référence.
 
-Correction :
-- nouvelle migration `20261116120000_prevent_competing_payment_sessions.sql` ;
-- la RPC verrouille toujours la ligne de paiement ;
-- lorsqu'une référence est déjà enregistrée, une référence différente déclenche `payment_session_already_prepared` ; la même référence reste idempotente ;
-- l'assertion de contrat pgTAP couvre le verrouillage, le refus d'une référence concurrente et les privilèges de la RPC.
-
-La migration a été ajoutée au dépôt, mais n'a pas été exécutée sur Supabase distant.
+Le test `supabase/tests/database/phase1_commerce_integrity_test.sql` vérifie déjà ce contrat. Une migration supplémentaire créée pendant cette passe a été supprimée après cette découverte, afin de ne pas écraser le comportement plus complet déjà présent ; l'assertion supplémentaire ajoutée à `order_delivery_contract_test.sql` a également été retirée. **Aucun nouveau correctif SQL de session de paiement ne subsiste dans cette passe.**
 
 ## Validation et limites
 
 - Les fichiers modifiés ont été relus depuis GitHub après écriture.
-- Le fichier pgTAP annonce désormais 14 assertions de contrat.
+- Le fichier `order_delivery_contract_test.sql` conserve son plan de 13 assertions ; le contrat de concurrence est déjà couvert dans `phase1_commerce_integrity_test.sql` (plan annoncé : 20 assertions).
 - Aucun lancement local de `flutter analyze`, `flutter test`, Deno tests ou pgTAP n'a été effectué dans cette passe.
 - Le dernier statut combiné GitHub consulté pour le commit de travail ne rapporte aucun status check (`statuses: []`). Il ne faut donc pas considérer cette passe comme validée par CI.
 - Aucun paiement réel, remboursement ou mouvement financier n'a été effectué.
