@@ -504,10 +504,13 @@ begin
   -- Do not start another provider refund when a prior refund on this payment
   -- still needs item/seller allocation and ledger reconciliation.
   if exists (
-    select 1 from private.refund_accounting_reconciliations ar
+    select 1
+    from private.refund_accounting_reconciliations ar
+    join public.refunds prior on prior.id=ar.refund_id
     where ar.payment_id=(select r0.payment_id from public.refunds r0 where r0.id=p_refund_id)
       and ar.refund_id<>p_refund_id
       and ar.status='PENDING_ALLOCATION'
+      and prior.status in ('PENDING','PROCESSING','COMPLETED','FAILED')
   ) then
     raise exception 'refund_financial_reconciliation_required';
   end if;
