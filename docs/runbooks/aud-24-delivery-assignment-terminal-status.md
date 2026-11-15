@@ -1,0 +1,83 @@
+# AUD-24 — Cohérence du statut terminal des affectations de livraison
+
+**Date de constat :** 15 novembre 2026  
+**Branche :** `maintenance/audit-01-07-2026-11-15`  
+**Sévérité :** P1 — parcours de livraison / confirmation client  
+**Statut :** anomalie SQL statique confirmée ; aucune correction de base distante appliquée.
+
+## 1. Constat
+
+La migration initiale déclare :
+
+```sql
+create type public.delivery_status as enum (
+  'CREATED',
+  'READY_FOR_PICKUP',
+  'ASSIGNED',
+  'PICKED_UP',
+  'IN_TRANSIT',
+  'DELIVERED',
+  'RETURNED',
+  'DAMAGED',
+  'LOST',
+  'CANCELLED'
+);
+```
+
+La migration `20261103213933_fix_courier_accept_and_require_pickup_photo.sql` ajoute `ACCEPTED`. Aucune migration examinée n'ajoute `COMPLETED` à `public.delivery_status`.
+
+La table `public.delivery_assignments.status` utilise le type `public.delivery_status`.
+
+La migration `20260921081745_v15_secure_package_delivery.sql` finalisait l'affectation avec `status='DELIVERED'`, valeur autorisée par l'enum.
+
+Cependant, la migration `20260921085013_v62_delivery_events_and_parent_sync.sql` remplace le finaliseur et définit dans `public.sync_after_package_delivery(uuid)` :
+
+```sql
+update public.delivery_assignments
+set status = 'COMPLETED', completed_at = now()
+where package_id = p_package_id
+  and status in ('IN_TRANSIT','PICKED_UP','ACCEPTED');
+```
+
+`COMPLETED` n'appartient pas à l'enum. PostgreSQL ne peut donc pas convertir cette valeur dans la colonne `delivery_assignments.status`.
+
+## 2. Conséquence
+
+La fonction `public.confirm_package_delivery(uuid,text)` appelle `sync_after_package_delivery` dans la même transaction. Quand l'affectation correspond, l'UPDATE avec la valeur non autorisée peut échouer et faire annuler toute la transaction, y compris la mise à jour du colis et l'événement associé.
+
+Le risque touche donc la confirmation finale d'une livraison. Le statut du colis et celui de l'affectation peuvent ne jamais être enregistrés comme livrés par ce chemin.
+
+Le nouveau tableau de bord partenaires compte les affectations terminées sous le statut réellement défini par l'enum, `DELIVERED`, et non le statut inexistant `COMPLETED`.
+
+## 3. Correction à effectuer dans une nouvelle migration
+
+Ne pas modifier les anciennes migrations déjà appliquées : cela ne corrigerait pas automatiquement les fonctions déjà installées sur le projet hébergé et fausserait la reproductibilité de l'historique.
+
+Créer une nouvelle migration avec la Supabase CLI (`supabase migration new fix_delivery_assignment_terminal_status`) puis redéfinir `public.sync_after_package_delivery(uuid)` pour enregistrer `DELIVERED`, valeur déjà valide et utilisée par l'ancien finaliseur.
+
+La correction doit conserver :
+- les gardes de propriété et de mission active ;
+- le verrouillage de la livraison et de son affectation ;
+- l'idempotence de la confirmation ;
+- l'événement de livraison et la synchronisation de l'état parent ;
+- les ACL actuelles, sans donner l'exécution à `anon` ou `authenticated` si le chemin actuel réserve l'appel à `service_role`.
+
+## 4. Tests exigés avant toute application distante
+
+Sur la base locale reconstruite uniquement :
+1. vérifier que `DELIVERED` existe dans `pg_enum` et que `COMPLETED` n'est pas une valeur de `delivery_status` ;
+2. vérifier la définition de `sync_after_package_delivery` et refuser la chaîne `status='COMPLETED'` sur `delivery_assignments` ;
+3. exécuter un scénario complet de retrait puis livraison avec une affectation et des preuves factices ;
+4. confirmer que le colis et l'affectation passent tous deux à `DELIVERED` ;
+5. répéter le callback et vérifier qu'aucune seconde livraison ni double événement financier/logistique n'est créé ;
+6. vérifier les refus pour un autre coursier, un code invalide, une mission annulée et une mission sans preuve requise.
+
+Ensuite exécuter `supabase db reset --local` et `supabase test db --local` sur le nouveau commit avant toute discussion de migration distante.
+
+## 5. Limites de cette passe
+
+- Le constat provient de la comparaison statique des migrations versionnées ; aucun SQL live n'a été exécuté.
+- Aucun projet Supabase n'était disponible via le connecteur durant cette session.
+- L'environnement local de travail ne dispose pas de la commande `supabase` ; la création CLI de la migration et ses tests n'ont donc pas été exécutés.
+- Aucune fonction hébergée, commande, preuve, donnée ou affectation n'a été modifiée.
+- Ne pas annoncer la confirmation de livraison « corrigée » avant l'application contrôlée de la nouvelle migration, la reconstruction locale et les tests pgTAP.
