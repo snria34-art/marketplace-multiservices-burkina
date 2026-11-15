@@ -97,7 +97,9 @@ Si les secrets nécessaires sont absents, l'application bloque le checkout avant
 
 - Les webhooks Wave et CinetPay n'appellent plus `process_payment_event` pour un statut `PROCESSING`. Ces notifications non terminales sont acquittées en HTTP 200 sans écrire dans `payment_events`.
 - Cette règle évite qu'un événement d'attente ou un échec d'essai Wave consomme l'unique slot de `provider_reference` avant l'événement final. La référence de session/transaction reste celle enregistrée lors de la création du checkout.
-- Seuls les statuts terminaux `SUCCEEDED` et `FAILED` sont envoyés au RPC avec la référence fournisseur. Le RPC existant reste responsable de l'idempotence de ces événements terminaux.
+- Seuls les statuts terminaux `SUCCEEDED` et `FAILED` sont envoyés au RPC. Le champ `payment_events.provider_reference` reste `NULL` pour éviter l'index unique global ; la référence stable reste dans `payments.provider_reference` et dans le payload d'événement sous `gateway_reference`.
+- Avant l'appel RPC, le webhook vérifie l'existence d'une ligne avec le même paiement, type d'événement et référence NULL. En cas de livraison simultanée, il relit cette ligne après une erreur d'insertion unique et répond succès si le doublon est confirmé.
+- Wave exige désormais l'identifiant de session dans le callback signé. Son identifiant d'événement `event.id` est conservé dans le payload pour audit ; CinetPay garde la référence `cpm_trans_id` dans le payload.
 - Des tests Deno couvrent la règle commune. Cette mitigation protège le passage normal `PROCESSING` puis état terminal ; elle ne remplace pas une clé d'idempotence par événement si le fournisseur envoie plusieurs états terminaux contradictoires pour la même référence.
 - La nouvelle CI doit encore confirmer cette modification.
 

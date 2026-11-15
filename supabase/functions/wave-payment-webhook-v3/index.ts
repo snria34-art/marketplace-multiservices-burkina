@@ -115,6 +115,10 @@ Deno.serve(async (req: Request) => {
   const sessionId = String(data.id ?? "").trim();
   const transactionId = String(data.transaction_id ?? "").trim();
 
+  if (!sessionId) {
+    return json({ error: "wave_session_reference_missing" }, 422);
+  }
+
   let paymentId = clientReference;
   if (!paymentId && sessionId) {
     const { data: rows } = await supabase
@@ -186,17 +190,49 @@ Deno.serve(async (req: Request) => {
     });
   }
 
-  const providerReference = sessionId || transactionId || clientReference ||
-    null;
+  // The stable Wave session reference is already stored in
+  // payments.provider_reference by prepare_payment_processing. Do not reuse
+  // it in payment_events.provider_reference: that column has a global unique
+  // index and a prior callback may already have occupied it.
+  const eventPayload = {
+    ...data,
+    gateway_reference: sessionId,
+    wave_event_id: typeof event.id === "string" ? event.id : null,
+  };
+  const findRecordedEvent = async () =>
+    await supabase
+      .from("payment_events")
+      .select("id")
+      .eq("payment_id", paymentId)
+      .eq("event_type", eventType)
+      .is("provider_reference", null)
+      .limit(1);
+
+  const existingEvent = await findRecordedEvent();
+  if (existingEvent.error) {
+    return json({ error: "payment_event_lookup_failed" }, 503);
+  }
+  if (existingEvent.data?.length) {
+    return json({ ok: true, duplicate: true, status: preparedEvent.status });
+  }
+
   const { data: result, error } = await supabase.rpc("process_payment_event", {
     p_payment_id: paymentId,
     p_event_type: eventType,
     p_status: preparedEvent.status,
-    p_provider_reference: providerReference,
+    p_provider_reference: null,
     p_amount: amountForRpc,
-    p_payload: data,
+    p_payload: eventPayload,
   });
-  if (error) return json({ error: error.message }, 409);
+  if (error) {
+    // A concurrent delivery may have inserted the same (payment,type,NULL)
+    // row after the preflight lookup. Confirm the unique-index winner.
+    const concurrentDuplicate = await findRecordedEvent();
+    if (!concurrentDuplicate.error && concurrentDuplicate.data?.length) {
+      return json({ ok: true, duplicate: true, status: preparedEvent.status });
+    }
+    return json({ error: "payment_event_processing_failed" }, 409);
+  }
 
-  return json({ ok: true, result });
+  return json({ ok: true, result, status: preparedEvent.status });
 });

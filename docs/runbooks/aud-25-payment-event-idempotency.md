@@ -67,7 +67,9 @@ Rejouer `supabase db reset --local`, `supabase test db --local` et les tests Edg
 
 ## 4. Mitigation temporaire appliquée dans les webhooks
 
-Les fonctions `wave-payment-webhook-v3` et `cinetpay-webhook-v3` ne transmettent plus les notifications `PROCESSING` au RPC financier. Elles répondent HTTP 200 après authentification/vérification fournisseur, sans consommer l'index unique `payment_events.provider_reference`. Les statuts terminaux restent traités par le RPC avec la référence fournisseur d'origine, déjà enregistrée lors du checkout.
+Les fonctions `wave-payment-webhook-v3` et `cinetpay-webhook-v3` ne transmettent plus les notifications `PROCESSING` au RPC financier. Elles répondent HTTP 200 après authentification/vérification fournisseur, sans consommer l'index unique `payment_events.provider_reference`.
+
+Les statuts terminaux sont traités par le RPC avec `p_provider_reference = NULL`. La référence stable fournisseur est conservée dans `payments.provider_reference` (écrite lors de `prepare_payment_processing`) et recopiée dans `payment_events.payload.gateway_reference`. Une recherche préalable par paiement/type/référence NULL protège les replays ; après une erreur d'insertion, le webhook vérifie si un appel concurrent a déjà écrit la ligne et renvoie HTTP 200 si c'est le cas. Wave conserve aussi `event.id` dans le payload.
 
 Cette mesure supprime le conflit sur les séquences normales :
 - Wave : `payment_failed` (non terminal) puis `checkout.session.completed` ;

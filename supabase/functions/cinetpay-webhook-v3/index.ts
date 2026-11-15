@@ -173,16 +173,46 @@ Deno.serve(async (req: Request) => {
     }, 200);
   }
 
-  const providerReference = transactionId;
+  // Checkout creation has already stored transactionId in
+  // payments.provider_reference. Keep payment_events.provider_reference NULL
+  // so status callbacks for one transaction are not blocked by the global
+  // unique index on that column. Retain the reference in the JSON payload.
+  const eventPayload = {
+    ...data,
+    gateway_reference: transactionId,
+  };
+  const findRecordedEvent = async () =>
+    await supabase
+      .from("payment_events")
+      .select("id")
+      .eq("payment_id", String(payment.id))
+      .eq("event_type", eventType)
+      .is("provider_reference", null)
+      .limit(1);
+
+  const existingEvent = await findRecordedEvent();
+  if (existingEvent.error) {
+    return json({ error: "payment_event_lookup_failed" }, 503);
+  }
+  if (existingEvent.data?.length) {
+    return json({ ok: true, duplicate: true, status: internalStatus }, 200);
+  }
+
   const { error } = await supabase.rpc("process_payment_event", {
     p_payment_id: payment.id,
     p_event_type: eventType,
     p_status: internalStatus,
-    p_provider_reference: providerReference,
+    p_provider_reference: null,
     p_amount: providerAmount,
-    p_payload: data,
+    p_payload: eventPayload,
   });
-  if (error) return json({ error: "payment_event_processing_failed" }, 409);
+  if (error) {
+    const concurrentDuplicate = await findRecordedEvent();
+    if (!concurrentDuplicate.error && concurrentDuplicate.data?.length) {
+      return json({ ok: true, duplicate: true, status: internalStatus }, 200);
+    }
+    return json({ error: "payment_event_processing_failed" }, 409);
+  }
 
   return json({ ok: true, status: internalStatus }, 200);
 });
