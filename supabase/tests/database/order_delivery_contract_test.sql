@@ -1,5 +1,5 @@
 begin;
-select plan(13);
+select plan(14);
 
 select ok(
   has_function_privilege('authenticated', 'public.cancel_unpaid_order(uuid)', 'EXECUTE')
@@ -103,6 +103,13 @@ select ok(
   and position('if v_refund.status=''COMPLETED'' then' in pg_get_functiondef('public.complete_refund(uuid,text)'::regprocedure)) > 0
   and position('for update' in pg_get_functiondef('public.complete_refund(uuid,text)'::regprocedure)) > 0,
   'refund completion remains service-role-only, idempotent and row-locked'
+);
+
+select ok(
+  position('payment_checkout_reference_conflict' in pg_get_functiondef('public.prepare_payment_processing(uuid,text,jsonb)'::regprocedure)) > 0
+  and position('nullif(trim(v_payment.provider_reference)' in pg_get_functiondef('public.prepare_payment_processing(uuid,text,jsonb)'::regprocedure)) > 0
+  and position('if v_payment.status = ''PROCESSING''' in pg_get_functiondef('public.prepare_payment_processing(uuid,text,jsonb)'::regprocedure)) = 0,
+  'a persisted provider reference cannot be replaced regardless of the current payment state'
 );
 
 select * from finish();
