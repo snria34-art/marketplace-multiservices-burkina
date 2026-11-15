@@ -2,6 +2,14 @@ name: Native debug validation
 
 # Manual validation only. No release signing, store upload or deployment.
 on:
+  push:
+    branches: ['maintenance/audit-01-07-2026-11-15']
+    paths:
+      - 'android/**'
+      - 'lib/**'
+      - 'pubspec.yaml'
+      - 'pubspec.lock'
+      - '.github/workflows/native-build.yml'
   workflow_dispatch:
 
 permissions:
@@ -46,6 +54,8 @@ jobs:
 
   ios-simulator-debug:
     name: Build iOS simulator debug app (unsigned)
+    # macOS runners consume a larger Actions budget; keep iOS manual-only.
+    if: github.event_name == 'workflow_dispatch'
     runs-on: macos-latest
     timeout-minutes: 35
     steps:
