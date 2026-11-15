@@ -44,7 +44,20 @@ Cette passe a corrigé les incohérences sûres et confirmables dans la configur
 - Aucun appel `throw UnimplementedError` ni marqueur `FIXME` trouvé par les recherches ciblées.
 - Les fonctions Wave/CinetPay v3 et leurs webhooks ont été relus pour leurs contrôles JWT, signature, site/provider et traitement serveur. Les secrets marchands et FCM restent une condition de configuration externe ; aucune valeur de secret n'a été cherchée ou affichée.
 
-Ces vérifications ne remplacent ni l'analyseur Dart, ni le compilateur, ni les tests Flutter, Deno ou pgTAP.
+### Validation Flutter réellement exécutée — 15 novembre 2026
+
+Le run GitHub Actions `43717217145`, commit `5428bc9255d52559bbacfaa47e3e4cde26f3318a`, a terminé avec succès :
+
+- `flutter --version` : réussi (Flutter 3.47.2) ;
+- `flutter pub get --enforce-lockfile` : réussi ;
+- contrôle que `pubspec.yaml` et `pubspec.lock` restent inchangés : réussi ;
+- `flutter analyze --no-fatal-infos` : réussi, aucune erreur et aucun avertissement bloquant ; les diagnostics de niveau info restent visibles ;
+- `flutter test` : **29 tests réussis, 0 échec** ;
+- `flutter build web --debug` avec des valeurs Supabase fictives : réussi.
+
+Lien du run : https://github.com/snria34-art/marketplace-multiservices-burkina/actions/runs/43717217145
+
+Cette validation ne remplace pas les contrôles Deno/pgTAP, les tests des builds natifs, l'intégration avec de vrais comptes distincts, ni une validation de production.
 
 ## Échecs CI historiques — diagnostic
 
@@ -78,16 +91,15 @@ Les permissions GPS en arrière-plan sont présentes dans les fichiers Android/i
 
 ## Reste à valider avant d'affirmer que le projet ne présente plus d'erreur
 
-1. Débloquer l'attribution des runners GitHub Actions via les paramètres Actions/quota/politiques ou le support GitHub, sans activer de dépense.
-2. Exécuter `flutter analyze`, `flutter test` et la compilation Web Debug, puis corriger chaque diagnostic réel.
-3. Exécuter `deno check` sur les 22 fonctions Edge et corriger chaque erreur réelle.
-4. Reconstruire une base Supabase **locale** isolée, vérifier la reproductibilité des migrations et exécuter les 179 assertions pgTAP.
-5. Ajouter les scénarios d'intégration multi-vendeurs/retours, callbacks signés/idempotents, capture après annulation et concurrence stock.
-6. Tester Android et iOS Debug sur appareils/simulateurs, et GPS arrière-plan sur appareils réels.
-7. Faire examiner le modèle financier, les règles légales/fiscales et la conservation GPS avant d'activer des flux réels.
+1. La validation Flutter est réussie sur le commit `5428bc9` : analyse, 29 tests et build Web Debug.
+2. Exécuter `deno check` sur les 22 fonctions Edge dans la CI Edge dédiée ; aucune validation Deno n'est revendiquée dans cette passe.
+3. Reconstruire une base Supabase **locale** isolée, vérifier la reproductibilité des migrations et exécuter les 179 assertions pgTAP.
+4. Ajouter les scénarios d'intégration multi-vendeurs/retours, callbacks signés/idempotents, capture après annulation et concurrence stock.
+5. Tester Android APK Debug et iOS Simulator Debug sur runner(s), puis GPS arrière-plan sur appareils réels.
+6. Faire examiner le modèle financier, les règles légales/fiscales et la conservation GPS avant d'activer des flux réels.
 
 ## Opérations interdites pendant la maintenance
 
 Aucun déploiement GitHub ou Vercel, aucune publication Web/Android/iOS, aucun build Release, aucun merge vers `main`, aucune migration Supabase distante, aucune modification de données, aucun paiement/remboursement réel, aucun secret modifié et aucune action de billing n'a été effectué.
 
-**Conclusion :** les incohérences de configuration identifiées ont été corrigées sur la branche de maintenance. Le dépôt ne peut pas encore être déclaré sans erreur : les tests automatiques n'ont pas pu démarrer faute de runner et plusieurs contrôles critiques nécessitent un environnement isolé ou une décision métier.
+**Conclusion :** les corrections Flutter identifiées dans cette passe sont validées par un run vert (analyse, 29/29 tests, Web Debug). Le dépôt complet ne peut pas encore être certifié sans erreur : Deno/pgTAP, builds natifs, scénarios E2E, intégrité financière, intervention PostGIS et historique distant restent à valider séparément.
