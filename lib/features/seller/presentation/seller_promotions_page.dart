@@ -297,7 +297,7 @@ class _PromotionDialogState extends State<_PromotionDialog> {
                 end: DateTime.now().add(const Duration(days: 7)),
               ),
             );
-            if (range == null || !mounted) return;
+            if (range == null || !mounted || !context.mounted) return;
 
             Navigator.pop(
               context,
