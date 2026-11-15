@@ -29,7 +29,7 @@ Deno.test("readRowsInPages continues after a server-capped short page", async ()
   );
 
   assert(rows.length === source.length, "short pages must not truncate results");
-  assert(offsets.join(",") === "0,17,34,51,68,85,102", "offset advances by received row count");
+  assert(offsets.join(",") === "0,17,34,51,68,85,102,117", "offset advances by received row count and probes the final empty page");
 });
 
 Deno.test("readRowsInPages stops at the configured safety cap", async () => {
