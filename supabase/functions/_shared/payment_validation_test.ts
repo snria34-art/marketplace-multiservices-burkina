@@ -1,6 +1,7 @@
 import {
   isXofCurrency,
   parsePositiveSafeIntegerAmount,
+  waveCheckoutEventStatus,
 } from "./payment_validation.ts";
 
 function assert(condition: unknown, message: string): asserts condition {
@@ -49,4 +50,23 @@ Deno.test("accepts only an explicit XOF currency string", () => {
   assert(!isXofCurrency(0), "numeric currency");
   assert(!isXofCurrency(true), "boolean currency");
   assert(!isXofCurrency("USD"), "other currency");
+});
+
+Deno.test("Wave failed attempts remain processing until a session succeeds", () => {
+  assert(
+    waveCheckoutEventStatus("checkout.session.completed") === "SUCCEEDED",
+    "completed event settles only through success path",
+  );
+  assert(
+    waveCheckoutEventStatus("checkout.session.payment_failed") === "PROCESSING",
+    "failed attempt is non-terminal and may be retried",
+  );
+  assert(
+    waveCheckoutEventStatus("test.test_event") === null,
+    "unrelated event is ignored",
+  );
+  assert(
+    waveCheckoutEventStatus(undefined) === null,
+    "missing event type is ignored",
+  );
 });

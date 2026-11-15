@@ -1,7 +1,7 @@
 // deno-lint-ignore no-import-prefix no-unversioned-import
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
-import { isXofCurrency, parsePositiveSafeIntegerAmount } from "../_shared/payment_validation.ts";
+import { isXofCurrency, parsePositiveSafeIntegerAmount, waveCheckoutEventStatus } from "../_shared/payment_validation.ts";
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
@@ -104,9 +104,7 @@ Deno.serve(async (req: Request) => {
   const data = (event.data ?? {}) as Record<string, unknown>;
   if (!eventType) return json({ error: "invalid_event" }, 400);
 
-  let status: "SUCCEEDED" | "FAILED" | null = null;
-  if (eventType === "checkout.session.completed") status = "SUCCEEDED";
-  if (eventType === "checkout.session.payment_failed") status = "FAILED";
+  const status = waveCheckoutEventStatus(eventType);
   if (!status) return json({ ok: true, ignored: true, event_type: eventType });
 
   const supabase = createClient(url, adminKey, {
@@ -140,14 +138,6 @@ Deno.serve(async (req: Request) => {
 
   if (!paymentId) return json({ error: "payment_not_resolved" }, 404);
 
-  // A successful provider callback must carry its own amount and currency.
-  // Never substitute the local expected amount when provider data is missing:
-  // doing so would allow an incomplete notification to settle a payment.
-  const amount = parsePositiveSafeIntegerAmount(data.amount);
-  if (amount === null || !isXofCurrency(data.currency)) {
-    return json({ error: "payment_amount_or_currency_invalid" }, 422);
-  }
-
   const { data: payment, error: paymentError } = await supabase
     .from("payments")
     .select("amount,currency,provider")
@@ -157,12 +147,31 @@ Deno.serve(async (req: Request) => {
   if (paymentError || !payment) {
     return json({ error: "payment_not_found" }, 404);
   }
+
+  const localAmount = parsePositiveSafeIntegerAmount(payment.amount);
   if (
+    localAmount === null ||
     String(payment.provider ?? "").trim().toUpperCase() !== "WAVE" ||
-    String(payment.currency ?? "").trim().toUpperCase() !== "XOF" ||
-    Number(payment.amount) !== amount
+    String(payment.currency ?? "").trim().toUpperCase() !== "XOF"
   ) {
-    return json({ error: "payment_amount_or_currency_mismatch" }, 409);
+    return json({ error: "payment_local_data_invalid" }, 409);
+  }
+
+  // Wave's documented payment_failed payload contains the session id and
+  // failure status, but does not contain amount/currency. Multiple such
+  // failures may precede a successful attempt. Record them as PROCESSING
+  // using the trusted local amount only to satisfy the SQL RPC contract;
+  // this branch can never settle an order or prove that money was captured.
+  let amountForRpc = localAmount;
+  if (status === "SUCCEEDED") {
+    const providerAmount = parsePositiveSafeIntegerAmount(data.amount);
+    if (providerAmount === null || !isXofCurrency(data.currency)) {
+      return json({ error: "payment_amount_or_currency_invalid" }, 422);
+    }
+    if (providerAmount !== localAmount) {
+      return json({ error: "payment_amount_or_currency_mismatch" }, 409);
+    }
+    amountForRpc = providerAmount;
   }
 
   const providerReference = sessionId || transactionId || clientReference ||
@@ -172,7 +181,7 @@ Deno.serve(async (req: Request) => {
     p_event_type: eventType,
     p_status: status,
     p_provider_reference: providerReference,
-    p_amount: amount,
+    p_amount: amountForRpc,
     p_payload: data,
   });
   if (error) return json({ error: error.message }, 409);

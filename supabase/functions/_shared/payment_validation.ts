@@ -18,6 +18,19 @@ export function parsePositiveSafeIntegerAmount(value: unknown): number | null {
   return Number.isSafeInteger(amount) && amount > 0 ? amount : null;
 }
 
+/**
+ * Classify Wave Checkout events without treating a retryable attempt failure
+ * as a terminal payment failure. Wave documents that multiple payment_failed
+ * events may occur before the same session eventually succeeds.
+ */
+export function waveCheckoutEventStatus(
+  eventType: unknown,
+): "SUCCEEDED" | "PROCESSING" | null {
+  if (eventType === "checkout.session.completed") return "SUCCEEDED";
+  if (eventType === "checkout.session.payment_failed") return "PROCESSING";
+  return null;
+}
+
 /** Accept the provider currency only when it explicitly identifies XOF. */
 export function isXofCurrency(value: unknown): boolean {
   return typeof value === "string" && value.trim().toUpperCase() === "XOF";

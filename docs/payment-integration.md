@@ -9,7 +9,7 @@
 - Orange Money et Moov Money au Burkina sont proposés via CinetPay Collect.
 - CinetPay reçoit une notification x-www-form-urlencoded signée par x-token, puis le serveur vérifie toujours la transaction via l'API de vérification.
 - Une notification CinetPay `WAITING_FOR_CUSTOMER` reste en `PROCESSING`.
-- Un événement Wave `checkout.session.payment_failed` est actuellement transmis comme `FAILED` au RPC `process_payment_event`. Ce comportement doit rester aligné sur la machine d'état SQL et être confirmé par des notifications sandbox signées avant activation réelle.
+- Wave peut envoyer plusieurs événements `checkout.session.payment_failed` pour une même session avant une réussite. Ces événements doivent être traités comme `PROCESSING`, jamais comme un échec terminal qui annule la commande. Le payload documenté de cet événement ne contient pas nécessairement `amount` et `currency` ; seuls les callbacks `checkout.session.completed` prouvent une capture et doivent vérifier le montant/la devise fournis par Wave.
 - Les événements de paiement sont traités par un RPC idempotent qui valide le montant et la devise avant de modifier la commande.
 
 ## Fonctions Edge actives
@@ -109,10 +109,14 @@ Statut : code corrigé et commité ; validation Deno et tests de webhook en atte
 
 - Les fonctions `wave-payment-webhook-v3`, `cinetpay-webhook-v3` et `payment-return` ont `verify_jwt = false` dans `supabase/config.toml`, car les fournisseurs et navigateurs ne disposent pas d'un JWT Supabase.
 - Les webhooks vérifient leurs propres signatures/secrets dans le code avant toute mutation. La désactivation du contrôle JWT à la passerelle n'enlève donc pas le contrôle d'authenticité métier ; les callbacks non signés sont rejetés.
-- Les événements Wave `checkout.session.payment_failed` sont maintenant transmis comme `FAILED` et non `PROCESSING`, afin de suivre la machine d'état SQL.
+- Les événements Wave `checkout.session.payment_failed` sont enregistrés comme `PROCESSING` : la documentation Wave précise que plusieurs échecs peuvent survenir avant une réussite. Le payload d'échec est admis sans montant/devise fournisseur ; le montant local sert uniquement à enregistrer cet état non terminal. Le succès exige toujours le montant et la devise XOF exacts du callback `checkout.session.completed`.
 - Le contrôle Deno des fonctions Edge a réussi dans la CI du commit `7c3739f1d3`. Les tests SQL Supabase et les tests Flutter ont également réussi sur ce commit ; les builds Android/iOS sont encore en cours.
 
 ### Contrôles stricts des webhooks de paiement — 15 novembre 2026
+
+- Pour Wave, la notification `checkout.session.payment_failed` documentée contient l'identifiant de session et les détails d'échec, mais pas forcément le montant/la devise. Elle est non terminale et ne libère pas le stock ; le paiement reste `PROCESSING` pour permettre une nouvelle tentative.
+- Seul `checkout.session.completed` peut faire passer le paiement à `SUCCEEDED`. Ce callback doit fournir un montant entier positif sûr et la devise XOF, correspondant au montant et à la devise du paiement local.
+
 
 - Wave : un callback de succès doit contenir un montant fournisseur entier positif et sûr, une devise XOF, et correspondre exactement au montant, à la devise et au fournisseur du paiement local. L'absence du montant fournisseur n'est jamais compensée par le montant attendu en base.
 - CinetPay : après vérification serveur de la transaction, le montant fournisseur doit être un entier positif sûr égal au montant local ; la devise du fournisseur et celle du paiement local doivent toutes deux être XOF.
