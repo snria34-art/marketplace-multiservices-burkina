@@ -6,7 +6,7 @@ Identifiant d’application :
 
 `com.marketplaceburkina.marketplace_multiservices_burkina`
 
-Le niveau minimal Android est API 23.
+Le niveau minimal Android est API 23. Les validations natives actuelles utilisent Flutter 3.47.2, AGP 9.1.0, Gradle 9.3.1 et Java 17. Ne pas utiliser une version Flutter supérieure à la plage déclarée dans `pubspec.yaml` avant la mise à niveau coordonnée de la toolchain.
 
 Permissions configurées :
 - Internet
