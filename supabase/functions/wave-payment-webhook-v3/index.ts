@@ -139,17 +139,30 @@ Deno.serve(async (req: Request) => {
 
   if (!paymentId) return json({ error: "payment_not_resolved" }, 404);
 
-  let amount = Number(data.amount);
-  if (!Number.isFinite(amount) || amount <= 0) {
-    const { data: payment } = await supabase
-      .from("payments")
-      .select("amount")
-      .eq("id", paymentId)
-      .maybeSingle();
-    amount = Number(payment?.amount);
+  // A successful provider callback must carry its own amount and currency.
+  // Never substitute the local expected amount when provider data is missing:
+  // doing so would allow an incomplete notification to settle a payment.
+  const amount = Number(data.amount);
+  const currency = String(data.currency ?? "").trim().toUpperCase();
+  if (!Number.isSafeInteger(amount) || amount <= 0 || currency !== "XOF") {
+    return json({ error: "payment_amount_or_currency_invalid" }, 422);
   }
-  if (!Number.isFinite(amount) || amount <= 0) {
-    return json({ error: "payment_amount_invalid" }, 422);
+
+  const { data: payment, error: paymentError } = await supabase
+    .from("payments")
+    .select("amount,currency,provider")
+    .eq("id", paymentId)
+    .maybeSingle();
+
+  if (paymentError || !payment) {
+    return json({ error: "payment_not_found" }, 404);
+  }
+  if (
+    String(payment.provider ?? "").trim().toUpperCase() !== "WAVE" ||
+    String(payment.currency ?? "").trim().toUpperCase() !== "XOF" ||
+    Number(payment.amount) !== amount
+  ) {
+    return json({ error: "payment_amount_or_currency_mismatch" }, 409);
   }
 
   const providerReference = sessionId || transactionId || clientReference ||
