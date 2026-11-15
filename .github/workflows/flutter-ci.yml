@@ -62,6 +62,6 @@ jobs:
 
       - name: Compile Flutter Web without production credentials
         run: >-
-          flutter build web --release
+          flutter build web --debug
           --dart-define=SUPABASE_URL=https://example.supabase.co
           --dart-define=SUPABASE_PUBLISHABLE_KEY=sb_publishable_ci_placeholder
