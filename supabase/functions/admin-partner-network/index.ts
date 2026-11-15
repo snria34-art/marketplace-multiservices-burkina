@@ -167,7 +167,7 @@ Deno.serve(async (request: Request) => {
         .filter((id) => activeCouriers.has(id)),
     );
     const couriersWithCompletedDeliveries = new Set(
-      completedAssignments.map((row) => String(row.courier_id))
+      deliveredAssignments.map((row) => String(row.courier_id))
         .filter((id) => activeCouriers.has(id)),
     );
 
@@ -221,7 +221,7 @@ Deno.serve(async (request: Request) => {
 
     const truncated = [
       sellers, shops, providers, roles, activeAssignments,
-      completedAssignments, deliveredPackages, completedRequests, profiles,
+      deliveredAssignments, deliveredPackages, completedRequests, profiles,
       deliveredGroups, completedServices,
     ].some((rows) => rows.length > 10000);
 
