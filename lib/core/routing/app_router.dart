@@ -134,8 +134,8 @@ Future<String?> _guardRoute(
             .from('user_roles')
             .select('role')
             .eq('user_id', user.id);
-        final hasModeratorRole = rows is List &&
-            rows.any((row) => row is Map && row['role'] == 'MODERATOR');
+        final hasModeratorRole =
+            rows.any((row) => row['role'] == 'MODERATOR');
 
         if (!hasModeratorRole) {
           return '/access-status?reason=moderator_required';
@@ -148,8 +148,7 @@ Future<String?> _guardRoute(
           .from('user_roles')
           .select('role')
           .eq('user_id', user.id);
-      final hasSellerRole = rows is List &&
-          rows.any((row) => row is Map && row['role'] == 'SELLER');
+      final hasSellerRole = rows.any((row) => row['role'] == 'SELLER');
       final sellerProfile = await client
           .from('sellers')
           .select('id')
@@ -166,8 +165,7 @@ Future<String?> _guardRoute(
           .from('user_roles')
           .select('role')
           .eq('user_id', user.id);
-      final hasCourierRole = rows is List &&
-          rows.any((row) => row is Map && row['role'] == 'COURIER');
+      final hasCourierRole = rows.any((row) => row['role'] == 'COURIER');
 
       if (!hasCourierRole) return '/access-status?reason=courier_required';
     }
