@@ -53,3 +53,19 @@ Comparaison avec `main` au commit `9b70580f322814d6decf9eeac2e5d93aa01e44e9), av
 - état : divergé.
 
 Ne pas fusionner automatiquement. Une revue de synchronisation de l'unique commit manquant et une validation CI complète restent nécessaires.
+
+## Addendum — vérification des références de session concurrentes (16 novembre 2026)
+
+Relecture de l'arbre Git de la branche après l'ajout de cet audit :
+
+- Le fichier `supabase/migrations/20261116120000_prevent_competing_payment_sessions.sql` cité dans la section PAY-01 **n'est pas présent dans l'arbre de la branche** ; aucune migration portant ce nom n'a été créée ou validée dans le dépôt au moment de cette vérification.
+- La migration existante `20261115191336_phase1_commerce_integrity_final.sql` définit déjà `prepare_payment_processing` avec un verrou `FOR UPDATE` et une garde qui refuse toute nouvelle référence quand `provider_reference` est déjà non vide, quel que soit le statut courant, via `payment_checkout_reference_conflict`. Cette garde ne doit pas être remplacée par une condition limitée à `PROCESSING`.
+- Le contrat pgTAP `order_delivery_contract_test.sql` est maintenant porté à **14 assertions** et inclut un contrôle statique de cette immutabilité. Ce test n'a pas encore été exécuté après cette modification : le workflow DB est volontairement manuel/local et aucun nouveau run n'a été déclenché.
+
+### Risque fournisseur résiduel
+
+La création de session Wave/CinetPay précède l'appel à `prepare_payment_processing`. Deux requêtes concurrentes peuvent donc encore créer deux objets externes avant que la ligne de paiement ne soit verrouillée. La garde SQL empêche que la seconde référence remplace la première et l'Edge Function refuse de retourner l'URL concurrente, mais l'objet fournisseur perdant peut rester ouvert/orphelin. La résolution complète exige un protocole serveur de réservation idempotente avant l'appel fournisseur, ou une annulation/expiration vérifiée de l'objet perdant lorsque l'API le permet, plus des tests de concurrence et de rapprochement.
+
+Les chemins de réutilisation des sessions existantes dans les Edge Functions v3 sont actuellement déclenchés lorsque le paiement est `PROCESSING`. Une référence non vide avec un statut incohérent `PENDING` doit être traitée comme un état de rapprochement, pas comme une autorisation de créer une nouvelle session. Ce cas doit être couvert dans les prochains tests d'intégration.
+
+**Portée :** audit et test pgTAP ajouté uniquement sur la branche de maintenance. Aucune migration Supabase distante, session fournisseur, transaction financière ou donnée utilisateur n'a été modifiée.
