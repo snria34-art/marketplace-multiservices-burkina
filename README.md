@@ -7,7 +7,7 @@ Application mobile Flutter pour marketplace locale et services associés au Burk
 
 ## Stack
 
-Flutter stable 3.47+, Dart 3.13+, Supabase, Riverpod, go_router, Geolocator et Firebase Messaging.
+Flutter 3.47.2 (Dart 3.13+), Supabase, Riverpod, go_router, Geolocator et Firebase Messaging.
 
 ## État du projet
 
@@ -32,7 +32,7 @@ flutter pub get
 flutter run --dart-define=SUPABASE_URL=https://YOUR_PROJECT.supabase.co --dart-define=SUPABASE_PUBLISHABLE_KEY=YOUR_PUBLISHABLE_KEY
 ```
 
-Ne jamais inclure de secret de production dans le code source, les logs ou les paramètres de compilation partagés.
+Pendant la maintenance, le SDK Flutter est volontairement borné à `>=3.47.2 <3.50.0` pour rester cohérent avec la chaîne Android AGP 9.1.0 / Gradle 9.3.1 enregistrée et les workflows. Ne pas passer Flutter 3.50+ avant mise à niveau coordonnée d'AGP/Gradle et validation de tous les plugins natifs. Ne jamais inclure de secret de production dans le code source, les logs ou les paramètres de compilation partagés.
 
 ## Validation
 
