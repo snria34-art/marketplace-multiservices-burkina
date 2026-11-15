@@ -65,7 +65,12 @@ Créer une nouvelle migration au moyen de la Supabase CLI, sans réécrire les m
 
 Rejouer `supabase db reset --local`, `supabase test db --local` et les tests Edge avant de discuter d'une application distante.
 
-## 4. Limites de cette passe
+## 4. Références de contrat fournisseur
+
+- Wave documente explicitement que plusieurs événements `checkout.session.payment_failed` peuvent précéder une réussite et que l'identifiant d'événement `id` est unique : [Wave — Webhooks / Checkout Events](https://docs.wave.com/webhook).
+- La documentation CinetPay indique que l'URL de notification peut être appelée à chaque mise à jour de l'état : [CinetPay Support — intégration PayIn](https://support.cinetpay.com/d/81-comment-integrer-lapi-de-paiement-payin).
+
+## 5. Limites de cette passe
 
 - Le constat est issu des migrations versionnées ; aucune écriture ni requête SQL distante n'a été exécutée durant cette passe.
 - Aucun événement marchand réel ni transaction sandbox n'a été émis.
