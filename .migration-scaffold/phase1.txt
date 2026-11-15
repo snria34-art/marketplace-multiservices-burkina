@@ -1,0 +1,1 @@
+This file temporarily triggers generation of a Supabase CLI migration scaffold in an isolated GitHub Actions runner. Remove it with the scaffold workflow after retrieving the generated migration.
