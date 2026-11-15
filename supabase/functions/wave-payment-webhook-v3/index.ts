@@ -1,6 +1,7 @@
 // deno-lint-ignore no-import-prefix no-unversioned-import
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { isXofCurrency, parsePositiveSafeIntegerAmount } from "../_shared/payment_validation.ts";
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
@@ -142,9 +143,8 @@ Deno.serve(async (req: Request) => {
   // A successful provider callback must carry its own amount and currency.
   // Never substitute the local expected amount when provider data is missing:
   // doing so would allow an incomplete notification to settle a payment.
-  const amount = Number(data.amount);
-  const currency = String(data.currency ?? "").trim().toUpperCase();
-  if (!Number.isSafeInteger(amount) || amount <= 0 || currency !== "XOF") {
+  const amount = parsePositiveSafeIntegerAmount(data.amount);
+  if (amount === null || !isXofCurrency(data.currency)) {
     return json({ error: "payment_amount_or_currency_invalid" }, 422);
   }
 

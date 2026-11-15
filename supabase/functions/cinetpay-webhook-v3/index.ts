@@ -1,5 +1,6 @@
 // deno-lint-ignore no-import-prefix no-unversioned-import
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { isXofCurrency, parsePositiveSafeIntegerAmount } from "../_shared/payment_validation.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
 const json = (body: unknown, status = 200) =>
@@ -131,14 +132,12 @@ Deno.serve(async (req: Request) => {
   }
 
   const data = (checked.data ?? {}) as Record<string, unknown>;
-  const providerAmount = Number(data.amount);
-  const providerCurrency = String(data.currency ?? "").trim().toUpperCase();
+  const providerAmount = parsePositiveSafeIntegerAmount(data.amount);
   const paymentCurrency = String(payment.currency ?? "").trim().toUpperCase();
   if (
-    !Number.isSafeInteger(providerAmount) ||
-    providerAmount <= 0 ||
+    providerAmount === null ||
     providerAmount !== Number(payment.amount) ||
-    providerCurrency !== "XOF" ||
+    !isXofCurrency(data.currency) ||
     paymentCurrency !== "XOF"
   ) {
     return json({ error: "payment_amount_or_currency_mismatch" }, 409);
