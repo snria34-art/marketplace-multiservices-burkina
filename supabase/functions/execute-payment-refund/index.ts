@@ -1,6 +1,7 @@
 // deno-lint-ignore no-import-prefix no-unversioned-import
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { parsePositiveSafeIntegerAmount } from "../_shared/payment_validation.ts";
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
@@ -73,10 +74,8 @@ Deno.serve(async (req: Request) => {
   const refund = refundRows[0] as Record<string, unknown>;
   const provider = String(refund.provider ?? "");
   const providerReference = String(refund.provider_reference ?? "").trim();
-  const amount = Number(refund.amount);
-  if (
-    !provider || !providerReference || !Number.isFinite(amount) || amount <= 0
-  ) {
+  const amount = parsePositiveSafeIntegerAmount(refund.amount);
+  if (!provider || !providerReference || amount === null) {
     return json({ error: "refund_provider_data_invalid" }, 409);
   }
 
@@ -116,11 +115,11 @@ Deno.serve(async (req: Request) => {
       }, 503);
     }
 
-    const capturedAmount = Number(payment.amount);
+    const capturedAmount = parsePositiveSafeIntegerAmount(payment.amount);
     if (
       payment.currency !== "XOF" ||
       refund.currency !== payment.currency ||
-      !Number.isFinite(capturedAmount) ||
+      capturedAmount === null ||
       capturedAmount !== amount
     ) {
       const { data: resetRow, error: resetError } = await adminClient
