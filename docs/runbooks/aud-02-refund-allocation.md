@@ -313,3 +313,12 @@ Les deux fonctions de finalisation ont des conventions incompatibles :
 - `finalize_seller_group_financials` enregistre directement une vente nette et conserve la commission dans un état séparé.
 
 Aucun appelant versionné dans les sources applicatives récentes n'a été identifié pendant l'audit. Un orchestrateur externe reste possible et doit être vérifié. Tant que ce point n'est pas établi et qu'une convention n'est pas choisie, ne pas ajouter un appel automatique ni supposer qu'un groupe `DELIVERED` a déjà crédité le solde vendeur.
+
+
+### Addendum — absence de commande admin pour lever le gel (16 novembre 2026)
+
+La relecture de `AdminRefundsPage` et des fonctions SQL montre que l'interface admin peut consulter `accounting_status`/`accounting_note`, approuver/refuser un remboursement et faire confirmer une opération fournisseur. Elle ne peut pas créer d'allocation ni valider le rapprochement comptable privé. Le trigger passe automatiquement à `RECONCILED` lorsqu'une demande devient `REJECTED` ou `CANCELLED`, mais une demande `COMPLETED` reste `PENDING_ALLOCATION` en l'absence de procédure distincte.
+
+En conséquence, les retraits des vendeurs associés restent bloqués après un remboursement exécuté tant que le rapprochement n'est pas résolu par un mécanisme serveur privilégié. Cette limitation doit être traitée comme un blocage opérationnel à planifier, pas comme une raison de supprimer le gel ou d'autoriser une modification directe de la table privée.
+
+L'action « Exécuter » de l'écran admin a été limitée à `WAVE` + `APPROVED` : `admin_begin_refund` n'accepte pas `FAILED`/`PROCESSING` et CinetPay nécessite sa confirmation manuelle. Les résultats fournisseur ambigus ne doivent jamais être relancés automatiquement.
