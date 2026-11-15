@@ -55,7 +55,7 @@ $function$;
 revoke all on function private.sync_refund_accounting_hold() from public,anon,authenticated;
 drop trigger if exists trg_sync_refund_accounting_hold on public.refunds;
 create trigger trg_sync_refund_accounting_hold
-after insert or update of status,amount,payment_id,order_id,provider_reference
+after insert or update of status,amount,payment_id,order_id,provider_reference,currency
 on public.refunds for each row execute function private.sync_refund_accounting_hold();
 
 insert into private.refund_accounting_reconciliations(
@@ -516,6 +516,7 @@ begin
     join public.payments p on p.id=r.payment_id
     where r.id=p_refund_id
       and r.amount>0
+      and r.amount=trunc(r.amount)
       and r.currency='XOF'
       and nullif(trim(p.provider),'') is not null
       and nullif(trim(p.provider_reference),'') is not null
