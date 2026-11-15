@@ -1,5 +1,7 @@
 import {
+  isReusableCinetPayPaymentCheck,
   isReusableWaveCheckoutSession,
+  isTrustedCinetPayCheckoutUrl,
   isXofCurrency,
   parseCinetPayXofAmount,
   parsePositiveSafeIntegerAmount,
@@ -66,6 +68,66 @@ Deno.test("CinetPay XOF amounts respect the provider minimum and increment", () 
     assert(
       parseCinetPayXofAmount(value) === null,
       `expected CinetPay amount to be rejected: ${String(value)}`,
+    );
+  }
+});
+
+Deno.test("trusts only HTTPS CinetPay checkout hosts", () => {
+  assert(
+    isTrustedCinetPayCheckoutUrl("https://checkout.cinetpay.com/pay/abc"),
+    "CinetPay .com checkout URL",
+  );
+  assert(
+    isTrustedCinetPayCheckoutUrl("https://secure.cinetpay.co/checkout/start"),
+    "CinetPay .co checkout URL",
+  );
+
+  const invalid: unknown[] = [
+    "http://checkout.cinetpay.com/pay/abc",
+    "https://cinetpay.com.example.org/pay/abc",
+    "https://example.org/?next=https://cinetpay.com",
+    "https://user:password@checkout.cinetpay.com/pay/abc",
+    "javascript:alert(1)",
+    "not a URL",
+    null,
+  ];
+  for (const value of invalid) {
+    assert(
+      !isTrustedCinetPayCheckoutUrl(value),
+      `untrusted CinetPay URL must be rejected: ${String(value)}`,
+    );
+  }
+});
+
+Deno.test("CinetPay checkout reuse requires provider-confirmed pending XOF amount", () => {
+  const valid = {
+    code: "00",
+    data: {
+      status: "WAITING_FOR_CUSTOMER",
+      amount: "125",
+      currency: "XOF",
+    },
+  };
+  assert(
+    isReusableCinetPayPaymentCheck(valid, 125, "XOF"),
+    "pending transaction with exact amount is reusable",
+  );
+
+  const invalid: Array<[unknown, unknown, unknown]> = [
+    [{ code: "609", data: valid.data }, 125, "XOF"],
+    [{ code: "00", data: { ...valid.data, status: "ACCEPTED" } }, 125, "XOF"],
+    [{ code: "00", data: { ...valid.data, status: "REFUSED" } }, 125, "XOF"],
+    [{ code: "00", data: { ...valid.data, amount: "130" } }, 125, "XOF"],
+    [{ code: "00", data: { ...valid.data, currency: "USD" } }, 125, "XOF"],
+    [{ code: "00", data: { ...valid.data, amount: "125.50" } }, 125, "XOF"],
+    [{ code: "00", data: valid.data }, "125.0", "XOF"],
+    [{ code: "00", data: valid.data }, 125, "USD"],
+    [null, 125, "XOF"],
+  ];
+  for (const [response, amount, currency] of invalid) {
+    assert(
+      !isReusableCinetPayPaymentCheck(response, amount, currency),
+      "unknown, terminal, mismatched or incomplete payment must not be reused",
     );
   }
 });

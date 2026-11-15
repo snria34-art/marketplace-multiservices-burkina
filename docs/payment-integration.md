@@ -146,6 +146,10 @@ Statut révisé au 15 novembre 2026 : les contrôles statiques Deno et les tests
 - Le parseur partagé rejette aussi les types JSON inattendus (booléens, `null`), les décimaux, les notations exponentielles et les entiers hors plage sûre. Des tests Deno couvrent les montants et la devise XOF ; ils ont réussi avec le typage de toutes les fonctions Edge dans le run CI `43735230698` sur le commit `77d08d11`.
 - La CI Deno a réussi sur le commit `8faf7d9851aecb688a329edd93325d18fb89fefd`. Cela confirme le typage des fonctions Edge, pas le comportement des API marchandes en environnement sandbox ou production.
 
+### Réutilisation sûre des sessions CinetPay
+
+Une session déjà marquée `PROCESSING` n'est réutilisée que si la référence de transaction et l'URL de checkout stockées sont présentes, si l'URL est HTTPS sur un domaine CinetPay, et si `POST /v2/payment/check` confirme `WAITING_FOR_CUSTOMER` avec le même montant XOF. Les statuts `ACCEPTED`, `REFUSED`, les montants/devise différents et toute réponse inconnue bloquent la remise de l'ancien lien et exigent un rapprochement. Aucun nouveau `transaction_id` n'est inventé pour une transaction déjà créée.
+
 ### Réutilisation sûre des sessions Wave — 15 novembre 2026
 
 - Une session Wave enregistrée en `PROCESSING` est réutilisée seulement après lecture de son état auprès de Wave, si son URL `pay.wave.com` est présente, sa date d'expiration est future et les états exacts de l'objet Checkout Session Wave sont `checkout_status=open` et `payment_status=processing`. Le `payment_failed` reçu en webhook est une tentative non terminale ; il ne constitue pas une valeur de ces enums de l'objet retourné par le GET.

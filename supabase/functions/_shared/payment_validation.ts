@@ -124,6 +124,50 @@ export function parseCinetPayXofAmount(value: unknown): number | null {
   return amount;
 }
 
+/** Accept only HTTPS checkout links hosted by a CinetPay domain. */
+export function isTrustedCinetPayCheckoutUrl(value: unknown): value is string {
+  if (typeof value !== "string" || value.trim() !== value) return false;
+  try {
+    const url = new URL(value);
+    const host = url.hostname.toLowerCase();
+    const trustedHost = host === "cinetpay.com" ||
+      host.endsWith(".cinetpay.com") ||
+      host === "cinetpay.co" ||
+      host.endsWith(".cinetpay.co");
+    return url.protocol === "https:" &&
+      trustedHost &&
+      url.username === "" &&
+      url.password === "";
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * A stored CinetPay checkout is reusable only when the provider's status API
+ * confirms an awaiting-customer transaction with the exact local XOF amount.
+ */
+export function isReusableCinetPayPaymentCheck(
+  value: unknown,
+  localAmount: unknown,
+  localCurrency: unknown,
+): boolean {
+  if (typeof value !== "object" || value === null) return false;
+  const response = value as Record<string, unknown>;
+  const data = response.data;
+  if (typeof data !== "object" || data === null) return false;
+
+  const result = data as Record<string, unknown>;
+  const expectedAmount = parseCinetPayXofAmount(localAmount);
+  const actualAmount = parseCinetPayXofAmount(result.amount);
+  return String(response.code ?? "").trim() === "00" &&
+    String(result.status ?? "").trim().toUpperCase() === "WAITING_FOR_CUSTOMER" &&
+    expectedAmount !== null &&
+    actualAmount === expectedAmount &&
+    isXofCurrency(localCurrency) &&
+    isXofCurrency(result.currency);
+}
+
 /** Accept the provider currency only when it explicitly identifies XOF. */
 export function isXofCurrency(value: unknown): boolean {
   return typeof value === "string" && value.trim().toUpperCase() === "XOF";

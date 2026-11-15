@@ -1,6 +1,10 @@
 // deno-lint-ignore no-import-prefix no-unversioned-import
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { parseCinetPayXofAmount } from "../_shared/payment_validation.ts";
+import {
+  isReusableCinetPayPaymentCheck,
+  isTrustedCinetPayCheckoutUrl,
+  parseCinetPayXofAmount,
+} from "../_shared/payment_validation.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
 const json = (body: unknown, status = 200) =>
@@ -104,21 +108,6 @@ Deno.serve(async (req: Request) => {
 
   const existing = paymentRecord.data as Record<string, unknown>;
   const metadata = (existing.metadata ?? {}) as Record<string, unknown>;
-  if (
-    existing.status === "PROCESSING" &&
-    typeof metadata.payment_url === "string" &&
-    metadata.payment_url
-  ) {
-    return json({
-      payment_id: paymentId,
-      provider,
-      gateway: "CINETPAY",
-      checkout_url: metadata.payment_url,
-      provider_reference: existing.provider_reference,
-      reused: true,
-    });
-  }
-
   const amount = parseCinetPayXofAmount(existing.amount);
   const currency = String(existing.currency ?? "").trim().toUpperCase();
   if (amount === null || currency !== "XOF") {
@@ -126,6 +115,98 @@ Deno.serve(async (req: Request) => {
       error: "payment_amount_invalid",
       detail: "CinetPay XOF amount must be a positive integer of at least 100 and a multiple of 5",
     }, 409);
+  }
+
+  if (existing.status === "PROCESSING") {
+    const existingReference = String(existing.provider_reference ?? "").trim();
+    const existingUrl = metadata.payment_url;
+    if (!existingReference || !isTrustedCinetPayCheckoutUrl(existingUrl)) {
+      return json({
+        error: "cinetpay_existing_checkout_unverifiable",
+        payment_id: paymentId,
+        reconciliation_required: true,
+      }, 409);
+    }
+
+    let statusResponse: Response;
+    try {
+      statusResponse = await fetch(
+        "https://api-checkout.cinetpay.com/v2/payment/check",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "User-Agent": "Marketplace-Multiservices-Burkina/1.0",
+          },
+          body: JSON.stringify({
+            apikey: apiKey,
+            site_id: siteId,
+            transaction_id: existingReference,
+          }),
+        },
+      );
+    } catch (_) {
+      return json({
+        error: "cinetpay_existing_checkout_check_failed",
+        payment_id: paymentId,
+        reconciliation_required: true,
+      }, 502);
+    }
+
+    const statusCheck = await statusResponse.json().catch(() => null);
+    if (!statusResponse.ok || !statusCheck || String(statusCheck.code ?? "") !== "00") {
+      return json({
+        error: "cinetpay_existing_checkout_check_failed",
+        provider_status: statusResponse.status,
+        payment_id: paymentId,
+        reconciliation_required: true,
+      }, 502);
+    }
+
+    const checkedData = (statusCheck.data ?? {}) as Record<string, unknown>;
+    if (
+      String(checkedData.status ?? "").trim().toUpperCase() === "ACCEPTED"
+    ) {
+      return json({
+        error: "cinetpay_payment_already_accepted",
+        payment_id: paymentId,
+        reconciliation_required: true,
+      }, 409);
+    }
+    if (
+      String(checkedData.status ?? "").trim().toUpperCase() === "REFUSED"
+    ) {
+      return json({
+        error: "cinetpay_transaction_refused_reissue_required",
+        payment_id: paymentId,
+        reconciliation_required: true,
+      }, 409);
+    }
+
+    if (
+      !isReusableCinetPayPaymentCheck(
+        statusCheck,
+        amount,
+        currency,
+      )
+    ) {
+      return json({
+        error: "cinetpay_existing_checkout_not_reusable",
+        payment_id: paymentId,
+        provider_status: String(checkedData.status ?? "UNKNOWN"),
+        reconciliation_required: true,
+      }, 409);
+    }
+
+    return json({
+      payment_id: paymentId,
+      provider,
+      gateway: "CINETPAY",
+      checkout_url: existingUrl,
+      provider_reference: existingReference,
+      provider_status: "WAITING_FOR_CUSTOMER",
+      reused: true,
+    });
   }
 
   const transactionId = "CP" + paymentId.replaceAll("-", "");
