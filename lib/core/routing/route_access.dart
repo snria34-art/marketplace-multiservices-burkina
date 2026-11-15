@@ -15,6 +15,7 @@ bool isCourierRoute(String path) => path == '/courier';
 
 bool routeRequiresAuthentication(String path) {
   return _matchesRoute(path, '/cart') ||
+      _matchesRoute(path, '/wallet') ||
       _matchesRoute(path, '/checkout') ||
       _matchesRoute(path, '/orders') ||
       _matchesRoute(path, '/delivery') ||
