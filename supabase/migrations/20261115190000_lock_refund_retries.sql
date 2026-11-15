@@ -1,5 +1,5 @@
--- Prevent duplicate provider calls after a refund has entered PROCESSING.
--- FAILED and PROCESSING refunds require manual reconciliation before any new attempt.
+-- Validate provider data before claiming a refund and prevent duplicate provider calls.
+-- PROCESSING and FAILED refunds require manual reconciliation; only REQUESTED/APPROVED may be claimed.
 create or replace function public.admin_begin_refund(p_refund_id uuid)
 returns table (
   refund_id uuid,
@@ -17,12 +17,30 @@ set search_path to pg_catalog, public
 as $function$
 begin
   if not private.is_admin() then
-    raise exception 'ADMIN_REQUIRED';
+    raise exception 'ADMIN_REQUIRED' using errcode='42501';
   end if;
 
-  -- This conditional update is the atomic claim: concurrent calls can only
-  -- move REQUESTED/APPROVED to PROCESSING once. Never reclaim PROCESSING or
-  -- FAILED automatically because the provider may already have refunded.
+  if p_refund_id is null then
+    raise exception 'refund_id_required';
+  end if;
+
+  -- Validate all provider data before moving the refund to PROCESSING.
+  if not exists (
+    select 1
+    from public.refunds r
+    join public.payments p on p.id=r.payment_id
+    where r.id=p_refund_id
+      and r.amount>0
+      and r.currency='XOF'
+      and nullif(trim(p.provider),'') is not null
+      and nullif(trim(p.provider_reference),'') is not null
+      and p.provider in ('WAVE','CINETPAY','ORANGE_MONEY','MOOV_MONEY')
+  ) then
+    raise exception 'refund_provider_data_invalid';
+  end if;
+
+  -- Atomic claim: only an unstarted refund may move to PROCESSING.
+  -- Failed or in-flight provider attempts require manual reconciliation.
   update public.refunds r
   set status='PROCESSING'
   where r.id=p_refund_id

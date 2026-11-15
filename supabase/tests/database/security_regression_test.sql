@@ -224,10 +224,11 @@ select ok(
 );
 
 select ok(
-  position('r.status in (''REQUESTED'',''APPROVED'',''FAILED'')' in pg_get_functiondef('public.admin_begin_refund(uuid)'::regprocedure)) > 0
-  and position('''PROCESSING''' in pg_get_functiondef('public.admin_begin_refund(uuid)'::regprocedure)) = 0
+  position('r.status in (''REQUESTED'',''APPROVED'')' in pg_get_functiondef('public.admin_begin_refund(uuid)'::regprocedure)) > 0
+  and position('''FAILED''' in pg_get_functiondef('public.admin_begin_refund(uuid)'::regprocedure)) = 0
+  and position('''PROCESSING''' in pg_get_functiondef('public.admin_begin_refund(uuid)'::regprocedure)) > 0
   and position('private.is_admin()' in pg_get_functiondef('public.admin_begin_refund(uuid)'::regprocedure)) > 0,
-  'refund processing cannot be started twice and remains restricted to active admins'
+  'refund processing is atomically claimed only once; failed and in-flight attempts require reconciliation'
 );
 
 select ok(
@@ -242,8 +243,9 @@ select ok(
 select ok(
   position('refund_provider_data_invalid' in pg_get_functiondef('public.admin_begin_refund(uuid)'::regprocedure)) > 0
   and position('nullif(trim(p.provider_reference),'''') is not null' in pg_get_functiondef('public.admin_begin_refund(uuid)'::regprocedure)) > 0
-  and position('r.status in (''REQUESTED'',''APPROVED'',''FAILED'')' in pg_get_functiondef('public.admin_begin_refund(uuid)'::regprocedure)) > 0,
-  'provider data is validated before refund processing starts'
+  and position('p.provider in (''WAVE'',''CINETPAY'',''ORANGE_MONEY'',''MOOV_MONEY'')' in pg_get_functiondef('public.admin_begin_refund(uuid)'::regprocedure)) > 0
+  and position('r.status in (''REQUESTED'',''APPROVED'')' in pg_get_functiondef('public.admin_begin_refund(uuid)'::regprocedure)) > 0,
+  'provider data is validated before a refund is claimed for processing'
 );
 
 select ok(
@@ -352,7 +354,7 @@ select ok(
   and position('unpaid_order_inventory_already_consumed' in pg_get_functiondef('public.cancel_unpaid_order(uuid)'::regprocedure)) > 0
   and position('CANCELLED_BY_ORDER' in pg_get_functiondef('public.cancel_unpaid_order(uuid)'::regprocedure)) > 0
   and position('released_coupon_usage' in pg_get_functiondef('public.cancel_unpaid_order(uuid)'::regprocedure)) > 0
-  and position('customer_cancelled_before_payment' in pg_get_functiondef('public.cancel_unpaid_order(uuid)'::regprocedure)) > 0,
+  and position('cancelled_before_payment' in pg_get_functiondef('public.cancel_unpaid_order(uuid)'::regprocedure)) > 0,
   'unpaid cancellation protects paid/dispatched/consumed orders, cancels pre-dispatch assignments, releases coupon usage, and logs the event'
 );
 
