@@ -54,6 +54,8 @@ String? sanitizeInternalLocation(String? value) {
         decoded = Uri.decodeComponent(segment);
       } on FormatException {
         return null;
+      } on ArgumentError {
+        return null;
       }
 
       if (decoded == segment) break;
