@@ -88,3 +88,20 @@ Le listener `signedOut` ne tente plus une RPC tardive. Les futurs boutons et men
 
 
 Le listener `onAuthStateChange` possède également un gestionnaire `onError` explicite. Les erreurs de rafraîchissement ou de réseau transmises par le flux sont journalisées en mode debug au lieu de devenir des exceptions non gérées. Aucun token ni contenu privé n'est journalisé.
+
+## Addendum — contrôle de reprise et fiabilité par appareil (16 novembre 2026)
+
+La relecture de `dispatch-push-notifications/index.ts` met en évidence une limite supplémentaire : quand plusieurs appareils sont ciblés, le worker renseigne `push_sent_at` dès qu'au moins un appareil a reçu le message. Les appareils en échec ne seront donc plus repris par la file Cron, même si `push_error` indique une erreur. C'est une perte possible de notifications sur les appareils concernés.
+
+**Correction cible requise :** table de livraison durable, privée et idempotente par couple `notification_id + device_id`, avec état `PENDING / PROCESSING / SENT / RETRYABLE_FAILURE / PERMANENT_FAILURE`, compteur et timestamp de reprise. Une notification ne doit être considérée comme finalisée que lorsque chaque appareil ciblé est livré ou explicitement abandonné après une erreur permanente/limite de tentatives. La reprise ne doit renvoyer que les appareils non livrés.
+
+**Pourquoi cette correction n'est pas commitée dans le worker aujourd'hui :** elle nécessite une migration SQL, des RPC atomiques de claim/finalisation, des tests pgTAP sur concurrence/rejeu et un test Deno de l'orchestration. Le CLI Supabase et un projet isolé ne sont pas accessibles depuis cette session ; introduire cette migration sans exécuter sa suite locale créerait un risque de régression sur la file de notifications. Le comportement existant est donc signalé comme bloquant, sans patch incomplet.
+
+Le blocage Firebase demeure également : compte de service FCM, identifiant projet et fichiers de configuration natifs ne sont pas présents dans le dépôt. Aucun envoi de test n'a été effectué.
+
+### Contrôles de code à garder
+
+- Ne jamais journaliser un token FCM, un JWT ou la clé privée.
+- Garder `verify_push_dispatch_secret` et l'exécution service-role uniquement.
+- Désactiver les tokens explicitement déclarés `UNREGISTERED` par FCM.
+- Un échec de notification ne doit ni bloquer l'application ni être présenté comme une livraison réussie.
