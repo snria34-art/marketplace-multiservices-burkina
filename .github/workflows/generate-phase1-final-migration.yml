@@ -1,0 +1,33 @@
+name: Generate phase-one migration timestamp
+
+on:
+  push:
+    branches: ['maintenance/audit-01-07-2026-11-15']
+    paths:
+      - '.migration-scaffold/phase1.txt'
+
+permissions:
+  contents: read
+
+jobs:
+  generate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout maintenance branch
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Install pinned Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: 2.122.1
+      - name: Generate migration with the Supabase CLI
+        run: supabase migration new phase1_commerce_integrity_final
+      - name: Upload generated migration
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase1-final-migration-name
+          path: supabase/migrations/*_phase1_commerce_integrity_final.sql
+          if-no-files-found: error
+          retention-days: 1

@@ -1,0 +1,1 @@
+Temporary marker used to ask Supabase CLI to generate the final phase-one migration timestamp on an isolated runner.
