@@ -19,6 +19,7 @@ class _ResumeCourierRepository extends CourierRepository {
   _ResumeCourierRepository(super.client);
 
   var _calls = 0;
+  int get calls => _calls;
 
   @override
   Future<List<Map<String, dynamic>>> assignments() async {
@@ -65,6 +66,7 @@ void main() {
 
       await tester.pumpAndSettle();
 
+      expect(repository.calls, 2);
       expect(find.text('Aucune livraison affectée.'), findsOneWidget);
 
       await tester.tap(find.byTooltip('Partager ma position'));
