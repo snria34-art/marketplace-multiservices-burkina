@@ -1,5 +1,8 @@
 # Marketplace Multiservices Burkina
 
+**Dépôt de référence :** [`snria34-art/marketplace-multiservices-burkina`](https://github.com/snria34-art/marketplace-multiservices-burkina).  
+**Phase actuelle :** maintenance et corrections uniquement. Aucun déploiement Vercel, aucune publication GitHub, aucun build de release ni promotion de production ne doit être lancé avant autorisation explicite.
+
 Application mobile Flutter pour marketplace locale et services associés au Burkina Faso.
 
 ## Stack
