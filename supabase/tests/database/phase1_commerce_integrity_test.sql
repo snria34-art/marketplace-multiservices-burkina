@@ -1,5 +1,5 @@
 begin;
-select plan(16);
+select plan(17);
 select ok(exists(select 1 from information_schema.columns where table_schema='public' and table_name='payment_events' and column_name='provider_event_id'),'event identity column exists');
 select ok(exists(select 1 from pg_indexes where schemaname='public' and indexname='uq_payment_events_provider_event_id') and exists(select 1 from pg_indexes where schemaname='public' and indexname='uq_payment_events_legacy_idempotency') and not exists(select 1 from pg_indexes where schemaname='public' and indexname='uq_payment_events_provider_ref'),'event id unique; stable payment reference reusable');
 select ok(to_regprocedure('public.process_payment_event(uuid,text,public.payment_status,text,numeric,text,jsonb)') is not null and to_regprocedure('public.process_payment_event(uuid,text,public.payment_status,text,numeric,jsonb)') is not null and has_function_privilege('service_role','public.process_payment_event(uuid,text,public.payment_status,text,numeric,text,jsonb)','EXECUTE') and not has_function_privilege('authenticated','public.process_payment_event(uuid,text,public.payment_status,text,numeric,text,jsonb)','EXECUTE') and not has_function_privilege('anon','public.process_payment_event(uuid,text,public.payment_status,text,numeric,text,jsonb)','EXECUTE'),'processor overloads and service-only permissions');
@@ -25,5 +25,12 @@ select ok(position('public.seller_ledger' in pg_get_functiondef('public.complete
 select ok(position('accounting_status' in pg_get_functiondef('public.get_admin_refunds()'::regprocedure))>0 and position('accounting_note' in pg_get_functiondef('public.get_admin_refunds()'::regprocedure))>0,'admin refund list exposes hold information');
 select ok((select prosecdef from pg_proc where oid='private.sync_refund_accounting_hold()'::regprocedure) and not has_function_privilege('authenticated','private.sync_refund_accounting_hold()','EXECUTE'),'refund trigger helper stays privileged');
 select ok(position('PENDING_ALLOCATION' in pg_get_functiondef('public.request_seller_payout_secure(uuid,numeric,text)'::regprocedure))>0 and position('PENDING_ALLOCATION' in pg_get_functiondef('public.admin_begin_refund(uuid)'::regprocedure))>0,'financial holds gate payout and next provider refund');
+
+select ok(
+  position('payment_checkout_reference_conflict' in pg_get_functiondef('public.prepare_payment_processing(uuid,text,jsonb)'::regprocedure)) > 0
+  and position('trim(v_payment.provider_reference) <> trim(p_provider_reference)' in pg_get_functiondef('public.prepare_payment_processing(uuid,text,jsonb)'::regprocedure)) > 0
+  and position('v_payment.status::text = ''SUCCEEDED''' in pg_get_functiondef('public.prepare_payment_processing(uuid,text,jsonb)'::regprocedure)) > 0,
+  'one provider checkout reference wins; conflicting sessions are rejected and a settled matching session is idempotent'
+);
 select * from finish();
 rollback;
