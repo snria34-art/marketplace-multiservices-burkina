@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -19,13 +21,20 @@ class _ResumeCourierRepository extends CourierRepository {
   _ResumeCourierRepository(super.client);
 
   var _calls = 0;
+  final _refreshedAssignments =
+      Completer<List<Map<String, dynamic>>>();
+
   int get calls => _calls;
 
+  void completeRefresh() {
+    _refreshedAssignments.complete(const []);
+  }
+
   @override
-  Future<List<Map<String, dynamic>>> assignments() async {
+  Future<List<Map<String, dynamic>>> assignments() {
     _calls++;
     if (_calls == 1) {
-      return [
+      return Future.value([
         {
           'assignment_id': 'assignment-1',
           'package_id': 'package-1',
@@ -35,9 +44,9 @@ class _ResumeCourierRepository extends CourierRepository {
           'delivery_address_line': 'Secteur 1',
           'delivery_city': 'Bobo-Dioulasso',
         },
-      ];
+      ]);
     }
-    return const [];
+    return _refreshedAssignments.future;
   }
 }
 
@@ -108,6 +117,8 @@ void main() {
       final lifecycleObserver =
           tester.state(find.byType(CourierPage)) as WidgetsBindingObserver;
       lifecycleObserver.didChangeAppLifecycleState(AppLifecycleState.resumed);
+      await tester.pump();
+      repository.completeRefresh();
       await tester.pumpAndSettle();
 
       expect(repository.calls, 2);
