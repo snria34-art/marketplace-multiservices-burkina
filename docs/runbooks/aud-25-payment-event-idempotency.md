@@ -3,7 +3,7 @@
 **Date du constat :** 15 novembre 2026  
 **Branche :** `maintenance/audit-01-07-2026-11-15`  
 **Sévérité :** P1 — callbacks paiement pouvant se succéder sur une même session  
-**Statut :** migration versionnée `20261115184115_phase1_commerce_integrity.sql` ; validations SQL/Edge déclenchées sur le nouveau commit, aucune base hébergée modifiée.
+**Statut :** migration versionnée `20261115191336_phase1_commerce_integrity_final.sql` ; validations SQL/Edge déclenchées sur le nouveau commit, aucune base hébergée modifiée.
 
 ## 1. Constat SQL
 

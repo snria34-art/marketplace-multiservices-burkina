@@ -225,18 +225,17 @@ select ok(
 
 select ok(
   position('r.status in (''REQUESTED'',''APPROVED'')' in pg_get_functiondef('public.admin_begin_refund(uuid)'::regprocedure)) > 0
-  and position('''FAILED''' in pg_get_functiondef('public.admin_begin_refund(uuid)'::regprocedure)) = 0
-  and position('''PROCESSING''' in pg_get_functiondef('public.admin_begin_refund(uuid)'::regprocedure)) > 0
+  and position('prior.status in (''PENDING'',''PROCESSING'',''COMPLETED'',''FAILED'')' in pg_get_functiondef('public.admin_begin_refund(uuid)'::regprocedure)) > 0
   and position('private.is_admin()' in pg_get_functiondef('public.admin_begin_refund(uuid)'::regprocedure)) > 0,
-  'refund processing is atomically claimed only once; failed and in-flight attempts require reconciliation'
+  'refund processing is atomically claimed once; failed/in-flight attempts and earlier provider refunds require reconciliation'
 );
 
 select ok(
-  position('if v_order.status = ''CANCELLED'' then' in pg_get_functiondef('public.process_payment_event(uuid,text,public.payment_status,text,numeric,jsonb)'::regprocedure)) > 0
-  and position('insert into public.refunds' in pg_get_functiondef('public.process_payment_event(uuid,text,public.payment_status,text,numeric,jsonb)'::regprocedure)) > 0
-  and position('Payment succeeded after order cancellation; refund required' in pg_get_functiondef('public.process_payment_event(uuid,text,public.payment_status,text,numeric,jsonb)'::regprocedure)) > 0
-  and position('v_refund_inflight' in pg_get_functiondef('public.process_payment_event(uuid,text,public.payment_status,text,numeric,jsonb)'::regprocedure)) > 0
-  and not has_function_privilege('authenticated','public.process_payment_event(uuid,text,public.payment_status,text,numeric,jsonb)','EXECUTE'),
+  position('if v_order.status = ''CANCELLED'' then' in pg_get_functiondef('public.process_payment_event(uuid,text,public.payment_status,text,numeric,text,jsonb)'::regprocedure)) > 0
+  and position('insert into public.refunds' in pg_get_functiondef('public.process_payment_event(uuid,text,public.payment_status,text,numeric,text,jsonb)'::regprocedure)) > 0
+  and position('Payment succeeded after order cancellation; refund required' in pg_get_functiondef('public.process_payment_event(uuid,text,public.payment_status,text,numeric,text,jsonb)'::regprocedure)) > 0
+  and position('v_refund_inflight' in pg_get_functiondef('public.process_payment_event(uuid,text,public.payment_status,text,numeric,text,jsonb)'::regprocedure)) > 0
+  and not has_function_privilege('authenticated','public.process_payment_event(uuid,text,public.payment_status,text,numeric,text,jsonb)','EXECUTE'),
   'late successful payment after cancellation queues one outstanding refund and stays server-only'
 );
 

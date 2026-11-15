@@ -3,7 +3,7 @@
 **Date de constat :** 15 novembre 2026  
 **Branche :** `maintenance/audit-01-07-2026-11-15`  
 **Sévérité :** P1 — parcours de livraison / confirmation client  
-**Statut :** correction versionnée dans `20261115184115_phase1_commerce_integrity.sql` ; tests SQL locaux à exécuter sur le nouveau commit. Aucune base Supabase hébergée modifiée.
+**Statut :** correction versionnée dans `20261115191336_phase1_commerce_integrity_final.sql` ; tests SQL locaux à exécuter sur le nouveau commit. Aucune base Supabase hébergée modifiée.
 
 ## 1. Constat
 
@@ -92,7 +92,7 @@ Ensuite exécuter `supabase db reset --local` et `supabase test db --local` sur 
 
 ## 5. Correction versionnée
 
-La migration `20261115184115_phase1_commerce_integrity.sql` redéfinit `assign_package_to_courier` et `sync_after_package_delivery` afin d'utiliser `DELIVERED`, statut valide de l'enum. Les gardes du chauffeur, des états de commande et des ACL sont conservés.
+La migration `20261115191336_phase1_commerce_integrity_final.sql` redéfinit `assign_package_to_courier` et `sync_after_package_delivery` afin d'utiliser `DELIVERED`, statut valide de l'enum. Les gardes du chauffeur, des états de commande et des ACL sont conservés.
 
 Les assertions de contrat sont dans `supabase/tests/database/phase1_commerce_integrity_test.sql` et doivent encore être exécutées sur une base locale reconstruite.
 
