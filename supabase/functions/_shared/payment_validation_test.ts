@@ -1,4 +1,5 @@
 import {
+  isCinetPayPendingStatus,
   isReusableCinetPayPaymentCheck,
   isReusableWaveCheckoutSession,
   isTrustedCinetPayCheckoutUrl,
@@ -96,6 +97,34 @@ Deno.test("trusts only HTTPS CinetPay checkout hosts", () => {
       !isTrustedCinetPayCheckoutUrl(value),
       `untrusted CinetPay URL must be rejected: ${String(value)}`,
     );
+  }
+});
+
+Deno.test("CinetPay recognizes documented non-terminal status aliases only", () => {
+  const pending = [
+    "WAITING_FOR_CUSTOMER",
+    "WAITING_CUSTOMER_TO_VALIDATE",
+    "PENDING",
+    "INITIATED",
+    "SECURE_PAYMENT_WAITING_CONFIRMATION",
+  ];
+  for (const status of pending) {
+    assert(isCinetPayPendingStatus(status), `${status} is non-terminal`);
+  }
+
+  const terminalOrUnknown = [
+    "ACCEPTED",
+    "REFUSED",
+    "CANCELLED",
+    "EXPIRED",
+    "VALIDATED",
+    "UNKNOWN",
+    "",
+    null,
+    607,
+  ];
+  for (const status of terminalOrUnknown) {
+    assert(!isCinetPayPendingStatus(status), `${String(status)} must not be reusable`);
   }
 });
 

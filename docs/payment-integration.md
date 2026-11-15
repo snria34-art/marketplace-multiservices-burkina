@@ -146,6 +146,10 @@ Statut révisé au 15 novembre 2026 : les contrôles statiques Deno et les tests
 - Le parseur partagé rejette aussi les types JSON inattendus (booléens, `null`), les décimaux, les notations exponentielles et les entiers hors plage sûre. Des tests Deno couvrent les montants et la devise XOF ; ils ont réussi avec le typage de toutes les fonctions Edge dans le run CI `43735230698` sur le commit `77d08d11`.
 - La CI Deno a réussi sur le commit `8faf7d9851aecb688a329edd93325d18fb89fefd`. Cela confirme le typage des fonctions Edge, pas le comportement des API marchandes en environnement sandbox ou production.
 
+### Normalisation des états intermédiaires CinetPay — 15 novembre 2026
+
+La reprise d'une session CinetPay vérifie désormais un ensemble fermé d'états non terminaux connus : `WAITING_FOR_CUSTOMER`, `WAITING_CUSTOMER_TO_VALIDATE`, `PENDING`, `INITIATED` et `SECURE_PAYMENT_WAITING_CONFIRMATION`. La même classification est utilisée par le webhook V3. Dans tous les cas, la réponse doit être confirmée par l'API avec le code de succès attendu, le montant XOF exact et une URL CinetPay HTTPS déjà enregistrée. `ACCEPTED`, `REFUSED`, `CANCELLED`, `EXPIRED` et tout état inconnu ne sont jamais réutilisés. Une transaction expirée ou refusée nécessite un mécanisme serveur de réémission/rapprochement qui n'est pas encore implémenté.
+
 ### Réutilisation sûre des sessions CinetPay
 
 Une session déjà marquée `PROCESSING` n'est réutilisée que si la référence de transaction et l'URL de checkout stockées sont présentes, si l'URL est HTTPS sur un domaine CinetPay, et si `POST /v2/payment/check` confirme `WAITING_FOR_CUSTOMER` avec le même montant XOF. Les statuts `ACCEPTED`, `REFUSED`, les montants/devise différents et toute réponse inconnue bloquent la remise de l'ancien lien et exigent un rapprochement. Aucun nouveau `transaction_id` n'est inventé pour une transaction déjà créée.

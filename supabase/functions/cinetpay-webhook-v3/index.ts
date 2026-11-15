@@ -1,6 +1,11 @@
 // deno-lint-ignore no-import-prefix no-unversioned-import
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { isXofCurrency, parsePositiveSafeIntegerAmount, shouldPersistPaymentEvent } from "../_shared/payment_validation.ts";
+import {
+  isCinetPayPendingStatus,
+  isXofCurrency,
+  parsePositiveSafeIntegerAmount,
+  shouldPersistPaymentEvent,
+} from "../_shared/payment_validation.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
 const json = (body: unknown, status = 200) =>
@@ -149,9 +154,9 @@ Deno.serve(async (req: Request) => {
   if (String(checked.code ?? "") === "00" && providerStatus === "ACCEPTED") {
     internalStatus = "SUCCEEDED";
     eventType = "cinetpay.accepted";
-  } else if (providerStatus === "WAITING_FOR_CUSTOMER") {
+  } else if (isCinetPayPendingStatus(providerStatus)) {
     internalStatus = "PROCESSING";
-    eventType = "cinetpay.waiting_for_customer";
+    eventType = "cinetpay." + providerStatus.toLowerCase();
   } else if (providerStatus === "REFUSED") {
     internalStatus = "FAILED";
     eventType = "cinetpay.refused";

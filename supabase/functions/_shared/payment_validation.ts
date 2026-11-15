@@ -124,6 +124,20 @@ export function parseCinetPayXofAmount(value: unknown): number | null {
   return amount;
 }
 
+/**
+ * Recognized CinetPay non-terminal transaction statuses. An unknown status
+ * is deliberately not considered reusable: the caller must reconcile it.
+ */
+export function isCinetPayPendingStatus(value: unknown): boolean {
+  if (typeof value !== "string") return false;
+  const status = value.trim().toUpperCase();
+  return status === "WAITING_FOR_CUSTOMER" ||
+    status === "WAITING_CUSTOMER_TO_VALIDATE" ||
+    status === "PENDING" ||
+    status === "INITIATED" ||
+    status === "SECURE_PAYMENT_WAITING_CONFIRMATION";
+}
+
 /** Accept only HTTPS checkout links hosted by a CinetPay domain. */
 export function isTrustedCinetPayCheckoutUrl(value: unknown): value is string {
   if (typeof value !== "string" || value.trim() !== value) return false;
@@ -161,7 +175,7 @@ export function isReusableCinetPayPaymentCheck(
   const expectedAmount = parseCinetPayXofAmount(localAmount);
   const actualAmount = parseCinetPayXofAmount(result.amount);
   return String(response.code ?? "").trim() === "00" &&
-    String(result.status ?? "").trim().toUpperCase() === "WAITING_FOR_CUSTOMER" &&
+    isCinetPayPendingStatus(result.status) &&
     expectedAmount !== null &&
     actualAmount === expectedAmount &&
     isXofCurrency(localCurrency) &&
