@@ -28,6 +28,16 @@ class CourierRoutePlan {
     'IN_TRANSIT',
   };
 
+  /// The courier assignment RPC exposes the primary key as assignment_id.
+  /// Accept the legacy id key only for callers using an older read model.
+  static String requireAssignmentId(Map<String, dynamic> assignment) {
+    final value = (assignment['assignment_id'] ?? assignment['id'])?.toString();
+    if (value == null || value.trim().isEmpty || value == 'null') {
+      throw const FormatException('Identifiant de mission indisponible.');
+    }
+    return value;
+  }
+
   /// Combines all currently assigned packages for the signed-in courier into
   /// one operational itinerary. This is a client-side grouping only: it does
   /// not create or mutate database assignments or persisted delivery routes.
