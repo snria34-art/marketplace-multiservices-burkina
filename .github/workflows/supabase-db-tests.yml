@@ -1,5 +1,7 @@
 name: Supabase database tests
 
+# Manual validation only. Every database command is explicitly local.
+# This workflow must never link to, reset, or test a hosted Supabase project.
 on:
   workflow_dispatch:
 
@@ -12,33 +14,35 @@ concurrency:
 
 jobs:
   database-tests:
-    runs-on: ubuntu-latest
-    timeout-minutes: 25
+    if: github.ref == 'refs/heads/maintenance/audit-01-07-2026-11-15'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
-      - name: Set up Supabase CLI
+      - name: Set up pinned Supabase CLI
         uses: supabase/setup-cli@v1
         with:
           version: 2.122.1
 
-      - name: Set up Deno
-        uses: denoland/setup-deno@v2
-        with:
-          deno-version: v2.x
-
-      - name: Type-check Supabase Edge Functions
-        run: deno check supabase/functions/*/index.ts
-
-      - name: Start local Supabase
+      # A fresh GitHub-hosted runner has no linked project or local stack.
+      # 'supabase start' creates the isolated local stack, applies migrations,
+      # and loads only supabase/seed.test.sql configured in supabase/config.toml.
+      - name: Start isolated local Supabase stack
         run: supabase start
 
-      - name: Apply migrations and local demo seed
-        run: supabase db reset
+      - name: Run pgTAP tests against the local database only
+        run: supabase test db --local
 
-      - name: Run database and RLS tests
-        run: supabase test db
-
-      - name: Stop local Supabase
+      - name: Stop local Supabase stack
         if: always()
-        run: if command -v supabase >/dev/null 2>&1; then supabase stop; else echo 'Supabase CLI was not installed; nothing to stop.'; fi
+        shell: bash
+        run: |
+          if command -v supabase >/dev/null 2>&1; then
+            supabase stop
+          else
+            echo 'Supabase CLI was not installed; nothing to stop.'
+          fi
