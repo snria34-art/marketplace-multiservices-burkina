@@ -123,6 +123,7 @@ class SellerProductsRepository {
       'image/jpeg': 'jpg',
       'image/png': 'png',
       'image/webp': 'webp',
+      'image/heic': 'heic',
     };
     final reportedMime = (file.mimeType ?? '').toLowerCase().trim();
     final reportedExtension = file.name.contains('.')
@@ -134,12 +135,13 @@ class SellerProductsRepository {
             'jpg' || 'jpeg' => 'image/jpeg',
             'png' => 'image/png',
             'webp' => 'image/webp',
+            'heic' => 'image/heic',
             _ => '',
           };
     final extension = allowedImageTypes[mime];
     if (extension == null) {
       throw StateError(
-        'Format non pris en charge. Utilisez une image JPEG, PNG ou WebP.',
+        'Format non pris en charge. Utilisez une image JPEG, PNG, WebP ou HEIC.',
       );
     }
     UploadMediaValidator.requireMimeType(bytes, mime);
