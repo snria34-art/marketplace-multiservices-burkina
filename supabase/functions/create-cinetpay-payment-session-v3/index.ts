@@ -1,6 +1,7 @@
 // deno-lint-ignore no-import-prefix no-unversioned-import
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import {
+  isPaymentCheckoutEligibleStatus,
   isReusableCinetPayPaymentCheck,
   isTrustedCinetPayCheckoutUrl,
   parseCinetPayXofAmount,
@@ -117,7 +118,19 @@ Deno.serve(async (req: Request) => {
     }, 409);
   }
 
-  if (existing.status === "PROCESSING") {
+  const existingStatus = String(existing.status ?? "").trim().toUpperCase();
+  if (
+    existingStatus === "SUCCEEDED" ||
+    existingStatus === "PARTIALLY_REFUNDED" ||
+    existingStatus === "REFUNDED"
+  ) {
+    return json({ error: "payment_already_settled", payment_id: paymentId }, 409);
+  }
+  if (!isPaymentCheckoutEligibleStatus(existingStatus)) {
+    return json({ error: "payment_not_pending", payment_id: paymentId }, 409);
+  }
+
+  if (existingStatus === "PROCESSING") {
     const existingReference = String(existing.provider_reference ?? "").trim();
     const existingUrl = metadata.payment_url;
     if (!existingReference || !isTrustedCinetPayCheckoutUrl(existingUrl)) {
