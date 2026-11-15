@@ -2,10 +2,9 @@ name: Supabase Edge Functions CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, 'maintenance/audit-01-07-2026-11-15']
     paths:
       - 'supabase/functions/**'
-      - '.github/workflows/supabase-functions-ci.yml'
   pull_request:
     branches: [main]
     paths:
@@ -23,7 +22,7 @@ concurrency:
 jobs:
   edge-functions:
     name: Type-check Supabase Edge Functions
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 25
     steps:
       - name: Checkout
