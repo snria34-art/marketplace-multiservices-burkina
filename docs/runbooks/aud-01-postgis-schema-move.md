@@ -177,3 +177,16 @@ Résultat attendu : une distance positive en mètres, sans erreur SRID/type.
 - Aucun compte propriétaire n'a été créé. Aucun paiement ou secret Firebase n'a été touché.
 - Après confirmation du Support, vérifier le schéma de l'extension, les trois colonnes, les deux index GiST, le calcul spatial, les fonctions RPC et Security Advisor. Ne pas déclarer AUD-01 terminé avant ces contrôles.
 
+## Addendum — vérification documentaire et accès Support (16 novembre 2026)
+
+La documentation Supabase actuelle confirme que PostGIS 2.3+ n'est pas relocatable avec un simple `ALTER EXTENSION ... SET SCHEMA`. Pour un projet qui possède déjà des colonnes `geometry`/`geography`, Supabase recommande de demander au Support le déplacement non destructif vers `extensions` ; cette méthode est exécutée en transaction et préserve les colonnes, index, vues et données, sans passage par un `DROP EXTENSION ... CASCADE`.
+
+Références officielles :
+- https://supabase.com/kb/troubleshooting/security-advisor-flags-spatial_ref_sys-and-other-postgis-objects-in-the-public-schema-f9d408
+- https://supabase.com/docs/guides/database/extensions/postgis
+
+Le texte de demande au Support figure déjà à la section 3 ci-dessus. Accès direct au formulaire du projet : https://supabase.com/dashboard/support/new?projectRef=dzhhsoikzxibmngjzcch
+
+**État de cette session :** le connecteur Supabase retourne `projects: []` et ne donne pas accès au projet `dzhhsoikzxibmngjzcch`. Je n'ai donc ni ouvert le ticket ni vérifié l'état live. La demande est prête à être envoyée par un propriétaire du projet. Ne pas tenter de déplacer l'extension via SQL, de la supprimer/recréer ou de révoquer ses grants depuis le rôle du projet.
+
+Après réponse du Support, appliquer uniquement la liste de contrôle post-mouvement déjà décrite dans ce runbook : schéma de l'extension, colonnes geography, index GiST, vues, RPC, Data API (ne pas exposer `extensions`) et Security Advisor.
