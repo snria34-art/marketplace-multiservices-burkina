@@ -88,3 +88,19 @@ La liste de projets Supabase accessible à la connexion est vide. Une lecture di
 La base Flutter, plusieurs tests unitaires, les fonctions Edge et les tests PostgreSQL ont des validations positives sur des commits antérieurs de maintenance. Mais la tête actuelle n'a pas de run CI, la protection de `main` n'est pas active, le projet Vercel et Supabase ne sont pas vérifiés depuis les connecteurs, PostGIS nécessite Support, les secrets et sandboxes marchands ne sont pas validés, et les parcours terrain/E2E/iOS restent incomplets.
 
 Aucune migration distante, aucun paiement réel, aucune opération sur les soldes ou remboursements, aucun déploiement, aucune publication ni aucun merge vers `main` n'a été effectué dans cette passe.
+
+ 
+## Addendum — finitions Flutter et validations du 16 novembre 2026
+
+Les commits `a633f02e99d3b4a298a6249702eaaec13dce18dd` et `fc4cc9a09c11c7fcc6243803328f7bc081af69c8` ont réalisé une passe de nettoyage sans changement de logique métier.
+
+- **99 diagnostics de style corrigés** : 97 paramètres inutilisés avec noms à underscores redondants, une accolade inutile d'interpolation et un constructeur de test converti en super-paramètre.
+- Les diagnostics Flutter sont passés de **376 à 277**. Les 277 restants sont des recommandations `prefer_interpolation_to_compose_strings` ; elles ne sont ni des erreurs ni des avertissements bloquants.
+- La documentation native a été corrigée pour correspondre au workflow : Android Debug sur les pushes de maintenance concernés et iOS Simulator Debug uniquement avec `workflow_dispatch`.
+
+### CI observée après les corrections
+
+- Flutter CI [run 43764285828](https://github.com/snria34-art/marketplace-multiservices-burkina/actions/runs/43764285828), commit `fc4cc9a09c11c7fcc6243803328f7bc081af69c8` : **success**. Analyse, tests et build Web Debug réussis ; le journal confirme **50 tests passés**.
+- Native Debug [run 43764125828](https://github.com/snria34-art/marketplace-multiservices-burkina/actions/runs/43764125828), commit `a633f02e99d3b4a298a6249702eaaec13dce18dd` : **in_progress** au moment de ce relevé. Android APK Debug est encore en cours ; iOS Simulator Debug a été ignoré car le déclenchement était un push et le job iOS est réservé à `workflow_dispatch`. Ne pas présenter l'APK comme validé avant la conclusion du run.
+
+Cette passe améliore la qualité Flutter et valide le parcours de build Web Debug, mais elle ne rend pas l'application certifiée pour la production. Les blocages P1 (allocations financières, PostGIS Support, sandbox paiements, migrations distantes, protection GitHub de `main` et accès Vercel) et les essais E2E/GPS/iOS restent ouverts.
