@@ -1,46 +1,71 @@
-name: Native platform build
+name: Native debug validation
 
-concurrency:
-  group: native-build-${{ github.ref }}
-  cancel-in-progress: true
-
-# Keep this workflow manual until signing and Firebase configuration are ready.
-# This prevents a version tag from unexpectedly consuming Actions minutes.
+# Manual validation only. No release signing, store upload or deployment.
 on:
   workflow_dispatch:
 
 permissions:
   contents: read
 
+concurrency:
+  group: native-debug-validation-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  android-release:
-    runs-on: ubuntu-latest
+  android-debug:
+    name: Build Android debug APK (unsigned)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
-      - uses: subosito/flutter-action@v2
+      - name: Checkout
+        uses: actions/checkout@v4
         with:
-          flutter-version: '3.47.x'
-          channel: stable
-          cache: true
-      - uses: actions/setup-java@v4
+          persist-credentials: false
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
-      - name: Dependencies
-        run: flutter pub get
-      - name: Build Android App Bundle (AAB)
-        run: flutter build appbundle --release
 
-  ios-release:
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: subosito/flutter-action@v2
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2.23.0
         with:
-          flutter-version: '3.47.x'
+          flutter-version: '3.47.2'
           channel: stable
           cache: true
-      - name: Dependencies
-        run: flutter pub get
-      - name: Build iOS simulator (debug, unsigned)
+
+      - name: Verify toolchain
+        run: flutter --version
+
+      - name: Resolve locked dependencies
+        run: flutter pub get --enforce-lockfile
+
+      - name: Build Android debug APK
+        run: flutter build apk --debug
+
+  ios-simulator-debug:
+    name: Build iOS simulator debug app (unsigned)
+    runs-on: macos-latest
+    timeout-minutes: 35
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2.23.0
+        with:
+          flutter-version: '3.47.2'
+          channel: stable
+          cache: true
+
+      - name: Verify toolchain
+        run: flutter --version
+
+      - name: Resolve locked dependencies
+        run: flutter pub get --enforce-lockfile
+
+      - name: Build iOS simulator debug app
         run: flutter build ios --simulator --debug
