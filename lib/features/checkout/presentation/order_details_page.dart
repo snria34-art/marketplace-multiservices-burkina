@@ -310,7 +310,11 @@ class _OrderDetailsPageState extends ConsumerState<OrderDetailsPage> {
     }
   }
   Future<void> _requestRefund(num maxAmount) async {
-    final amountController = TextEditingController(text: maxAmount.toString());
+    final initialAmountText = maxAmount.isFinite &&
+            maxAmount == maxAmount.roundToDouble()
+        ? maxAmount.toInt().toString()
+        : maxAmount.toString();
+    final amountController = TextEditingController(text: initialAmountText);
     final reasonController = TextEditingController();
     final values = await showDialog<bool>(
       context: context,
@@ -348,7 +352,23 @@ class _OrderDetailsPageState extends ConsumerState<OrderDetailsPage> {
     final reason = reasonController.text.trim();
     amountController.dispose();
     reasonController.dispose();
-    if (!mounted || values != true || amount == null || amount > maxAmount) return;
+    if (!mounted || values != true) return;
+    if (amount == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Le montant doit être un entier positif en XOF.'),
+        ),
+      );
+      return;
+    }
+    if (amount > maxAmount) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Le montant dépasse le montant remboursable.'),
+        ),
+      );
+      return;
+    }
 
     try {
       final client = ref.read(supabaseProvider);
