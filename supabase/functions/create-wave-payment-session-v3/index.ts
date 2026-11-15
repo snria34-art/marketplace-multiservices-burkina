@@ -1,7 +1,7 @@
 // deno-lint-ignore no-import-prefix no-unversioned-import
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
-import { isReusableWaveCheckoutSession } from "../_shared/payment_validation.ts";
+import { isPaymentCheckoutEligibleStatus, isReusableWaveCheckoutSession } from "../_shared/payment_validation.ts";
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
@@ -149,6 +149,28 @@ Deno.serve(async (req: Request) => {
   }
   if (payment.provider !== "WAVE") {
     return json({ error: "provider_invalid" }, 409);
+  }
+
+  const paymentStatus = String(payment.status ?? "").trim().toUpperCase();
+  if (
+    paymentStatus === "SUCCEEDED" ||
+    paymentStatus === "PARTIALLY_REFUNDED" ||
+    paymentStatus === "REFUNDED"
+  ) {
+    return json({ error: "payment_already_settled", payment_id: paymentId }, 409);
+  }
+  if (!isPaymentCheckoutEligibleStatus(paymentStatus)) {
+    return json({ error: "payment_not_pending", payment_id: paymentId }, 409);
+  }
+
+  if (
+    paymentStatus === "PROCESSING" &&
+    !String(payment.provider_reference ?? "").trim()
+  ) {
+    return json({
+      error: "payment_session_reconciliation_required",
+      payment_id: paymentId,
+    }, 409);
   }
 
   const amount = Number(payment.amount);
