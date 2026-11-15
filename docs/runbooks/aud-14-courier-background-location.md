@@ -110,3 +110,15 @@ Un test widget est ajouté pour vérifier qu'en l'absence d'affectation active, 
 - Le build Android debug non signé du run `43735673369` a réussi sur le commit `9980093e`. La CI Flutter du même commit a réussi (47 tests et compilation Web). Aucun APK n'a été installé ni testé sur un téléphone réel ; le build iOS n'a pas été lancé (job manuel sur macOS).
 - App Store / Google Play : les permissions de localisation en arrière-plan demandent un examen dédié et une justification conforme à la fonction principale de livraison. La présence des clés natives ne garantit pas l'approbation des stores.
 - La politique de conservation GPS est encore à définir (RIA-31).
+
+## Addendum — revalidation au retour au premier plan (16 novembre 2026)
+
+Le livreur peut laisser l'application en arrière-plan pendant une mission ; le flux natif Geolocator reste attaché à l'écran livreur. Un nouveau contrôle de cycle de vie rafraîchit maintenant les affectations à l'événement `resumed` :
+
+- la liste et les étapes de tournée sont rechargées au retour dans l'application ;
+- si la dernière mission n'est plus active selon `CourierRoutePlan.build`, l'abonnement GPS local est annulé ;
+- en cas d'indisponibilité réseau, l'interface avertit le livreur ; le serveur continue d'appliquer le contrôle d'affectation active à chaque écriture GPS.
+
+Le changement est dans `lib/features/courier/presentation/courier_page.dart` et un test widget correspondant est ajouté dans `test/features/courier/courier_location_tracking_test.dart`.
+
+**Limites inchangées :** aucun appareil physique n'a été testé. La poursuite du suivi lorsque le système termine complètement le processus, la politique de conservation/purge GPS, les permissions révoquées pendant une mission et la revue Google Play/App Store restent à valider.
