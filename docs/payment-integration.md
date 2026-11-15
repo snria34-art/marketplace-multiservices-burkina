@@ -93,6 +93,13 @@ Si les secrets nécessaires sont absents, l'application bloque le checkout avant
 - Si la connexion échoue pendant l'appel de remboursement Wave, le résultat fournisseur est considéré comme **inconnu**. La demande reste en `PROCESSING` afin d'empêcher une nouvelle soumission aveugle ; une réconciliation avec le tableau de bord Wave est nécessaire avant toute nouvelle action.
 - Cette correction réduit le risque de double remboursement mais ne résout pas l'allocation comptable multi-vendeurs documentée dans `docs/runbooks/aud-02-refund-allocation.md`. Les remboursements restent un parcours non certifié jusqu'à la correction et aux tests isolés du ledger.
 
+### Blocage restant : idempotence des événements multiples — 15 novembre 2026
+
+- Un contrôle complémentaire des migrations a révélé que `payment_events.provider_reference` possède un index unique global. Le processeur actuel déduplique pourtant par paiement + type + référence ; ces deux règles ne sont pas cohérentes lorsque plusieurs événements distincts utilisent la même session Wave ou transaction CinetPay.
+- Wave peut envoyer plusieurs tentatives échouées puis une réussite sur la même session. CinetPay peut également notifier un état d'attente puis un état final pour une même transaction. Le deuxième événement distinct risque donc d'échouer lors de l'insertion de l'événement.
+- Ce conflit est documenté dans `docs/runbooks/aud-25-payment-event-idempotency.md`. Il faut séparer la référence de paiement stable de l'identifiant/fingerprint de l'événement dans une nouvelle migration et un RPC adapté.
+- En attendant cette correction et les tests SQL isolés, les callbacks successifs d'une même session/transaction ne sont pas certifiés pour la production. Les contrôles Deno réussis valident le typage, pas cet invariant SQL.
+
 ## Activation production
 
 Le code d'intégration est en place, mais les comptes marchands/KYC, clés API, secrets de signature et URLs webhook doivent être fournis par les comptes fournisseur avant tout paiement réel.
