@@ -287,11 +287,11 @@ Cette incohérence peut faire échouer la confirmation de livraison dans une tra
 
 ### Validation technique déclenchée
 
-- La CI Edge a d'abord révélé un problème de typage dans l'agrégateur. Une correction a été faite ; la dernière validation Edge suit le commit `2ac4968`.
-- Flutter CI sur le commit `1a8572f` est en cours.
-- Android Debug sur le commit `a4dba57` est en cours.
-- Le job iOS reste volontairement ignoré (runner macOS manuel).
-- Le workflow DB local `43732504970` a réussi, avec reconstruction de la base et pgTAP ; ce run précède uniquement les pages et le code UI, qui n'introduisent pas de migration SQL.
+- **Flutter CI `43732891714` : SUCCESS** sur le commit `1a8572ff48b54f613292fb85e1894940c50d7e60` : analyse terminée, 44 tests réussis et build Web Debug réussi. L'analyse signale 375 diagnostics de niveau `info`; aucun warning ou erreur bloquant n'a empêché le job de réussir. [Voir Flutter CI](https://github.com/snria34-art/marketplace-multiservices-burkina/actions/runs/43732891714).
+- **Supabase Edge Functions CI `43733215120` : SUCCESS** sur le commit `e4563684d34038ec382684756ab5ee67c12b7844` : les 22 points d'entrée sont typés avec succès, y compris le nouvel agrégateur partenaires. [Voir Edge CI](https://github.com/snria34-art/marketplace-multiservices-burkina/actions/runs/43733215120).
+- **Supabase DB locale `43732504970` : SUCCESS** : reconstruction locale de toutes les migrations et tests pgTAP, sans projet hébergé. [Voir DB CI](https://github.com/snria34-art/marketplace-multiservices-burkina/actions/runs/43732504970).
+- **Android Debug `43732874157` : toujours en cours** au dernier contrôle ; l'étape Gradle `flutter build apk --debug` n'avait pas encore rendu son résultat. [Voir Android Debug](https://github.com/snria34-art/marketplace-multiservices-burkina/actions/runs/43732874157).
+- **iOS Simulator Debug : skipped** par le workflow ; aucun build iOS n'est revendiqué.
 - Ces validations ne signifient pas que WhatsApp, le portefeuille, les statistiques partenaires ou les routes groupées persistées fonctionnent en production.
 
 
