@@ -55,6 +55,9 @@ import '../../features/admin/presentation/admin_platform_health_page.dart';
 import '../../features/admin/presentation/admin_review_moderation_page.dart';
 import '../../features/admin/presentation/admin_accounts_page.dart';
 import '../../features/admin/presentation/admin_refunds_page.dart';
+import '../../features/admin/presentation/admin_partner_network_page.dart';
+import '../../features/whatsapp/presentation/whatsapp_assistant_page.dart';
+import '../../features/wallet/presentation/customer_wallet_page.dart';
 
 class _AuthRefreshListenable extends ChangeNotifier {
   _AuthRefreshListenable(SupabaseClient? client) {
@@ -188,6 +191,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     initialLocation: '/',
     routes: [
       GoRoute(path: '/', builder: (_, __) => const HomePage()),
+      GoRoute(path: '/whatsapp', builder: (_, __) => const WhatsAppAssistantPage()),
+      GoRoute(path: '/wallet', builder: (_, __) => const CustomerWalletPage()),
       GoRoute(path: '/auth', builder: (_, __) => const SignInPage()),
       GoRoute(
         path: '/auth/forgot-password',
@@ -294,6 +299,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/notifications/preferences',
         builder: (_, __) => const NotificationPreferencesPage(),
+      ),
+      GoRoute(
+        path: '/admin/partner-network',
+        builder: (_, __) => const AdminPartnerNetworkPage(),
       ),
       GoRoute(
         path: '/admin',
