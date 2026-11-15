@@ -105,9 +105,9 @@ void main() {
       expect(repository.calls, 1);
       expect(find.text('Colis package-1'), findsOneWidget);
 
-      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
-      await tester.pump();
-      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      final lifecycleObserver =
+          tester.state(find.byType(CourierPage)) as WidgetsBindingObserver;
+      lifecycleObserver.didChangeAppLifecycleState(AppLifecycleState.resumed);
       await tester.pumpAndSettle();
 
       expect(repository.calls, 2);
