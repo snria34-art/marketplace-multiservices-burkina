@@ -56,10 +56,16 @@ class _CourierPageState extends ConsumerState<CourierPage>
     if (repo == null) return;
 
     try {
-      final assignments = await repo.assignments();
+      // Give FutureBuilder the pending future before awaiting it. Supplying a
+      // Future.value(...) after the result has already resolved can leave the
+      // old snapshot visible because FutureBuilder cannot synchronously detect
+      // an already-completed future.
+      final assignmentsFuture = repo.assignments();
+      if (mounted) {
+        setState(() => _future = assignmentsFuture);
+      }
+      final assignments = await assignmentsFuture;
       if (!mounted) return;
-
-      setState(() => _future = Future.value(assignments));
 
       if (_sharingLocation && CourierRoutePlan.build(assignments).isEmpty) {
         await _stopLocation(
