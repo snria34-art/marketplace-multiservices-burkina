@@ -3,6 +3,14 @@ name: Supabase database tests
 # Manual validation only. Every database command is explicitly local.
 # This workflow must never link to, reset, or test a hosted Supabase project.
 on:
+  push:
+    branches: ['maintenance/audit-01-07-2026-11-15']
+    paths:
+      - 'supabase/migrations/**'
+      - 'supabase/tests/**'
+      - 'supabase/seed.sql'
+      - 'supabase/config.toml'
+      - '.github/workflows/supabase-db-tests.yml'
   workflow_dispatch:
 
 permissions:
