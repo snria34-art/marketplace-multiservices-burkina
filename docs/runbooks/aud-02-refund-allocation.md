@@ -281,7 +281,7 @@ La branche de maintenance contient la migration `20261115191336_phase1_commerce_
 - Elle crée `private.refund_accounting_reconciliations`, dans un schéma privé avec RLS et sans accès direct aux rôles clients.
 - Le trigger `trg_sync_refund_accounting_hold` place les remboursements non rejetés/annulés en `PENDING_ALLOCATION`.
 - `public.complete_refund` ne répartit plus de débit arbitraire dans `seller_ledger` : il confirme l'état du remboursement et du paiement, tout en laissant le rapprochement vendeur en attente.
-- Les retraits des vendeurs concernés et un autre remboursement sur le même paiement sont bloqués tant que le rapprochement requis n'est pas résolu.
+- Les retraits des vendeurs concernés restent bloqués. Un nouveau traitement fournisseur sur le même paiement est bloqué lorsqu'une tentative antérieure est déjà en cours, échouée ou terminée et demeure en `PENDING_ALLOCATION`.
 - Les remboursements rejetés/annulés passent en `RECONCILED`; aucun mécanisme de libération manuelle d'une allocation financière non approuvée ne doit être ajouté.
 
 ### Validation et portée
