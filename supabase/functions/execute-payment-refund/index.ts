@@ -84,6 +84,73 @@ Deno.serve(async (req: Request) => {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
+  // Wave's Checkout refund endpoint refunds the entire checkout payment; it
+  // does not accept a partial amount. Never send a partial local refund to it.
+  if (provider === "WAVE") {
+    const { data: payment, error: paymentLookupError } = await adminClient
+      .from("payments")
+      .select("amount,currency")
+      .eq("id", String(refund.payment_id ?? ""))
+      .maybeSingle();
+
+    if (paymentLookupError || !payment) {
+      const { data: resetRow, error: resetError } = await adminClient
+        .from("refunds")
+        .update({ status: "APPROVED" })
+        .eq("id", refundId)
+        .eq("status", "PROCESSING")
+        .select("id")
+        .maybeSingle();
+
+      if (resetError || !resetRow) {
+        return json({
+          error: "refund_state_update_failed",
+          refund_id: refundId,
+        }, 500);
+      }
+
+      return json({
+        error: "refund_payment_lookup_failed",
+        refund_id: refundId,
+        manual_required: true,
+      }, 503);
+    }
+
+    const capturedAmount = Number(payment.amount);
+    if (
+      payment.currency !== "XOF" ||
+      !Number.isFinite(capturedAmount) ||
+      capturedAmount !== amount
+    ) {
+      const { data: resetRow, error: resetError } = await adminClient
+        .from("refunds")
+        .update({
+          status: "APPROVED",
+          reason: (
+            String(refund.reason ?? "") +
+            " | Wave Checkout ne prend en charge que le remboursement intégral du paiement ; montant différent, validation manuelle requise."
+          ).slice(0, 1000),
+        })
+        .eq("id", refundId)
+        .eq("status", "PROCESSING")
+        .select("id")
+        .maybeSingle();
+
+      if (resetError || !resetRow) {
+        return json({
+          error: "refund_state_update_failed",
+          refund_id: refundId,
+        }, 500);
+      }
+
+      return json({
+        error: "wave_partial_refund_not_supported",
+        refund_id: refundId,
+        manual_required: true,
+      }, 409);
+    }
+  }
+
   if (provider !== "WAVE") {
     const { error: manualUpdateError } = await adminClient
       .from("refunds")
