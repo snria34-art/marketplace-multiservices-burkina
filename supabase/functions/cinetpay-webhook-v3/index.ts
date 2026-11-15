@@ -132,13 +132,16 @@ Deno.serve(async (req: Request) => {
 
   const data = (checked.data ?? {}) as Record<string, unknown>;
   const providerAmount = Number(data.amount);
-  const providerCurrency = String(data.currency ?? "");
+  const providerCurrency = String(data.currency ?? "").trim().toUpperCase();
+  const paymentCurrency = String(payment.currency ?? "").trim().toUpperCase();
   if (
-    !Number.isFinite(providerAmount) ||
+    !Number.isSafeInteger(providerAmount) ||
+    providerAmount <= 0 ||
     providerAmount !== Number(payment.amount) ||
-    providerCurrency !== "XOF"
+    providerCurrency !== "XOF" ||
+    paymentCurrency !== "XOF"
   ) {
-    return json({ error: "payment_amount_mismatch" }, 409);
+    return json({ error: "payment_amount_or_currency_mismatch" }, 409);
   }
 
   const providerStatus = String(data.status ?? "").toUpperCase();
