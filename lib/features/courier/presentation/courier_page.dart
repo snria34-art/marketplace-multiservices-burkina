@@ -65,7 +65,7 @@ class _CourierPageState extends ConsumerState<CourierPage> {
     try {
       final assignments = await repo.assignments();
       if (!mounted) return;
-      if (assignments.isEmpty) {
+      if (CourierRoutePlan.build(assignments).isEmpty) {
         _showLocationMessage(
           'Aucune mission active : la position ne peut pas être partagée.',
         );
