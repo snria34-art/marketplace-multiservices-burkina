@@ -1,28 +1,41 @@
-name: Flutter CI
-
-concurrency:
-  group: flutter-ci-${{ github.ref }}
-  cancel-in-progress: true
-
-permissions:
-  contents: read
+name: Flutter manual validation
 
 on:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: flutter-manual-validation-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   analyze-and-test:
-    runs-on: ubuntu-latest
+    name: Analyze and test Flutter
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
     steps:
-      - uses: actions/checkout@v4
-      - uses: subosito/flutter-action@v2
+      - name: Checkout
+        uses: actions/checkout@v4
         with:
-          flutter-version: '3.47.x'
+          persist-credentials: false
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2.23.0
+        with:
+          flutter-version: '3.47.2'
           channel: stable
           cache: true
-      - name: Dependencies
-        run: flutter pub get
+
+      - name: Verify toolchain
+        run: flutter --version
+
+      - name: Resolve locked dependencies
+        run: flutter pub get --enforce-lockfile
+
       - name: Analyze
-        run: flutter analyze --no-fatal-warnings --no-fatal-infos
-      - name: Test
+        run: flutter analyze
+
+      - name: Run tests
         run: flutter test
