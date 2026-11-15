@@ -2,6 +2,29 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:marketplace_multiservices_burkina/features/courier/domain/courier_route_plan.dart';
 
 void main() {
+  group('CourierRoutePlan.requireAssignmentId', () {
+    test('uses the assignment_id field returned by the secure RPC', () {
+      expect(
+        CourierRoutePlan.requireAssignmentId({'assignment_id': 'assignment-1'}),
+        'assignment-1',
+      );
+    });
+
+    test('accepts the legacy id field for older read models', () {
+      expect(
+        CourierRoutePlan.requireAssignmentId({'id': 'assignment-2'}),
+        'assignment-2',
+      );
+    });
+
+    test('rejects a missing assignment identifier', () {
+      expect(
+        () => CourierRoutePlan.requireAssignmentId({'package_id': 'package-1'}),
+        throwsFormatException,
+      );
+    });
+  });
+
   group('CourierRoutePlan.build', () {
     test('places all shop pickups before customer drop-offs', () {
       final stops = CourierRoutePlan.build([
