@@ -429,7 +429,11 @@ class _CourierPageState extends ConsumerState<CourierPage>
         );
       }
       if (!mounted) return;
-      setState(() => _future = Future.value(remainingAssignments));
+      setState(() {
+        _assignments = remainingAssignments;
+        _assignmentsError = null;
+        _assignmentsLoading = false;
+      });
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Mise à jour enregistrée.')),
