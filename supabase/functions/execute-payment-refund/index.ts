@@ -217,18 +217,17 @@ Deno.serve(async (req: Request) => {
     }, 502);
   }
 
-  const responseText = await waveResponse.text();
   if (!waveResponse.ok) {
+    // Do not persist provider response bodies in the customer-visible reason field.
     const { error: failureUpdateError } = await adminClient
       .from("refunds")
       .update({
         status: "FAILED",
         reason: (
           String(refund.reason ?? "") +
-          " | Wave refund error " +
+          " | Wave refund failed with HTTP status " +
           waveResponse.status +
-          ": " +
-          responseText.slice(0, 500)
+          "."
         ).slice(0, 1000),
       })
       .eq("id", refundId);
