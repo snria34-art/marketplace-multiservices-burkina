@@ -16,10 +16,10 @@ Le workflow `.github/workflows/supabase-db-tests.yml` a été renforcé sur la b
 - déclenchement manuel uniquement et job limité à `maintenance/audit-01-07-2026-11-15` ;
 - runner épinglé `ubuntu-24.04`, permissions de contenu en lecture seule et checkout sans identifiants persistants ;
 - Supabase CLI épinglée à `2.122.1` ;
-- stack Supabase locale éphémère puis `supabase test db --local` explicite ;
+- stack Supabase locale éphémère, `supabase db reset --local` pour reconstruire depuis zéro puis `supabase test db --local` explicite ;
 - aucune connexion, aucun secret et aucune commande de mutation distante dans ce workflow.
 
-Le reset redondant après `supabase start` a été retiré : sur un runner GitHub hébergé vierge, `supabase start` initialise la stack locale, applique les migrations et charge le seul seed configuré pour les tests locaux. La suite pgTAP est ensuite exécutée explicitement contre cette base locale.
+Après vérification de la documentation CLI, le workflow conserve bien `supabase db reset --local` après `supabase start` : cette commande recrée la base PostgreSQL locale, applique toutes les migrations et charge le seed de test configuré. La suite pgTAP est ensuite exécutée explicitement contre cette base locale. Le reset reste strictement local ; aucun `--remote`, `--linked`, DB URL ou secret distant n'est configuré.
 
 ### Verrou Vercel — déploiements Git suspendus
 
