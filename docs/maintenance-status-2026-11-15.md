@@ -21,6 +21,20 @@ Le workflow `.github/workflows/supabase-db-tests.yml` a été renforcé sur la b
 
 Le reset redondant après `supabase start` a été retiré : sur un runner GitHub hébergé vierge, `supabase start` initialise la stack locale, applique les migrations et charge le seul seed configuré pour les tests locaux. La suite pgTAP est ensuite exécutée explicitement contre cette base locale.
 
+### Verrou Vercel — déploiements Git suspendus
+
+Le fichier `vercel.json` contient désormais :
+
+```json
+"git": {
+  "deploymentEnabled": false
+}
+```
+
+Ce paramètre désactive les déploiements Git automatiques pour toutes les branches, y compris la branche de production, tant qu'il reste en place. Il ne supprime pas un déploiement déjà créé et ne garantit pas l'annulation d'un build déjà en cours. La réactivation devra être faite séparément après autorisation et fin de maintenance.
+
+Des statuts GitHub `Vercel: failure` sont présents sur les commits Flutter `5428bc9` et Edge `f2384db`. L'API Vercel refuse actuellement l'accès en lecture au scope `ridiastore` (403) et aucune équipe n'est retournée par la découverte de contexte ; le détail des déploiements et leurs journaux ne sont donc pas vérifiables depuis cette session. Aucun outil de création, promotion, annulation ou suppression de déploiement n'a été appelé.
+
 ### Limites qui restent ouvertes
 
 L'environnement de travail courant ne contient ni Docker, ni Supabase CLI, ni PostgreSQL ; le connecteur Supabase ne retourne aucun projet accessible. Le workflow SQL n'a donc pas été exécuté dans cette passe. Les éléments suivants restent non certifiés :
