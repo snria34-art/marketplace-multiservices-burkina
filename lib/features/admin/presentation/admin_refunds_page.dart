@@ -242,6 +242,9 @@ class _AdminRefundsPageState extends ConsumerState<AdminRefundsPage> {
                         (accountingStatus == 'PENDING_ALLOCATION'
                             ? '\nRapprochement comptable requis'
                             : '') +
+                        ((status == 'FAILED' || status == 'PROCESSING')
+                            ? '\nRelance automatique bloquée : vérifier le statut chez le fournisseur.'
+                            : '') +
                         '\n' +
                         reason +
                         (accountingNote.isNotEmpty
@@ -267,7 +270,7 @@ class _AdminRefundsPageState extends ConsumerState<AdminRefundsPage> {
                           value: 'reject',
                           child: Text('Refuser'),
                         ),
-                      if (status == 'APPROVED' || status == 'FAILED' || status == 'PROCESSING')
+                      if (provider == 'WAVE' && status == 'APPROVED')
                         const PopupMenuItem(
                           value: 'execute',
                           child: Text('Exécuter'),
