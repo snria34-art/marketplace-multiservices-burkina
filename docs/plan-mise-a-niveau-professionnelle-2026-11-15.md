@@ -179,3 +179,62 @@ Le lancement public n'est autorisable que si :
 ## Limites
 
 Ce plan ne certifie pas l'application et ne garantit pas l'absence absolue de défauts. Une validation professionnelle exige des preuves reproductibles, des tests indépendants et des contrôles de configuration dans les consoles des fournisseurs. Toute action sur la production ou tout changement financier doit être séparément autorisé et testé sur environnement isolé au préalable.
+
+
+---
+
+## Vérification ciblée complémentaire — 15 novembre 2026
+
+Cette section complète l'état de référence ci-dessus après vérification GitHub, recherche dans le code et contrôle de disponibilité des connecteurs.
+
+### Builds du correctif HEIC
+
+Commit de code testé : `3ad203129b270002c384f5853fc7579893169aa4`.
+
+- Flutter CI `43730338406` : **success**, y compris analyse, tests et build Flutter Web Debug.
+- Android Debug `43730338472` : **success**, y compris l'étape `flutter build apk --debug`.
+- iOS Simulator Debug : job **skipped**. Le workflow ne le lance que sur `workflow_dispatch` et utilise un runner macOS. Aucun build iOS n'est donc validé.
+- Le commit `0cb9448d7ba9b34c2cb79f51e3b3d4b0565a23aa` ajoute uniquement cette feuille de route/documentation après ces validations ; les fichiers applicatifs validés restent ceux du commit `3ad2031`.
+
+### Sécurité réellement active en production
+
+**Non vérifiée dans cette passe.** Le connecteur Supabase actuellement disponible retourne une liste de projets vide. Aucun projet n'a donc été sélectionné et aucun Security Advisor, réglage Auth/MFA, paramètre Storage, log ou métrique de base hébergée n'a été consulté. Les anciens runbooks décrivent des observations historiques et ne remplacent pas un contrôle live daté.
+
+Le contrôle GitHub de la branche indique toujours :
+- `main` = `be9c6407aa384d417f43c20d1492b3b9dcb21cb0` ;
+- protection de branche désactivée (`protected=false`, aucun status check requis) ;
+- le contenu de `main` n'a pas été modifié.
+
+Il faut donc conserver le statut **sécurité de production incomplètement vérifiée**. La protection GitHub de `main` est un constat actuel confirmé ; les paramètres Supabase live restent inconnus, pas supposés vulnérables ou sûrs.
+
+### Exploitation commerciale
+
+**Non démontrée à partir des données disponibles.** Aucun projet Supabase n'étant exposé au connecteur, aucune statistique de comptes, boutiques actives, commandes, paiements, livraisons, réclamations ou rétention n'a pu être extraite. Le dépôt ne fournit pas de preuve d'activité commerciale réelle. L'API GitHub des Releases retourne une liste vide ; cela ne permet pas d'exclure une distribution par un autre canal.
+
+Les chiffres d'activité doivent être fournis par des métriques de production ou un rapport d'exploitation daté, anonymisé et vérifiable. Les nombres de modules, fichiers, tests ou commits ne sont pas des indicateurs de traction commerciale.
+
+### Vérification des avantages concurrentiels dans le code
+
+- **WhatsApp : non trouvé.** La recherche du dépôt pour `whatsapp` et `wa.me` ne retourne aucun résultat de code. Une intégration WhatsApp Business/API ou un assistant conversationnel n'est donc pas démontré.
+- **Livraison groupée multi-commandes : non trouvée comme fonction dédiée.** Le dépôt contient `group_buy`, qui porte sur l'achat groupé, et la gestion de colis/affectations de livraison. Cela ne prouve pas un regroupement d'ordres indépendants dans une tournée mutualisée, une optimisation de route ou un calcul de réduction de coût partagé.
+- **Portefeuille : partiellement présent.** Le dépôt expose un solde vendeur calculé depuis `seller_ledger` et des demandes de payout. La recherche ne démontre pas de portefeuille client prépayé, de dépôt/retrait client ou de transfert entre utilisateurs. Ne pas assimiler le ledger vendeur à un wallet client.
+- **Réseau opérationnel : base technique présente, réseau réel non prouvé.** Les fonctions vendeur, prestataire, coursier, vérification et affectation sont présentes dans le code. Sans données live, il est impossible de confirmer le nombre de boutiques, professionnels, livreurs ou partenaires réellement actifs, leur couverture par ville et leurs délais de service.
+
+### Contexte concurrentiel WhatsApp
+
+GO AI CORP a annoncé Jclick AI à Ouagadougou, avec une présentation/lancement indiqué au 12 mai 2026 et une publication de l'entreprise datée du 23 août 2026. LeFaso a également relaté le lancement et cité les fonctions revendiquées par son promoteur : commandes multiservices et recherche de vendeurs/livreurs via WhatsApp. Ce sont des annonces et descriptions publiques, pas un audit indépendant de disponibilité ou de volumes d'utilisation.
+
+Sources publiques :
+- GO AI CORP : https://goaicorporation.org/lancement-agent-ia-jclick-ai
+- LeFaso : https://lefaso.net/?id_article=146450&page=impression
+
+**Conséquence stratégique :** WhatsApp n'est pas une différence concurrentielle théorique à surveiller plus tard : un acteur local l'a déjà annoncé. Marketplace Multiservices Burkina doit soit intégrer une expérience WhatsApp réellement reliée aux commandes et au support, soit se différencier autrement par son réseau de prestataires vérifiés, sa fiabilité de livraison, ses prix transparents et son service client mesurable.
+
+### Conclusion corrigée
+
+- Builds Flutter/Web Debug et Android Debug : confirmés réussis sur le correctif HEIC.
+- iOS : non compilé, job ignoré ; ne pas le présenter comme validé.
+- Sécurité Supabase live : non vérifiable avec la connexion actuelle ; protection GitHub de `main` confirmée désactivée.
+- Exploitation commerciale : aucune preuve métrique accessible dans cette passe.
+- WhatsApp, livraison groupée multi-commandes et wallet client : non démontrés dans le code examiné.
+- Solde/ledger vendeur, achat groupé et workflow logistique des colis : présents, mais ce sont des fonctions différentes.
