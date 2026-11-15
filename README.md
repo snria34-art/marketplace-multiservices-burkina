@@ -49,9 +49,9 @@ Les corrections récentes du stock par variante, des annulations, des fonctions 
 Consulter également [l'audit complet du 6 novembre 2026](docs/audit-complet-2026-11-06.md), [l'audit du 4 novembre 2026](docs/audit-2026-11-04.md) et [l'audit du 11 octobre 2026](docs/audit-2026-10-11.md) pour les constats détaillés et historiques.
 
 
-## Accès navigateur avec Vercel
+## Cible navigateur — préparation suspendue
 
-Une cible Flutter Web est préparée dans le dépôt :
+La cible Flutter Web est conservée dans le dépôt pour une phase ultérieure. **Aucun projet Vercel ne doit être créé ou relié et aucun Preview/Production ne doit être déclenché pendant la maintenance.** Les étapes ci-dessous sont une documentation future uniquement et ne valent pas autorisation de publication :
 - web/ contient la page d'entrée et le manifeste ;
 - vercel.json configure le build et le routage SPA ;
 - scripts/vercel-build.sh installe Flutter 3.47.2 puis compile build/web.
@@ -62,6 +62,6 @@ Après liaison du projet Vercel, définir ces variables comme variables Encrypte
 
 Ne jamais fournir de clé service_role, sb_secret_*, secret Firebase ou clé de paiement au navigateur.
 
-L'URL publique reste à obtenir : l'équipe Vercel doit d'abord approuver l'accès du connecteur, puis le déploiement Preview doit réussir. Voir docs/runbooks/aud-23-vercel-web-release.md et docs/audit-global-2026-11-07.md.
+L'URL publique n'est pas demandée à ce stade. Ne pas approuver ou créer une connexion Vercel ni lancer de déploiement Preview/Production sans autorisation explicite. Voir docs/runbooks/aud-23-vercel-web-release.md et docs/audit-global-2026-11-07.md.
 
 Cette cible web n'active pas à elle seule les notifications push Web ni le retour navigateur des paiements. Les applications natives restent des livrables distincts.
