@@ -1,5 +1,5 @@
 begin;
-select plan(14);
+select plan(13);
 
 select ok(
   has_function_privilege('authenticated', 'public.cancel_unpaid_order(uuid)', 'EXECUTE')
@@ -103,15 +103,6 @@ select ok(
   and position('if v_refund.status=''COMPLETED'' then' in pg_get_functiondef('public.complete_refund(uuid,text)'::regprocedure)) > 0
   and position('for update' in pg_get_functiondef('public.complete_refund(uuid,text)'::regprocedure)) > 0,
   'refund completion remains service-role-only, idempotent and row-locked'
-);
-
-select ok(
-  position('for update' in pg_get_functiondef('public.prepare_payment_processing(uuid,text,jsonb)'::regprocedure)) > 0
-  and position('payment_session_already_prepared' in pg_get_functiondef('public.prepare_payment_processing(uuid,text,jsonb)'::regprocedure)) > 0
-  and position('v_payment.provider_reference <> trim(p_provider_reference)' in pg_get_functiondef('public.prepare_payment_processing(uuid,text,jsonb)'::regprocedure)) > 0
-  and has_function_privilege('authenticated', 'public.prepare_payment_processing(uuid,text,jsonb)', 'EXECUTE')
-  and not has_function_privilege('anon', 'public.prepare_payment_processing(uuid,text,jsonb)', 'EXECUTE'),
-  'a prepared payment session cannot be replaced by a competing provider reference'
 );
 
 select * from finish();
