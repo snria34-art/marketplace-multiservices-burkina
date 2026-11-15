@@ -26,7 +26,9 @@ class CourierPage extends ConsumerStatefulWidget {
 
 class _CourierPageState extends ConsumerState<CourierPage>
     with WidgetsBindingObserver {
-  late Future<List<Map<String, dynamic>>> _future;
+  List<Map<String, dynamic>>? _assignments;
+  Object? _assignmentsError;
+  bool _assignmentsLoading = true;
   StreamSubscription<Position>? _locationSubscription;
   bool _sharingLocation = false;
   bool _locationStarting = false;
@@ -37,7 +39,7 @@ class _CourierPageState extends ConsumerState<CourierPage>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _future = _load();
+    unawaited(_loadInitialAssignments());
   }
 
   @override
@@ -47,25 +49,52 @@ class _CourierPageState extends ConsumerState<CourierPage>
     }
   }
 
-  /// Refreshes the courier's assignments after returning from the background.
-  /// The server remains authoritative for every GPS write; this refresh also
-  /// stops the local stream promptly when the last active assignment ended
-  /// while the app was backgrounded.
+  Future<void> _loadInitialAssignments() async {
+    final repo = ref.read(courierRepositoryProvider);
+    if (repo == null) {
+      if (mounted) {
+        setState(() {
+          _assignments = const [];
+          _assignmentsLoading = false;
+          _assignmentsError = null;
+        });
+      }
+      return;
+    }
+
+    try {
+      final assignments = await repo.assignments();
+      if (!mounted) return;
+      setState(() {
+        _assignments = assignments;
+        _assignmentsLoading = false;
+        _assignmentsError = null;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _assignmentsError = error;
+        _assignmentsLoading = false;
+      });
+    }
+  }
+
+  /// Refreshes assignments after returning to the foreground. The server
+  /// remains authoritative for every GPS write; this refresh also stops the
+  /// local stream promptly when the last active assignment ended in background.
   Future<void> _refreshAssignmentsAfterResume() async {
     final repo = ref.read(courierRepositoryProvider);
     if (repo == null) return;
 
+    setState(() => _assignmentsLoading = true);
     try {
-      // Give FutureBuilder the pending future before awaiting it. Supplying a
-      // Future.value(...) after the result has already resolved can leave the
-      // old snapshot visible because FutureBuilder cannot synchronously detect
-      // an already-completed future.
-      final assignmentsFuture = repo.assignments();
-      if (mounted) {
-        setState(() => _future = assignmentsFuture);
-      }
-      final assignments = await assignmentsFuture;
+      final assignments = await repo.assignments();
       if (!mounted) return;
+      setState(() {
+        _assignments = assignments;
+        _assignmentsError = null;
+        _assignmentsLoading = false;
+      });
 
       if (_sharingLocation && CourierRoutePlan.build(assignments).isEmpty) {
         await _stopLocation(
@@ -75,17 +104,12 @@ class _CourierPageState extends ConsumerState<CourierPage>
       }
     } catch (_) {
       if (!mounted) return;
+      setState(() => _assignmentsLoading = false);
       _showLocationMessage(
         'Impossible de rafraîchir vos missions. Le serveur continue de '
         'vérifier chaque position GPS avant de l’accepter.',
       );
     }
-  }
-
-  Future<List<Map<String, dynamic>>> _load() {
-    final repo = ref.read(courierRepositoryProvider);
-    if (repo == null) return Future.value(const []);
-    return repo.assignments();
   }
 
   Future<void> _toggleLocation() async {
@@ -489,39 +513,28 @@ class _CourierPageState extends ConsumerState<CourierPage>
           const AccountSessionActionButton(),
         ],
       ),
-      body: FutureBuilder<List<Map<String, dynamic>>>(
-        future: _future,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
+      body: _assignmentsLoading
+          ? const Center(child: CircularProgressIndicator())
+          : _assignmentsError != null && _assignments == null
+              ? Center(
+                  child: Text('Erreur : ' + _assignmentsError.toString()),
+                )
+              : _buildAssignments(_assignments ?? const []),
+    );
+  }
 
-          if (snapshot.hasError) {
-            return Center(
-              child: Text('Erreur : ' + snapshot.error.toString()),
-            );
-          }
+  Widget _buildAssignments(List<Map<String, dynamic>> items) {
+    if (items.isEmpty) {
+      return const Center(child: Text('Aucune livraison affectée.'));
+    }
 
-          final items =
-              snapshot.data ?? const <Map<String, dynamic>>[];
-
-          if (items.isEmpty) {
-            return const Center(
-              child: Text('Aucune livraison affectée.'),
-            );
-          }
-
-          final routeStops = CourierRoutePlan.build(items);
-
-          return ListView(
-            padding: const EdgeInsets.all(12),
-            children: [
-              if (routeStops.isNotEmpty) _groupedRouteCard(routeStops),
-              for (final item in items) _assignmentCard(item),
-            ],
-          );
-        },
-      ),
+    final routeStops = CourierRoutePlan.build(items);
+    return ListView(
+      padding: const EdgeInsets.all(12),
+      children: [
+        if (routeStops.isNotEmpty) _groupedRouteCard(routeStops),
+        for (final item in items) _assignmentCard(item),
+      ],
     );
   }
 
