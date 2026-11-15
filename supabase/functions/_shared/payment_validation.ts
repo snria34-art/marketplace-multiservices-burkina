@@ -18,6 +18,15 @@ export function parsePositiveSafeIntegerAmount(value: unknown): number | null {
   return Number.isSafeInteger(amount) && amount > 0 ? amount : null;
 }
 
+/** Only unsettled payments may start or reuse a checkout session. */
+export function isPaymentCheckoutEligibleStatus(
+  value: unknown,
+): value is "PENDING" | "PROCESSING" {
+  if (typeof value !== "string") return false;
+  const status = value.trim().toUpperCase();
+  return status === "PENDING" || status === "PROCESSING";
+}
+
 /**
  * Classify Wave Checkout events without treating a retryable attempt failure
  * as a terminal payment failure. Wave documents that multiple payment_failed
