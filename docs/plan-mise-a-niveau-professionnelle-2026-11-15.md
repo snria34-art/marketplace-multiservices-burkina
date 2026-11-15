@@ -293,3 +293,13 @@ Cette incohérence peut faire échouer la confirmation de livraison dans une tra
 - Le job iOS reste volontairement ignoré (runner macOS manuel).
 - Le workflow DB local `43732504970` a réussi, avec reconstruction de la base et pgTAP ; ce run précède uniquement les pages et le code UI, qui n'introduisent pas de migration SQL.
 - Ces validations ne signifient pas que WhatsApp, le portefeuille, les statistiques partenaires ou les routes groupées persistées fonctionnent en production.
+
+
+### Précision sur les critères du réseau actif
+
+Le calcul Edge a été resserré :
+- coursier actif = rôle COURIER + profil ACTIVE + profil vérifié VERIFIED ;
+- prestataire actif = profil ACTIVE + prestataire activé et vérifié + au moins un service publié actif ;
+- vendeur actif = profil ACTIVE + vendeur vérifié + au moins une boutique active et vérifiée.
+
+Ces règles évitent de compter comme partenaires opérationnels des profils simplement inscrits ou activés sans offre de service. Elles ne signifient toujours pas qu'un coursier est disponible en ligne à l'instant T.
