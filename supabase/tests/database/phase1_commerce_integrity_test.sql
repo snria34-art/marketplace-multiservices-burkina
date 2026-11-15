@@ -29,7 +29,8 @@ select ok(position('PENDING_ALLOCATION' in pg_get_functiondef('public.request_se
 select ok(
   position('payment_checkout_reference_conflict' in pg_get_functiondef('public.prepare_payment_processing(uuid,text,jsonb)'::regprocedure)) > 0
   and position('trim(v_payment.provider_reference) <> trim(p_provider_reference)' in pg_get_functiondef('public.prepare_payment_processing(uuid,text,jsonb)'::regprocedure)) > 0
-  and position('v_payment.status::text = ''SUCCEEDED''' in pg_get_functiondef('public.prepare_payment_processing(uuid,text,jsonb)'::regprocedure)) > 0,
+  and position('v_payment.status::text = ''SUCCEEDED''' in pg_get_functiondef('public.prepare_payment_processing(uuid,text,jsonb)'::regprocedure)) > 0
+  and position('private.require_active_account()' in pg_get_functiondef('public.prepare_payment_processing(uuid,text,jsonb)'::regprocedure)) > 0,
   'one provider checkout reference wins; conflicting sessions are rejected and a settled matching session is idempotent'
 );
 select * from finish();
