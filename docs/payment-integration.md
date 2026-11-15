@@ -105,7 +105,7 @@ Les fonctions de création de session v3 ont été corrigées : les URL de retou
 
 La CI Supabase vérifie maintenant aussi le typage des fonctions Edge avec `deno check`. Ce contrôle doit réussir avant de considérer les correctifs de paiement comme validés. Les webhooks doivent ensuite être testés avec des notifications simulées signées et des réponses fournisseur simulées. Aucun paiement réel ne doit être utilisé pour ces tests.
 
-Statut : code corrigé et commité ; validation Deno et tests de webhook en attente de la CI. Les secrets et comptes marchands réels ne sont pas configurés ici.
+Statut révisé au 15 novembre 2026 : les contrôles statiques Deno et les tests Deno partagés ont réussi sur les commits de maintenance `77d08d11` et `ae08781e`. Cela ne remplace pas les tests sandbox signés, la revue d'idempotence sur événements réels ni la configuration des comptes marchands ; aucun secret marchand n'est disponible dans cette session.
 ### Sécurité des callbacks et état des échecs — correction complémentaire
 
 - Les fonctions `wave-payment-webhook-v3`, `cinetpay-webhook-v3` et `payment-return` ont `verify_jwt = false` dans `supabase/config.toml`, car les fournisseurs et navigateurs ne disposent pas d'un JWT Supabase.
@@ -125,6 +125,12 @@ Statut : code corrigé et commité ; validation Deno et tests de webhook en atte
 - Le parseur partagé rejette aussi les types JSON inattendus (booléens, `null`), les décimaux, les notations exponentielles et les entiers hors plage sûre. Des tests Deno couvrent les montants et la devise XOF ; ils ont réussi avec le typage de toutes les fonctions Edge dans le run CI `43735230698` sur le commit `77d08d11`.
 - La CI Deno a réussi sur le commit `8faf7d9851aecb688a329edd93325d18fb89fefd`. Cela confirme le typage des fonctions Edge, pas le comportement des API marchandes en environnement sandbox ou production.
 
+### Réutilisation sûre des sessions Wave — 15 novembre 2026
+
+- Une session Wave enregistrée en `PROCESSING` est réutilisée seulement après lecture de son état auprès de Wave, si son URL `pay.wave.com` est présente, sa date d'expiration est future et les états sont explicitement réutilisables (`checkout_status` ouvert/échec et `payment_status` en traitement/échec).
+- Une session expirée, terminée, annulée, à état inconnu ou impossible à relire n'est jamais renvoyée au client et ne déclenche pas la création aveugle d'une seconde session. L'API répond avec une erreur de rapprochement/réémission contrôlée.
+- La fonction SQL `prepare_payment_processing` conserve une référence fournisseur non nulle au lieu de la remplacer. En attendant une RPC/migration dédiée à la réémission atomique et idempotente, l'application bloque donc le renouvellement automatique d'une session expirée plutôt que de créer une session non suivie en base.
+- Les tests Deno couvrent la réutilisation d'une session active, les tentatives échouées encore réessayables et le rejet des sessions expirées/terminales. Le run Edge CI `43736158662` a réussi sur `90f36593`.
 ### Limite Wave Checkout pour les remboursements partiels — 15 novembre 2026
 
 - L'endpoint Wave `POST /v1/checkout/sessions/:id/refund` rembourse le paiement associé à la session Checkout dans son intégralité ; il ne prend aucun paramètre de montant.
