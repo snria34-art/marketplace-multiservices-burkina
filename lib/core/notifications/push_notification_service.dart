@@ -125,9 +125,6 @@ class PushNotificationService {
           break;
         case AuthChangeEvent.passwordRecovery:
           break;
-        default:
-          // Unknown or provider-specific auth events do not change token ownership.
-          break;
         case AuthChangeEvent.mfaChallengeVerified:
           // MFA verification does not change push-token ownership.
           break;
@@ -136,6 +133,9 @@ class PushNotificationService {
           // user-scoped RPC cannot be authorized from this event callback.
           // Deactivation must happen in signOutAndDeactivateCurrentDevice().
           _currentToken = null;
+          break;
+        default:
+          // Unknown or provider-specific auth events do not change token ownership.
           break;
         }
       } catch (error, stackTrace) {
