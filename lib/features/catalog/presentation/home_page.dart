@@ -6,6 +6,7 @@ import '../../../core/providers/repository_providers.dart';
 import '../../../core/widgets/app_error_view.dart';
 import '../../../core/widgets/account_session_action_button.dart';
 import '../../modules/presentation/service_module_sliver.dart';
+import '../../modules/presentation/future_capabilities_sliver.dart';
 
 class HomePage extends ConsumerStatefulWidget {
   const HomePage({super.key});
@@ -231,6 +232,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                 ),
               ),
               const ServiceModuleSliver(),
+              const FutureCapabilitiesSliver(),
               if (_productsError != null && _products.isEmpty)
                 SliverFillRemaining(
                   hasScrollBody: false,
