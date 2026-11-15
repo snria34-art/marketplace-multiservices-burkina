@@ -34,6 +34,28 @@ bool routeRequiresAuthentication(String path) {
 String? sanitizeInternalLocation(String? value) {
   if (value == null || value.isEmpty) return null;
 
+  // Validate the raw path before Uri.tryParse: Dart normalizes literal dot
+  // segments, so checking only uri.pathSegments misses "/a/../admin".
+  final rawPath = value.split(RegExp(r'[?#]')).first;
+  if (!rawPath.startsWith('/') ||
+      rawPath.startsWith('//') ||
+      rawPath.contains(r'\\')) {
+    return null;
+  }
+
+  for (final rawSegment in rawPath.split('/')) {
+    var segment = rawSegment;
+    for (var attempt = 0; attempt < 3; attempt++) {
+      if (segment == '.' || segment == '..') return null;
+
+      final decoded = Uri.decodeComponent(segment);
+      if (decoded == segment) break;
+      if (decoded.contains('/') || decoded.contains(r'\\')) return null;
+      segment = decoded;
+    }
+    if (segment == '.' || segment == '..') return null;
+  }
+
   final uri = Uri.tryParse(value);
   if (uri == null ||
       uri.hasScheme ||
