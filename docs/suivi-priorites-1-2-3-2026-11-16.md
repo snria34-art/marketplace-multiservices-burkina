@@ -18,7 +18,7 @@
 La migration `supabase/migrations/20261115191336_phase1_commerce_integrity_final.sql` :
 - conserve les rapprochements dans `private.refund_accounting_reconciliations` ;
 - place les remboursements non rejetés/annulés en `PENDING_ALLOCATION` ;
-- garde les fonds vendeurs concernés bloqués et bloque un second remboursement fournisseur avant résolution ;
+- garde les fonds vendeurs concernés bloqués et empêche un nouvel essai fournisseur si une tentative antérieure est déjà en cours, échouée ou terminée sans allocation comptable validée ;
 - retire de `complete_refund` le débit vendeur arbitraire au prorata de tous les groupes.
 
 Le run [43754031145](https://github.com/snria34-art/marketplace-multiservices-burkina/actions/runs/43754031145), commit `e0eac2cf7e15019b5cfa95304cffc6f209fe1875`, a réussi la reconstruction locale par migrations et la suite pgTAP (« All tests successful »).
