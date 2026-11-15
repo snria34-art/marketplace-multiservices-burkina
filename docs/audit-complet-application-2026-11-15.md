@@ -98,7 +98,7 @@ La matrice granulaire `admin_role_id` / permissions par domaine n'est pas encore
 
 ### P2 — CI et reproductibilité des outils
 
-Le dernier log Flutter disponible remonte au 15 novembre 2026 sur un commit antérieur aux corrections de cycle de vie. Il affichait 396 diagnostics de niveau `info` (principalement concaténation de chaînes et paramètres de callbacks). Les diagnostics de cycle de vie `BuildContext` ont été corrigés ensuite, mais l'analyse n'a pas encore été relancée sur la tête actuelle.
+Le dernier run Flutter complet vérifié est [43721183766](https://github.com/snria34-art/marketplace-multiservices-burkina/actions/runs/43721183766), sur le commit `5d48c0013f75502db5089d4d2b39ace4ec3b63a8`, qui inclut les corrections de cycle de vie. Les 9 étapes du job sont réussies : SDK, dépendances verrouillées, analyse, tests et build Web Debug. Les tests affichent **29 réussites**. L'analyse affiche encore **373 diagnostics de niveau `info`** : 276 concaténations de chaînes, 95 paramètres de callbacks avec underscores inutiles et 2 autres suggestions stylistiques. Les 23 diagnostics `BuildContext` du run précédent ont disparu. Aucun warning Dart ni erreur Dart n'est sorti de ce run ; un avertissement GitHub Actions Node.js 20 déprécié reste présent pour `actions/checkout@v4`. Les changements ultérieurs portent sur HTML Web et documentation, et ne relancent pas ce workflow par ses filtres de chemins.
 
 Le log contenait aussi un avertissement de dépréciation Node.js 20 sur `actions/checkout@v4`. Le workflow Deno utilise `deno-version: v2.x`, donc une version flottante. À terme, mettre à niveau les actions compatibles Node 24, épingler Deno et les actions tierces sur des versions vérifiées (idéalement SHA) et conserver un calendrier de mise à jour.
 
