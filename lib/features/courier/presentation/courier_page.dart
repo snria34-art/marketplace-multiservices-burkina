@@ -24,7 +24,8 @@ class CourierPage extends ConsumerStatefulWidget {
   ConsumerState<CourierPage> createState() => _CourierPageState();
 }
 
-class _CourierPageState extends ConsumerState<CourierPage> {
+class _CourierPageState extends ConsumerState<CourierPage>
+    with WidgetsBindingObserver {
   late Future<List<Map<String, dynamic>>> _future;
   StreamSubscription<Position>? _locationSubscription;
   bool _sharingLocation = false;
@@ -35,7 +36,44 @@ class _CourierPageState extends ConsumerState<CourierPage> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _future = _load();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && mounted) {
+      unawaited(_refreshAssignmentsAfterResume());
+    }
+  }
+
+  /// Refreshes the courier's assignments after returning from the background.
+  /// The server remains authoritative for every GPS write; this refresh also
+  /// stops the local stream promptly when the last active assignment ended
+  /// while the app was backgrounded.
+  Future<void> _refreshAssignmentsAfterResume() async {
+    final repo = ref.read(courierRepositoryProvider);
+    if (repo == null) return;
+
+    try {
+      final assignments = await repo.assignments();
+      if (!mounted) return;
+
+      setState(() => _future = Future.value(assignments));
+
+      if (_sharingLocation && CourierRoutePlan.build(assignments).isEmpty) {
+        await _stopLocation(
+          message:
+              'Votre dernière mission est terminée. Le partage GPS est arrêté.',
+        );
+      }
+    } catch (_) {
+      if (!mounted) return;
+      _showLocationMessage(
+        'Impossible de rafraîchir vos missions. Le serveur continue de '
+        'vérifier chaque position GPS avant de l’accepter.',
+      );
+    }
   }
 
   Future<List<Map<String, dynamic>>> _load() {
@@ -412,6 +450,7 @@ class _CourierPageState extends ConsumerState<CourierPage> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _locationSubscription?.cancel();
     super.dispose();
   }
