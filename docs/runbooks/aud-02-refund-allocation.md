@@ -274,3 +274,20 @@ Avant d'appliquer une migration :
 - **Soldes, remboursements et paiements : aucune donnée touchée.**
 - Validation finale de la règle de financement des coupons, des frais de livraison et de la commission : encore nécessaire.
 
+## Addendum — contrôle de la mitigation financière (16 novembre 2026)
+
+La branche de maintenance contient la migration `20261115191336_phase1_commerce_integrity_final.sql`.
+
+- Elle crée `private.refund_accounting_reconciliations`, dans un schéma privé avec RLS et sans accès direct aux rôles clients.
+- Le trigger `trg_sync_refund_accounting_hold` place les remboursements non rejetés/annulés en `PENDING_ALLOCATION`.
+- `public.complete_refund` ne répartit plus de débit arbitraire dans `seller_ledger` : il confirme l'état du remboursement et du paiement, tout en laissant le rapprochement vendeur en attente.
+- Les retraits des vendeurs concernés et un autre remboursement sur le même paiement sont bloqués tant que le rapprochement requis n'est pas résolu.
+- Les remboursements rejetés/annulés passent en `RECONCILED`; aucun mécanisme de libération manuelle d'une allocation financière non approuvée ne doit être ajouté.
+
+### Validation et portée
+
+Le workflow local Supabase Database Tests [run 43754031145](https://github.com/snria34-art/marketplace-multiservices-burkina/actions/runs/43754031145), sur le commit `e0eac2cf7e15019b5cfa95304cffc6f209fe1875`, a réussi : reconstruction locale depuis les migrations puis exécution pgTAP, journal final « All tests successful ». La migration et le test `phase1_commerce_integrity_test.sql` étaient déjà présents sur ce commit. Le workflow a toutefois été ajusté depuis ; sa dernière définition n'a pas encore son propre run.
+
+**Limite impérative :** cette validation est locale/CI. Elle ne prouve pas que la migration est appliquée à la base Supabase hébergée. La connexion Supabase ne retourne aucun projet accessible dans cette session. Aucun changement distant n'a été exécuté.
+
+Le gel reste nécessaire jusqu'à l'approbation des règles d'allocation par article/quantité, vendeur, commission, coupons et livraison, puis jusqu'à la conception et aux tests d'une procédure d'allocation immuable.
