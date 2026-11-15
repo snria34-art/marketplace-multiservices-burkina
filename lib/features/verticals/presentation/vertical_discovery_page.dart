@@ -218,12 +218,12 @@ class _VerticalDiscoveryPageState
                       lastDate: now.add(const Duration(days: 180)),
                       initialDate: now.add(const Duration(days: 1)),
                     );
-                    if (date == null || !mounted) return;
+                    if (date == null || !mounted || !dialogContext.mounted) return;
                     final time = await showTimePicker(
                       context: dialogContext,
                       initialTime: const TimeOfDay(hour: 9, minute: 0),
                     );
-                    if (time == null || !mounted) return;
+                    if (time == null || !mounted || !dialogContext.mounted) return;
                     final selected = DateTime(
                       date.year,
                       date.month,
@@ -337,7 +337,7 @@ class _VerticalDiscoveryPageState
                               await repo.cancelRealEstateVisit(
                                 request['request_id'].toString(),
                               );
-                              if (!mounted) return;
+                              if (!mounted || !dialogContext.mounted) return;
                               Navigator.pop(dialogContext);
                               _success('Demande immobilière annulée.');
                               await _showMyRealEstateVisitRequests();
@@ -423,7 +423,7 @@ class _VerticalDiscoveryPageState
                                     requestId: request['request_id'].toString(),
                                     decision: 'DECLINE',
                                   );
-                                  if (!mounted) return;
+                                  if (!mounted || !dialogContext.mounted) return;
                                   Navigator.pop(dialogContext);
                                   _success('Demande immobilière refusée.');
                                   await _showProviderRealEstateVisitRequests();
@@ -447,7 +447,7 @@ class _VerticalDiscoveryPageState
                                     requestId: request['request_id'].toString(),
                                     decision: 'ACCEPT',
                                   );
-                                  if (!mounted) return;
+                                  if (!mounted || !dialogContext.mounted) return;
                                   Navigator.pop(dialogContext);
                                   _success('Demande acceptée. Coordonnez l’heure exacte avec le demandeur.');
                                   await _showProviderRealEstateVisitRequests();
@@ -551,12 +551,12 @@ class _VerticalDiscoveryPageState
                       lastDate: now.add(const Duration(days: 180)),
                       initialDate: now.add(const Duration(days: 1)),
                     );
-                    if (date == null || !mounted) return;
+                    if (date == null || !mounted || !dialogContext.mounted) return;
                     final time = await showTimePicker(
                       context: dialogContext,
                       initialTime: const TimeOfDay(hour: 9, minute: 0),
                     );
-                    if (time == null || !mounted) return;
+                    if (time == null || !mounted || !dialogContext.mounted) return;
                     final value = DateTime(date.year, date.month, date.day, time.hour, time.minute);
                     if (!value.isAfter(DateTime.now())) {
                       _info('Choisissez une date future.');
@@ -828,7 +828,7 @@ class _VerticalDiscoveryPageState
                                 quantity: draft['quantity'] as num,
                                 active: draft['active'] == true,
                               );
-                              if (!mounted) return;
+                              if (!mounted || !dialogContext.mounted) return;
                               Navigator.pop(dialogContext);
                               _success('Annonce agricole mise à jour.');
                               await _showMyAgricultureListings();
@@ -898,7 +898,7 @@ class _VerticalDiscoveryPageState
                           onPressed: () async {
                             try {
                               await repo.cancelAgricultureOrderRequest(order['order_id'].toString());
-                              if (!mounted) return;
+                              if (!mounted || !dialogContext.mounted) return;
                               Navigator.pop(dialogContext);
                               _success('Commande annulée et stock libéré.');
                               await _showMyAgricultureOrderRequests();
@@ -966,7 +966,7 @@ class _VerticalDiscoveryPageState
                                     orderId: order['order_id'].toString(),
                                     decision: 'DECLINE',
                                   );
-                                  if (!mounted) return;
+                                  if (!mounted || !dialogContext.mounted) return;
                                   Navigator.pop(dialogContext);
                                   _success('Commande refusée ; stock libéré.');
                                   await _showSellerAgricultureOrderRequests();
@@ -984,7 +984,7 @@ class _VerticalDiscoveryPageState
                                     orderId: order['order_id'].toString(),
                                     decision: 'ACCEPT',
                                   );
-                                  if (!mounted) return;
+                                  if (!mounted || !dialogContext.mounted) return;
                                   Navigator.pop(dialogContext);
                                   _success('Commande acceptée. Le stock reste réservé.');
                                   await _showSellerAgricultureOrderRequests();
@@ -1002,7 +1002,7 @@ class _VerticalDiscoveryPageState
                               onPressed: () async {
                                 try {
                                   await repo.fulfillAgricultureOrderRequest(order['order_id'].toString());
-                                  if (!mounted) return;
+                                  if (!mounted || !dialogContext.mounted) return;
                                   Navigator.pop(dialogContext);
                                   _success('Commande clôturée ; stock vendu déduit.');
                                   await _showSellerAgricultureOrderRequests();
@@ -1292,7 +1292,7 @@ class _VerticalDiscoveryPageState
                               await repo.cancelHealthOrderRequest(
                                 order['request_id'].toString(),
                               );
-                              if (!mounted) return;
+                              if (!mounted || !dialogContext.mounted) return;
                               Navigator.pop(dialogContext);
                               _success('Demande annulée ; le stock réservé a été libéré.');
                               await _showMyHealthOrders();
@@ -1546,7 +1546,7 @@ class _VerticalDiscoveryPageState
                               await repo.fulfillHealthOrderRequest(
                                 order['request_id'].toString(),
                               );
-                              if (!mounted) return;
+                              if (!mounted || !dialogContext.mounted) return;
                               Navigator.pop(dialogContext);
                               _success('Remise enregistrée ; stock déduit.');
                               await _showPharmacyHealthOrders();
@@ -1785,7 +1785,7 @@ class _VerticalDiscoveryPageState
                                 stockQuantity: draft['stock_quantity'] as int,
                                 active: draft['active'] == true,
                               );
-                              if (!mounted) return;
+                              if (!mounted || !dialogContext.mounted) return;
                               Navigator.pop(dialogContext);
                               _success('Produit de santé mis à jour.');
                               await _showMyHealthProducts();
@@ -1855,7 +1855,7 @@ class _VerticalDiscoveryPageState
                             onPressed: () async {
                               try {
                                 await repo.cancelProfessionalServiceRequest(request['request_id'].toString());
-                                if (!mounted) return;
+                                if (!mounted || !dialogContext.mounted) return;
                                 Navigator.pop(dialogContext);
                                 _success('Demande annulée.');
                                 await _showMyProfessionalRequests();
@@ -1893,7 +1893,7 @@ class _VerticalDiscoveryPageState
                                                 quoteId: quote['id'].toString(),
                                                 decision: 'REJECT',
                                               );
-                                              if (!mounted) return;
+                                              if (!mounted || !dialogContext.mounted) return;
                                               Navigator.pop(dialogContext);
                                               _success('Devis refusé.');
                                               await _showMyProfessionalRequests();
@@ -1923,7 +1923,7 @@ class _VerticalDiscoveryPageState
                                                 quoteId: quote['id'].toString(),
                                                 decision: 'ACCEPT',
                                               );
-                                              if (!mounted) return;
+                                              if (!mounted || !dialogContext.mounted) return;
                                               Navigator.pop(dialogContext);
                                               _success('Devis accepté. Organisez maintenant la prestation avec le professionnel.');
                                               await _showMyProfessionalRequests();
@@ -2003,7 +2003,7 @@ class _VerticalDiscoveryPageState
                                 amount: draft['amount'] as num,
                                 message: draft['message']?.toString(),
                               );
-                              if (!mounted) return;
+                              if (!mounted || !dialogContext.mounted) return;
                               Navigator.pop(dialogContext);
                               _success('Devis envoyé : ' + quoteId);
                               await _showProviderProfessionalRequests();
@@ -2090,7 +2090,7 @@ class _VerticalDiscoveryPageState
                               await repo.cancelCreativeBooking(
                                 booking['id'].toString(),
                               );
-                              if (!mounted) return;
+                              if (!mounted || !dialogContext.mounted) return;
                               Navigator.pop(dialogContext);
                               _success('Demande créative annulée.');
                               await _showMyCreativeBookings();
@@ -2170,7 +2170,7 @@ class _VerticalDiscoveryPageState
                                     bookingId: booking['booking_id'].toString(),
                                     decision: 'DECLINE',
                                   );
-                                  if (!mounted) return;
+                                  if (!mounted || !dialogContext.mounted) return;
                                   Navigator.pop(dialogContext);
                                   _success('Demande refusée.');
                                   await _showProviderCreativeBookings();
@@ -2191,7 +2191,7 @@ class _VerticalDiscoveryPageState
                                     decision: 'CONFIRM',
                                     agreedAmount: amount,
                                   );
-                                  if (!mounted) return;
+                                  if (!mounted || !dialogContext.mounted) return;
                                   Navigator.pop(dialogContext);
                                   _success('Réservation confirmée.');
                                   await _showProviderCreativeBookings();
