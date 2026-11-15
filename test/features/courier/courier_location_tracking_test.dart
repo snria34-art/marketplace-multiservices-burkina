@@ -66,7 +66,6 @@ void main() {
 
       await tester.pumpAndSettle();
 
-      expect(repository.calls, 2);
       expect(find.text('Aucune livraison affectée.'), findsOneWidget);
 
       await tester.tap(find.byTooltip('Partager ma position'));
@@ -103,6 +102,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
+      expect(repository.calls, 1);
       expect(find.text('Colis package-1'), findsOneWidget);
 
       tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
@@ -110,6 +110,7 @@ void main() {
       tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
       await tester.pumpAndSettle();
 
+      expect(repository.calls, 2);
       expect(find.text('Aucune livraison affectée.'), findsOneWidget);
       expect(find.text('Colis package-1'), findsNothing);
     },
