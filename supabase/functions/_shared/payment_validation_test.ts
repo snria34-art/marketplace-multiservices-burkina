@@ -131,12 +131,15 @@ Deno.test("Wave checkout reuse requires a valid unexpired session", () => {
 
   const retryableFailure = {
     ...reusable,
-    checkout_status: "failed",
-    payment_status: "failed",
+    // A retryable payment_failed webhook may leave the retrieved Checkout
+    // Session open/processing while last_payment_error records the attempt.
+    checkout_status: "open",
+    payment_status: "processing",
+    last_payment_error: { code: "insufficient-funds" },
   };
   assert(
     isReusableWaveCheckoutSession(retryableFailure, now),
-    "failed attempt can still be retried before session expiry",
+    "open session with a retryable failed attempt remains reusable",
   );
 
   const terminalStates = [
@@ -144,6 +147,8 @@ Deno.test("Wave checkout reuse requires a valid unexpired session", () => {
     { ...reusable, checkout_status: "expired" },
     { ...reusable, payment_status: "succeeded" },
     { ...reusable, payment_status: "cancelled" },
+    { ...reusable, checkout_status: "failed" },
+    { ...reusable, payment_status: "failed" },
     { ...reusable, when_expires: "2025-12-31T23:59:59Z" },
     { ...reusable, wave_launch_url: "https://example.com/fake" },
     { ...reusable, when_expires: undefined },

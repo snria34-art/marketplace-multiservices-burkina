@@ -94,12 +94,11 @@ export function isReusableWaveCheckoutSession(
     .trim()
     .toLowerCase();
 
-  const reusableCheckoutState = checkoutStatus === "open" ||
-    checkoutStatus === "failed";
-  const reusablePaymentState = paymentStatus === "processing" ||
-    paymentStatus === "failed";
-
-  return reusableCheckoutState && reusablePaymentState;
+  // The GET Checkout Session object has a narrower enum than webhook events:
+  // checkout_status is open/complete/expired and payment_status is
+  // processing/cancelled/succeeded. A payment_failed webhook is retryable,
+  // but its event payload must not be confused with the GET session object.
+  return checkoutStatus === "open" && paymentStatus === "processing";
 }
 
 /** Accept the provider currency only when it explicitly identifies XOF. */

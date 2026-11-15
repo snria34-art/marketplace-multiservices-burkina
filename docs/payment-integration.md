@@ -127,7 +127,7 @@ Statut révisé au 15 novembre 2026 : les contrôles statiques Deno et les tests
 
 ### Réutilisation sûre des sessions Wave — 15 novembre 2026
 
-- Une session Wave enregistrée en `PROCESSING` est réutilisée seulement après lecture de son état auprès de Wave, si son URL `pay.wave.com` est présente, sa date d'expiration est future et les états sont explicitement réutilisables (`checkout_status` ouvert/échec et `payment_status` en traitement/échec).
+- Une session Wave enregistrée en `PROCESSING` est réutilisée seulement après lecture de son état auprès de Wave, si son URL `pay.wave.com` est présente, sa date d'expiration est future et les états exacts de l'objet Checkout Session Wave sont `checkout_status=open` et `payment_status=processing`. Le `payment_failed` reçu en webhook est une tentative non terminale ; il ne constitue pas une valeur de ces enums de l'objet retourné par le GET.
 - Une session expirée, terminée, annulée, à état inconnu ou impossible à relire n'est jamais renvoyée au client et ne déclenche pas la création aveugle d'une seconde session. L'API répond avec une erreur de rapprochement/réémission contrôlée.
 - La fonction SQL `prepare_payment_processing` conserve une référence fournisseur non nulle au lieu de la remplacer. En attendant une RPC/migration dédiée à la réémission atomique et idempotente, l'application bloque donc le renouvellement automatique d'une session expirée plutôt que de créer une session non suivie en base.
 - Les tests Deno couvrent la réutilisation d'une session active, les tentatives échouées encore réessayables et le rejet des sessions expirées/terminales. Le run Edge CI `43736158662` a réussi sur `90f36593`.
