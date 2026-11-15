@@ -58,3 +58,41 @@ Le dépôt ne contient pas de répertoire `integration_test/` et aucun compte/pr
 - Aucun paiement/remboursement réel, aucun payout et aucun envoi FCM de test.
 - Aucun build Release, certificat, upload de store ou déploiement.
 - Aucun merge vers `main`. Son SHA reste `9b70580f322814d6decf9eeac2e5d93aa01e44e9`.
+
+## Addendum — dernières corrections et contrôles (16 novembre 2026)
+
+### GPS / écran livreur
+
+Après trois itérations de test qui ont révélé une actualisation visuelle non fiable dans `FutureBuilder`, l'écran `CourierPage` a été refactoré pour conserver explicitement :
+- les affectations actuellement chargées ;
+- l'état de chargement ;
+- l'erreur initiale.
+
+Le retour au premier plan relit les affectations puis met à jour directement cet état. La même source d'état est maintenant utilisée après une action du livreur (acceptation, retrait, démarrage ou livraison). Si la dernière mission disparaît, le partage GPS local est arrêté ; le serveur continue d'exiger une affectation active lors de chaque écriture de position.
+
+Le test widget de reprise utilise un `Completer` pour maîtriser la fin de la requête. Les runs antérieurs ont échoué successivement sur l'actualisation du FutureBuilder, puis l'analyse a détecté une dernière référence `_future` dans le chemin d'action manuel ; cette référence a été corrigée.
+
+### Résultats CI sur le dernier code observé
+
+- [Flutter CI #43770753158](https://github.com/snria34-art/marketplace-multiservices-burkina/actions/runs/43770753158), commit `b05b3ca597603ccba68fb1a866a9b9d8ab981c56` : dernière lecture, analyse réussie et tests en cours ; le run n'a pas encore fourni de conclusion.
+- [Android Debug #43770753190](https://github.com/snria34-art/marketplace-multiservices-burkina/actions/runs/43770753190), même commit : compilation APK en cours ; aucune conclusion au dernier relevé.
+- [Android Debug #43768409218](https://github.com/snria34-art/marketplace-multiservices-burkina/actions/runs/43768409218), commit antérieur `dc9a2dd5` : APK Debug réussi pour la première modification GPS, mais avant le refactoring de l'écran.
+- Le job iOS reste ignoré sur les événements push et n'a pas été exécuté en mode manuel.
+
+Ne pas annoncer le test widget, le build Android du commit courant ni le build iOS comme réussis avant une conclusion CI correspondante.
+
+### Paiement concurrent — clarification
+
+L'audit de checkout a été complété. La migration `20261116120000_prevent_competing_payment_sessions.sql` mentionnée dans la première version du rapport n'existe pas dans l'arbre Git actuel. La fonction déjà versionnée dans `20261115191336_phase1_commerce_integrity_final.sql` refuse une référence fournisseur différente lorsque `provider_reference` est déjà enregistré (`payment_checkout_reference_conflict`). Le contrat `order_delivery_contract_test.sql` est maintenant porté à 14 assertions et contrôle cette immutabilité.
+
+Cette assertion pgTAP n'a pas été exécutée après modification. La garde SQL empêche le remplacement de la référence enregistrée, mais la création d'une session fournisseur précède cette garde : des objets externes concurrents peuvent encore être créés avant que seul le premier ne soit associé en base. L'objet perdant peut devenir orphelin ; un protocole de claim idempotent avant l'appel fournisseur reste nécessaire.
+
+### Remboursements et finances vendeurs
+
+- L'écran admin n'affiche « Exécuter » que pour les remboursements Wave approuvés. CinetPay reste sur confirmation manuelle et les états ambigus/échoués ne sont pas relancés automatiquement.
+- La table privée `PENDING_ALLOCATION` continue de bloquer les retraits vendeurs tant que les allocations comptables ne sont pas validées. Aucune action de libération sommaire n'a été ajoutée.
+- L'audit vendeur n'a pas trouvé d'appel versionné aux routines `finalize_seller_group` ou `finalize_seller_group_financials` au moment de la livraison. Deux conventions de ledger existent ; aucune n'est déclenchée dans le parcours versionné examiné. Il faut confirmer le backend externe et faire approuver une convention comptable avant d'ajouter une écriture automatique.
+
+### Périmètre inchangé
+
+Aucune migration hébergée, aucun changement de secrets, aucun paiement/remboursement réel, aucun payout, aucun build Release, aucun déploiement et aucun merge vers `main`. La branche principale reste séparée de la maintenance.
