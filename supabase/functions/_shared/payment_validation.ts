@@ -94,10 +94,12 @@ export function isReusableWaveCheckoutSession(
     .trim()
     .toLowerCase();
 
-  return checkoutStatus !== "complete" &&
-    checkoutStatus !== "expired" &&
-    paymentStatus !== "succeeded" &&
-    paymentStatus !== "cancelled";
+  const reusableCheckoutState = checkoutStatus === "open" ||
+    checkoutStatus === "failed";
+  const reusablePaymentState = paymentStatus === "processing" ||
+    paymentStatus === "failed";
+
+  return reusableCheckoutState && reusablePaymentState;
 }
 
 /** Accept the provider currency only when it explicitly identifies XOF. */
