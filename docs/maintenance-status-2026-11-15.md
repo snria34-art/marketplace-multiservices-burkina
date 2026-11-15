@@ -1,3 +1,43 @@
+## Addendum — validations du 15 novembre 2026
+
+Cette mise à jour prévaut sur les sections historiques ci-dessous qui décrivent encore les premiers échecs de runner du 7 novembre comme dernier état connu.
+
+### Validations réellement réussies
+
+- **Flutter CI**, run [43717217145](https://github.com/snria34-art/marketplace-multiservices-burkina/actions/runs/43717217145) : Flutter 3.47.2, résolution verrouillée, analyse sans erreur ni avertissement bloquant, **29 tests Flutter réussis**, build Web **Debug** réussi avec des valeurs Supabase fictives. Les diagnostics de niveau info restent visibles.
+- **Supabase Edge Functions**, run [43717824685](https://github.com/snria34-art/marketplace-multiservices-burkina/actions/runs/43717824685) : `deno check` réussi sur les **22 points d'entrée** Edge Function.
+- **pgTAP** : contrôle statique des 8 fichiers de tests. Les plans déclarés et les appels d'assertion recensés concordent dans chaque fichier ; total déclaré : **179**. Les tests n'ont pas été exécutés sur PostgreSQL local.
+- **Android/iOS natifs** : les workflows de validation Debug non signés existent, mais aucun build natif n'a été lancé dans cette passe. Aucun AAB/IPA Release ni publication n'est autorisé.
+
+### Sécurisation du workflow SQL
+
+Le workflow `.github/workflows/supabase-db-tests.yml` a été renforcé sur la branche de maintenance (commit `aa2700f58057cf57416937e09b8c54c54d6862f2`) :
+
+- déclenchement manuel uniquement et job limité à `maintenance/audit-01-07-2026-11-15` ;
+- runner épinglé `ubuntu-24.04`, permissions de contenu en lecture seule et checkout sans identifiants persistants ;
+- Supabase CLI épinglée à `2.122.1` ;
+- stack Supabase locale éphémère puis `supabase test db --local` explicite ;
+- aucune connexion, aucun secret et aucune commande de mutation distante dans ce workflow.
+
+Le reset redondant après `supabase start` a été retiré : sur un runner GitHub hébergé vierge, `supabase start` initialise la stack locale, applique les migrations et charge le seul seed configuré pour les tests locaux. La suite pgTAP est ensuite exécutée explicitement contre cette base locale.
+
+### Limites qui restent ouvertes
+
+L'environnement de travail courant ne contient ni Docker, ni Supabase CLI, ni PostgreSQL ; le connecteur Supabase ne retourne aucun projet accessible. Le workflow SQL n'a donc pas été exécuté dans cette passe. Les éléments suivants restent non certifiés :
+
+1. reconstruction complète des 347 migrations et exécution des 179 assertions pgTAP sur une base locale isolée ;
+2. builds Android APK Debug et iOS Simulator Debug, puis essais GPS en arrière-plan sur appareils ;
+3. scénarios E2E de commande, paiement simulé, webhook signé/idempotent, retour/remboursement et concurrence ;
+4. modèle financier d'allocation des remboursements, à valider avant toute modification de `complete_refund` ou du ledger ;
+5. intervention Supabase Support et vérifications PostGIS ;
+6. rapprochement de l'historique distant des migrations, opération volontairement non exécutée.
+
+### Garde-fous inchangés
+
+Les validations Flutter et Deno ne constituent pas une certification de l'ensemble du dépôt. Aucun déploiement GitHub/Vercel, aucun Preview/Production, aucun merge vers `main`, aucune migration ou requête SQL distante, aucun accès ou changement de données métier, aucun paiement/remboursement réel et aucun build Release n'ont été effectués.
+
+---
+
 # Suivi des corrections prioritaires — 15 novembre 2026
 
 **Dépôt de référence :** `snria34-art/marketplace-multiservices-burkina`  
