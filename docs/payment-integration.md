@@ -170,3 +170,23 @@ Une session déjà marquée `PROCESSING` n'est réutilisée que si la référenc
 - `admin_begin_refund` ne peut désormais réclamer que les statuts `REQUESTED` et `APPROVED`. Les statuts `PROCESSING` et `FAILED` ne peuvent pas déclencher un nouvel appel fournisseur automatique ; cette transition est protégée par un UPDATE conditionnel atomique.
 - La garde de remboursement Wave vérifie également que la devise du remboursement correspond à celle du paiement capturé, et que les deux sont `XOF`.
 - Le contrôle statique Deno/CI doit encore confirmer cette modification. Aucun remboursement réel ni appel fournisseur n'a été effectué.
+
+## Addendum — préparation des priorités 1 à 3 (16 novembre 2026)
+
+### 1. Remboursements multi-vendeurs
+
+La branche de maintenance contient désormais la migration `20261115191336_phase1_commerce_integrity_final.sql`. La fonction `complete_refund` n'écrit plus de débit vendeur au prorata de tous les groupes ; un rapprochement privé `PENDING_ALLOCATION` maintient les retraits vendeurs concernés et les remboursements suivants en attente. Le workflow local Supabase Database Tests [run 43754031145](https://github.com/snria34-art/marketplace-multiservices-burkina/actions/runs/43754031145) a reconstruit la base depuis les migrations et exécuté pgTAP avec succès.
+
+Cette mesure est un **gel de sécurité**, pas le modèle comptable final. La migration n'est pas confirmée sur la base hébergée. Les règles coupons vendeur/plateforme/cofinancés, frais de livraison, commission, retours à la ligne/quantité et recouvrement d'un vendeur déjà payé doivent encore être approuvées. Ne pas lever le gel.
+
+### 2. PostGIS
+
+Le déplacement vers `extensions` requiert le Support Supabase pour préserver les colonnes geography et leurs dépendances. Le ticket est préparé dans `docs/runbooks/aud-01-postgis-schema-move.md`. La connexion actuelle ne donne accès à aucun projet Supabase ; aucun ticket ni changement SQL distant n'a été effectué.
+
+### 3. Wave et CinetPay
+
+Les fonctions et webhooks v3 sont dans le dépôt. La CI Edge [run 43753543111](https://github.com/snria34-art/marketplace-multiservices-burkina/actions/runs/43753543111) a réussi sur le commit `bf42b629c89efbd2f909941a0a5a74966cb9ee17` ; aucune source `supabase/functions/` n'a été modifiée entre ce commit et la tête `a61064c`.
+
+Aucun test fournisseur n'a été exécuté : aucun environnement marchand/sandbox ou secret n'est accessible depuis cette session. Wave : demander au responsable du compte la procédure de test non financière ; la page officielle Checkout API consultée documente l'API `https://api.wave.com`, les clés Business et les webhooks, mais ne décrit pas de sandbox publique. CinetPay : confirmer auprès de CinetPay le mode et les identifiants sandbox exacts pour la génération d'API utilisée par ces fonctions ; ne pas mélanger des clés/URL d'une autre génération d'API.
+
+Le runbook `docs/runbooks/aud-26-payment-sandbox-validation.md` définit les prérequis et cas d'essai. Aucun paiement réel ne doit être utilisé.
