@@ -17,9 +17,17 @@ void main() {
       );
     });
 
-    test('rejects a missing assignment identifier', () {
+    test('trims valid identifiers and rejects blank or null-like values', () {
+      expect(
+        CourierRoutePlan.requireAssignmentId({'assignment_id': '  assignment-3  '}),
+        'assignment-3',
+      );
       expect(
         () => CourierRoutePlan.requireAssignmentId({'package_id': 'package-1'}),
+        throwsFormatException,
+      );
+      expect(
+        () => CourierRoutePlan.requireAssignmentId({'assignment_id': ' null '}),
         throwsFormatException,
       );
     });
@@ -76,6 +84,50 @@ void main() {
 
       expect(stops.first.completed, isTrue);
       expect(stops.last.completed, isFalse);
+    });
+
+
+    test('normalizes status and rejects malformed package identifiers', () {
+      final stops = CourierRoutePlan.build([
+        {'package_id': '  package-valid ', 'status': ' assigned '},
+        {'package_id': 'null', 'status': 'ASSIGNED'},
+        {'package_id': 'package-done', 'status': ' delivered '},
+      ]);
+
+      expect(stops, hasLength(2));
+      expect(stops.every((stop) => stop.packageId == 'package-valid'), isTrue);
+    });
+
+    test('rejects invalid GPS coordinates and keeps the address fallback', () {
+      final stops = CourierRoutePlan.build([
+        {
+          'package_id': 'package-a',
+          'status': 'IN_TRANSIT',
+          'delivery_address_line': 'Secteur 2',
+          'delivery_city': 'Bobo-Dioulasso',
+          'delivery_latitude': '999',
+          'delivery_longitude': '-4.29',
+        },
+      ]);
+
+      final dropoff = stops.last;
+      expect(dropoff.address, 'Secteur 2, Bobo-Dioulasso');
+      expect(dropoff.latitude, isNull);
+      expect(dropoff.longitude, isNull);
+    });
+
+    test('keeps coordinates only when both values are valid and finite', () {
+      final stops = CourierRoutePlan.build([
+        {
+          'package_id': 'package-a',
+          'status': 'IN_TRANSIT',
+          'delivery_latitude': '11.18',
+          'delivery_longitude': '-4.29',
+        },
+      ]);
+
+      expect(stops.last.latitude, '11.18');
+      expect(stops.last.longitude, '-4.29');
     });
 
     test('ignores completed, cancelled and malformed assignments', () {
