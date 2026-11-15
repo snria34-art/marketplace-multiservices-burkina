@@ -149,6 +149,12 @@ class _CartPageState extends ConsumerState<CartPage> {
                     final product = item['products'] is Map
                         ? Map<String, dynamic>.from(item['products'] as Map)
                         : const <String, dynamic>{};
+                    final variant = item['product_variants'] is Map
+                        ? Map<String, dynamic>.from(
+                            item['product_variants'] as Map,
+                          )
+                        : const <String, dynamic>{};
+                    final variantName = variant['name']?.toString().trim();
                     final quantity =
                         int.tryParse(item['quantity']?.toString() ?? '') ?? 1;
 
@@ -158,7 +164,11 @@ class _CartPageState extends ConsumerState<CartPage> {
                           product['name']?.toString() ?? 'Produit',
                         ),
                         subtitle: Text(
-                          (item['unit_price']?.toString() ?? '0') + ' XOF',
+                          [
+                            if (variantName != null && variantName.isNotEmpty)
+                              'Variante : ' + variantName,
+                            (item['unit_price']?.toString() ?? '0') + ' XOF',
+                          ].join('\n'),
                         ),
                         trailing: SizedBox(
                           width: 176,
