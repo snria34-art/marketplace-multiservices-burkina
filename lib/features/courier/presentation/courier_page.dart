@@ -290,7 +290,7 @@ class _CourierPageState extends ConsumerState<CourierPage> {
     try {
       final packageId = assignment['package_id'].toString();
       if (action == 'accept') {
-        await repo.accept(assignment['id'].toString());
+        await repo.accept(CourierRoutePlan.requireAssignmentId(assignment));
       } else if (action == 'pickup') {
         final pickupEvidenceConfirmed = await _confirmEvidenceCapture(
           'Photographiez uniquement l’article remis par le vendeur. Évitez tout visage et toute donnée personnelle.',
