@@ -57,7 +57,13 @@ Le run GitHub Actions `43717217145`, commit `5428bc9255d52559bbacfaa47e3e4cde26f
 
 Lien du run : https://github.com/snria34-art/marketplace-multiservices-burkina/actions/runs/43717217145
 
-Cette validation ne remplace pas les contrôles Deno/pgTAP, les tests des builds natifs, l'intégration avec de vrais comptes distincts, ni une validation de production.
+### Validation Supabase Edge Functions réellement exécutée — 15 novembre 2026
+
+Le run GitHub Actions `43717824685`, commit `f2384dbfbb7ffbcd6bb6b1f8a4d6ff817caf65d7`, a terminé avec succès. Il a exécuté `deno check` sur les 22 points d'entrée `supabase/functions/**/index.ts`.
+
+Lien du run : https://github.com/snria34-art/marketplace-multiservices-burkina/actions/runs/43717824685
+
+Ces validations ne remplacent pas les tests SQL pgTAP, les tests des builds natifs, l'intégration avec de vrais comptes distincts, ni une validation de production.
 
 ## Échecs CI historiques — diagnostic
 
@@ -102,4 +108,4 @@ Les permissions GPS en arrière-plan sont présentes dans les fichiers Android/i
 
 Aucun déploiement GitHub ou Vercel, aucune publication Web/Android/iOS, aucun build Release, aucun merge vers `main`, aucune migration Supabase distante, aucune modification de données, aucun paiement/remboursement réel, aucun secret modifié et aucune action de billing n'a été effectué.
 
-**Conclusion :** les corrections Flutter identifiées dans cette passe sont validées par un run vert (analyse, 29/29 tests, Web Debug). Le dépôt complet ne peut pas encore être certifié sans erreur : Deno/pgTAP, builds natifs, scénarios E2E, intégrité financière, intervention PostGIS et historique distant restent à valider séparément.
+**Conclusion :** les validations Flutter (analyse, 29/29 tests, Web Debug) et Deno (22/22 points d'entrée Edge) sont réussies sur la branche de maintenance. Le dépôt complet ne peut pas encore être certifié sans erreur : pgTAP et reconstruction locale des migrations, builds natifs, scénarios E2E, intégrité financière, intervention PostGIS et réconciliation de l'historique distant restent à valider séparément.
