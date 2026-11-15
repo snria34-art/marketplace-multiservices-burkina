@@ -10,6 +10,7 @@ import '../../../core/location/device_location_service.dart';
 import '../../../core/providers/repository_providers.dart';
 import '../../../core/widgets/account_session_action_button.dart';
 import '../data/courier_repository.dart';
+import '../domain/courier_route_plan.dart';
 
 final courierRepositoryProvider = Provider<CourierRepository?>((ref) {
   final client = ref.watch(supabaseProvider);
@@ -454,100 +455,174 @@ class _CourierPageState extends ConsumerState<CourierPage> {
             );
           }
 
-          return ListView.separated(
+          final routeStops = CourierRoutePlan.build(items);
+
+          return ListView(
             padding: const EdgeInsets.all(12),
-            itemCount: items.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 8),
-            itemBuilder: (_, index) {
-              final item = items[index];
-              final status = item['status']?.toString();
-
-              final shopAddress = item['shop_address']?.toString() ?? '';
-              final shopPhone = item['shop_phone']?.toString() ?? '';
-              final deliveryLine = item['delivery_address_line']?.toString() ?? '';
-              final deliveryCity = item['delivery_city']?.toString() ?? '';
-              final deliveryAddress = [deliveryLine, deliveryCity]
-                  .where((part) => part.trim().isNotEmpty)
-                  .join(', ');
-              final deliveryLatitude = item['delivery_latitude']?.toString() ?? '';
-              final deliveryLongitude = item['delivery_longitude']?.toString() ?? '';
-              final hasDeliveryDestination = deliveryAddress.isNotEmpty ||
-                  (deliveryLatitude.isNotEmpty && deliveryLongitude.isNotEmpty);
-              final recipientName = item['recipient_name']?.toString() ?? '';
-              final recipientPhone = item['recipient_phone']?.toString() ?? '';
-
-              return Card(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 6),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      ListTile(
-                        title: Text(
-                          'Colis ' + (item['package_id']?.toString() ?? '-'),
-                        ),
-                        subtitle: Text(
-                          'État : ' +
-                              (status ?? '-') +
-                              '\nAffecté le : ' +
-                              (item['assigned_at']?.toString() ?? '-'),
-                        ),
-                        trailing: _actions(item, status),
-                      ),
-                      if (shopAddress.isNotEmpty || hasDeliveryDestination)
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              if (shopAddress.isNotEmpty) ...[
-                                Text('Retrait : ' + shopAddress),
-                                if (shopPhone.isNotEmpty)
-                                  Text('Téléphone boutique : ' + shopPhone),
-                                Align(
-                                  alignment: Alignment.centerLeft,
-                                  child: TextButton.icon(
-                                    onPressed: () => _openDirections(
-                                      address: shopAddress,
-                                    ),
-                                    icon: const Icon(Icons.store_outlined),
-                                    label: const Text('Itinéraire vers la boutique'),
-                                  ),
-                                ),
-                              ],
-                              if (hasDeliveryDestination) ...[
-                                Text(
-                                  'Livraison : ' +
-                                      (deliveryAddress.isEmpty
-                                          ? 'Position GPS disponible'
-                                          : deliveryAddress),
-                                ),
-                                if (recipientName.isNotEmpty)
-                                  Text('Destinataire : ' + recipientName),
-                                if (recipientPhone.isNotEmpty)
-                                  Text('Téléphone : ' + recipientPhone),
-                                Align(
-                                  alignment: Alignment.centerLeft,
-                                  child: TextButton.icon(
-                                    onPressed: () => _openDirections(
-                                      address: deliveryAddress,
-                                      latitude: deliveryLatitude,
-                                      longitude: deliveryLongitude,
-                                    ),
-                                    icon: const Icon(Icons.directions_outlined),
-                                    label: const Text('Itinéraire vers le client'),
-                                  ),
-                                ),
-                              ],
-                            ],
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-              );
-            },
+            children: [
+              if (routeStops.isNotEmpty) _groupedRouteCard(routeStops),
+              for (final item in items) _assignmentCard(item),
+            ],
           );
+        },
+      ),
+    );
+  }
+
+  Widget _groupedRouteCard(List<CourierRouteStop> stops) {
+    final packageCount = stops.map((stop) => stop.packageId).toSet().length;
+    final completedPickups = stops.where(
+      (stop) => stop.kind == 'PICKUP' && stop.completed,
+    ).length;
+
+    return Card(
+      child: ExpansionTile(
+        initiallyExpanded: true,
+        leading: const Icon(Icons.alt_route_outlined),
+        title: Text('Tournée groupée • $packageCount colis'),
+        subtitle: Text(
+          '$completedPickups retrait(s) déjà effectué(s) • '
+          '${stops.length} étapes au total',
+        ),
+        children: [
+          const Padding(
+            padding: EdgeInsets.fromLTRB(16, 0, 16, 8),
+            child: Text(
+              'Regroupement de toutes les missions affectées à ce compte. '
+              'L’ordre proposé place les retraits avant les livraisons ; '
+              'il ne calcule pas le trafic ni la distance routière. Chaque '
+              'colis conserve sa propre preuve et son code de confirmation.',
+            ),
+          ),
+          for (final stop in stops)
+            ListTile(
+              dense: true,
+              leading: CircleAvatar(
+                radius: 16,
+                child: Text(stop.sequence.toString()),
+              ),
+              title: Text(
+                stop.kind == 'PICKUP'
+                    ? 'Retrait • colis ${stop.packageId}'
+                    : 'Livraison • colis ${stop.packageId}',
+              ),
+              subtitle: Text(
+                stop.address.isEmpty
+                    ? 'Adresse non disponible'
+                    : stop.address,
+              ),
+              trailing: stop.completed
+                  ? const Icon(Icons.check_circle, color: Colors.green)
+                  : IconButton(
+                      tooltip: 'Ouvrir cette étape dans Maps',
+                      onPressed: stop.address.isEmpty &&
+                              (stop.latitude == null ||
+                                  stop.longitude == null)
+                          ? null
+                          : () => _openDirections(
+                                address: stop.address,
+                                latitude: stop.latitude,
+                                longitude: stop.longitude,
+                              ),
+                      icon: const Icon(Icons.directions_outlined),
+                    ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _assignmentCard(Map<String, dynamic> item) {
+    final status = item['status']?.toString();
+    final shopAddress = item['shop_address']?.toString() ?? '';
+    final shopPhone = item['shop_phone']?.toString() ?? '';
+    final deliveryLine = item['delivery_address_line']?.toString() ?? '';
+    final deliveryCity = item['delivery_city']?.toString() ?? '';
+    final deliveryAddress = [deliveryLine, deliveryCity]
+        .where((part) => part.trim().isNotEmpty)
+        .join(', ');
+    final deliveryLatitude =
+        item['delivery_latitude']?.toString() ?? '';
+    final deliveryLongitude =
+        item['delivery_longitude']?.toString() ?? '';
+    final hasDeliveryDestination = deliveryAddress.isNotEmpty ||
+        (deliveryLatitude.isNotEmpty && deliveryLongitude.isNotEmpty);
+    final recipientName = item['recipient_name']?.toString() ?? '';
+    final recipientPhone = item['recipient_phone']?.toString() ?? '';
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ListTile(
+              title: Text(
+                'Colis ' + (item['package_id']?.toString() ?? '-'),
+              ),
+              subtitle: Text(
+                'État : ' +
+                    (status ?? '-') +
+                    '\\nAffecté le : ' +
+                    (item['assigned_at']?.toString() ?? '-'),
+              ),
+              trailing: _actions(item, status),
+            ),
+            if (shopAddress.isNotEmpty || hasDeliveryDestination)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (shopAddress.isNotEmpty) ...[
+                      Text('Retrait : ' + shopAddress),
+                      if (shopPhone.isNotEmpty)
+                        Text('Téléphone boutique : ' + shopPhone),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: TextButton.icon(
+                          onPressed: () => _openDirections(
+                            address: shopAddress,
+                          ),
+                          icon: const Icon(Icons.store_outlined),
+                          label: const Text('Itinéraire vers la boutique'),
+                        ),
+                      ),
+                    ],
+                    if (hasDeliveryDestination) ...[
+                      Text(
+                        'Livraison : ' +
+                            (deliveryAddress.isEmpty
+                                ? 'Position GPS disponible'
+                                : deliveryAddress),
+                      ),
+                      if (recipientName.isNotEmpty)
+                        Text('Destinataire : ' + recipientName),
+                      if (recipientPhone.isNotEmpty)
+                        Text('Téléphone : ' + recipientPhone),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: TextButton.icon(
+                          onPressed: () => _openDirections(
+                            address: deliveryAddress,
+                            latitude: deliveryLatitude,
+                            longitude: deliveryLongitude,
+                          ),
+                          icon: const Icon(Icons.directions_outlined),
+                          label: const Text('Itinéraire vers le client'),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _actions(          );
         },
       ),
     );
