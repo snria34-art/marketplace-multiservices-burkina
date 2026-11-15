@@ -343,7 +343,8 @@ class _CourierPageState extends ConsumerState<CourierPage> {
       final remainingAssignments = await repo.assignments();
       if (!mounted) return;
 
-      if (remainingAssignments.isEmpty && _sharingLocation) {
+      if (CourierRoutePlan.build(remainingAssignments).isEmpty &&
+          _sharingLocation) {
         await _stopLocation(
           message:
               'Vous n’avez plus de mission active. Le partage GPS est arrêté.',
