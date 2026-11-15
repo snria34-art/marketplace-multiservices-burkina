@@ -89,10 +89,7 @@ class CheckoutRepository {
   Future<void> ensurePaymentProviderConfigured({
     required String provider,
   }) async {
-    final normalized = provider.trim().toUpperCase();
-    if (normalized != 'WAVE' && normalized != 'CINETPAY') {
-      throw StateError('Mode de paiement non pris en charge.');
-    }
+    final normalized = PaymentProviderAvailability.normalizeProvider(provider);
 
     final response = await client.functions.invoke(
       'check-payment-provider-config',
@@ -134,20 +131,27 @@ class CheckoutRepository {
     required String orderId,
     required String provider,
   }) async {
-    if (provider == 'WAVE') {
+    final normalizedOrderId = orderId.trim();
+    if (normalizedOrderId.isEmpty) {
+      throw StateError('Commande introuvable.');
+    }
+    final normalizedProvider =
+        PaymentProviderAvailability.normalizeProvider(provider);
+
+    if (normalizedProvider == 'WAVE') {
       final response = await client.functions.invoke(
         'create-wave-payment-session-v3',
-        body: {'order_id': orderId},
+        body: {'order_id': normalizedOrderId},
       );
       if (response.data is Map) {
         return Map<String, dynamic>.from(response.data as Map);
       }
-    } else if (provider == 'CINETPAY') {
+    } else if (normalizedProvider == 'CINETPAY') {
       final response = await client.functions.invoke(
         'create-cinetpay-payment-session-v3',
         body: {
-          'order_id': orderId,
-          'provider': 'CINETPAY',
+          'order_id': normalizedOrderId,
+          'provider': normalizedProvider,
         },
       );
       if (response.data is Map) {

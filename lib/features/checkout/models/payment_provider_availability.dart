@@ -9,6 +9,15 @@ class PaymentProviderAvailability {
   final String provider;
   final bool configured;
 
+  /// Normalize and validate provider identifiers at every repository boundary.
+  static String normalizeProvider(String value) {
+    final normalized = value.trim().toUpperCase();
+    if (normalized != 'WAVE' && normalized != 'CINETPAY') {
+      throw const FormatException('Mode de paiement non pris en charge.');
+    }
+    return normalized;
+  }
+
   factory PaymentProviderAvailability.fromResponse(dynamic response) {
     if (response is! Map) {
       throw const FormatException(

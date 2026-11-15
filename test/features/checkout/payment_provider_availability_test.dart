@@ -4,6 +4,19 @@ import 'package:marketplace_multiservices_burkina/features/checkout/models/payme
 
 void main() {
   group('PaymentProviderAvailability', () {
+    test('normalizes provider identifiers consistently for repository calls', () {
+      expect(PaymentProviderAvailability.normalizeProvider(' wave '), 'WAVE');
+      expect(PaymentProviderAvailability.normalizeProvider('CinetPay'), 'CINETPAY');
+      expect(
+        () => PaymentProviderAvailability.normalizeProvider('ORANGE_MONEY'),
+        throwsFormatException,
+      );
+      expect(
+        () => PaymentProviderAvailability.normalizeProvider(''),
+        throwsFormatException,
+      );
+    });
+
     test('accepts a configured Wave response', () {
       final result = PaymentProviderAvailability.fromResponse({
         'provider': 'WAVE',
