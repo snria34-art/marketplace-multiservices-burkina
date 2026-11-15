@@ -1,6 +1,7 @@
 import {
   isXofCurrency,
   parsePositiveSafeIntegerAmount,
+  prepareWavePaymentEvent,
   waveCheckoutEventStatus,
 } from "./payment_validation.ts";
 
@@ -69,4 +70,49 @@ Deno.test("Wave failed attempts remain processing until a session succeeds", () 
     waveCheckoutEventStatus(undefined) === null,
     "missing event type is ignored",
   );
+});
+
+Deno.test("Wave payment_failed payload may omit provider amount and currency", () => {
+  const prepared = prepareWavePaymentEvent(
+    "PROCESSING",
+    undefined,
+    undefined,
+    1250,
+  );
+
+  assert(prepared !== null, "retryable failure should be recorded");
+  assert(prepared.status === "PROCESSING", "failure must not settle payment");
+  assert(prepared.amount === 1250, "trusted local amount satisfies RPC only");
+});
+
+Deno.test("Wave completed event requires exact provider amount and XOF", () => {
+  const valid = prepareWavePaymentEvent(
+    "SUCCEEDED",
+    "1250",
+    "XOF",
+    1250,
+  );
+  assert(valid !== null, "matching XOF success");
+  assert(valid.status === "SUCCEEDED", "successful callback status");
+  assert(valid.amount === 1250, "provider amount retained");
+
+  const invalid: Array<[unknown, unknown, unknown]> = [
+    [undefined, undefined, 1250],
+    ["1250", "USD", 1250],
+    ["1251", "XOF", 1250],
+    [true, "XOF", 1250],
+    ["1250", "XOF", "1250.50"],
+  ];
+
+  for (const [providerAmount, currency, localAmount] of invalid) {
+    assert(
+      prepareWavePaymentEvent(
+        "SUCCEEDED",
+        providerAmount,
+        currency,
+        localAmount,
+      ) === null,
+      "invalid successful callback data must be rejected",
+    );
+  }
 });

@@ -1,7 +1,7 @@
 // deno-lint-ignore no-import-prefix no-unversioned-import
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
-import { isXofCurrency, parsePositiveSafeIntegerAmount, waveCheckoutEventStatus } from "../_shared/payment_validation.ts";
+import { isXofCurrency, parsePositiveSafeIntegerAmount, prepareWavePaymentEvent, waveCheckoutEventStatus } from "../_shared/payment_validation.ts";
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
@@ -148,38 +148,40 @@ Deno.serve(async (req: Request) => {
     return json({ error: "payment_not_found" }, 404);
   }
 
-  const localAmount = parsePositiveSafeIntegerAmount(payment.amount);
   if (
-    localAmount === null ||
     String(payment.provider ?? "").trim().toUpperCase() !== "WAVE" ||
     String(payment.currency ?? "").trim().toUpperCase() !== "XOF"
   ) {
     return json({ error: "payment_local_data_invalid" }, 409);
   }
 
-  // Wave's documented payment_failed payload contains the session id and
-  // failure status, but does not contain amount/currency. Multiple such
-  // failures may precede a successful attempt. Record them as PROCESSING
-  // using the trusted local amount only to satisfy the SQL RPC contract;
-  // this branch can never settle an order or prove that money was captured.
-  let amountForRpc = localAmount;
-  if (status === "SUCCEEDED") {
-    const providerAmount = parsePositiveSafeIntegerAmount(data.amount);
-    if (providerAmount === null || !isXofCurrency(data.currency)) {
-      return json({ error: "payment_amount_or_currency_invalid" }, 422);
-    }
-    if (providerAmount !== localAmount) {
+  // This helper admits a missing provider amount/currency only for a
+  // non-settling PROCESSING event. A successful event must match the provider
+  // amount and XOF currency exactly before it can reach the SQL state machine.
+  const preparedEvent = prepareWavePaymentEvent(
+    status,
+    data.amount,
+    data.currency,
+    payment.amount,
+  );
+  if (!preparedEvent) {
+    if (status === "SUCCEEDED") {
+      const providerAmount = parsePositiveSafeIntegerAmount(data.amount);
+      if (providerAmount === null || !isXofCurrency(data.currency)) {
+        return json({ error: "payment_amount_or_currency_invalid" }, 422);
+      }
       return json({ error: "payment_amount_or_currency_mismatch" }, 409);
     }
-    amountForRpc = providerAmount;
+    return json({ error: "payment_local_data_invalid" }, 409);
   }
+  const amountForRpc = preparedEvent.amount;
 
   const providerReference = sessionId || transactionId || clientReference ||
     null;
   const { data: result, error } = await supabase.rpc("process_payment_event", {
     p_payment_id: paymentId,
     p_event_type: eventType,
-    p_status: status,
+    p_status: preparedEvent.status,
     p_provider_reference: providerReference,
     p_amount: amountForRpc,
     p_payload: data,

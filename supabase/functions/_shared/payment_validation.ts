@@ -31,6 +31,38 @@ export function waveCheckoutEventStatus(
   return null;
 }
 
+/**
+ * Prepare the numeric arguments for the Wave payment RPC.
+ *
+ * Failed checkout attempts are informational and may omit amount/currency.
+ * They are persisted as PROCESSING using only the trusted local amount.
+ * Successful callbacks require a matching provider amount and explicit XOF.
+ */
+export function prepareWavePaymentEvent(
+  status: "SUCCEEDED" | "PROCESSING",
+  providerAmount: unknown,
+  providerCurrency: unknown,
+  localAmount: unknown,
+): { status: "SUCCEEDED" | "PROCESSING"; amount: number } | null {
+  const expectedAmount = parsePositiveSafeIntegerAmount(localAmount);
+  if (expectedAmount === null) return null;
+
+  if (status === "PROCESSING") {
+    return { status, amount: expectedAmount };
+  }
+
+  const actualAmount = parsePositiveSafeIntegerAmount(providerAmount);
+  if (
+    actualAmount === null ||
+    actualAmount !== expectedAmount ||
+    !isXofCurrency(providerCurrency)
+  ) {
+    return null;
+  }
+
+  return { status, amount: actualAmount };
+}
+
 /** Accept the provider currency only when it explicitly identifies XOF. */
 export function isXofCurrency(value: unknown): boolean {
   return typeof value === "string" && value.trim().toUpperCase() === "XOF";
