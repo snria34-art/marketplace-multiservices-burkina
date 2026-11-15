@@ -30,7 +30,18 @@ La table `public.delivery_assignments.status` utilise le type `public.delivery_s
 
 La migration `20260921081745_v15_secure_package_delivery.sql` finalisait l'affectation avec `status='DELIVERED'`, valeur autorisée par l'enum.
 
-Cependant, la migration `20260921085013_v62_delivery_events_and_parent_sync.sql` remplace le finaliseur et définit dans `public.sync_after_package_delivery(uuid)` :
+Deux autres définitions utilisent cependant la valeur inexistante `COMPLETED` :
+
+1. La migration `20260921084959_v61_delivery_assignment_lifecycle.sql`, puis sa redéfinition dans `20260924010845_fix_cancelled_packages_assignment.sql`, contiennent dans `public.assign_package_to_courier(uuid,uuid)` :
+
+```sql
+where package_id = p_package_id
+  and status not in ('CANCELLED','COMPLETED')
+```
+
+La comparaison d'une colonne `public.delivery_status` à `COMPLETED` peut lever `invalid input value for enum delivery_status: "COMPLETED"` et empêcher l'affectation d'un colis.
+
+2. La migration `20260921085013_v62_delivery_events_and_parent_sync.sql` remplace le finaliseur et définit dans `public.sync_after_package_delivery(uuid)` :
 
 ```sql
 update public.delivery_assignments
@@ -39,7 +50,7 @@ where package_id = p_package_id
   and status in ('IN_TRANSIT','PICKED_UP','ACCEPTED');
 ```
 
-`COMPLETED` n'appartient pas à l'enum. PostgreSQL ne peut donc pas convertir cette valeur dans la colonne `delivery_assignments.status`.
+`COMPLETED` n'appartient pas à l'enum. La première utilisation peut donc échouer dans la comparaison de `assign_package_to_courier`, et l'UPDATE de `sync_after_package_delivery` ne peut pas convertir cette valeur dans `delivery_assignments.status`.
 
 ## 2. Conséquence
 
@@ -53,7 +64,11 @@ Le nouveau tableau de bord partenaires compte les affectations terminées sous l
 
 Ne pas modifier les anciennes migrations déjà appliquées : cela ne corrigerait pas automatiquement les fonctions déjà installées sur le projet hébergé et fausserait la reproductibilité de l'historique.
 
-Créer une nouvelle migration avec la Supabase CLI (`supabase migration new fix_delivery_assignment_terminal_status`) puis redéfinir `public.sync_after_package_delivery(uuid)` pour enregistrer `DELIVERED`, valeur déjà valide et utilisée par l'ancien finaliseur.
+Créer une nouvelle migration avec la Supabase CLI (`supabase migration new fix_delivery_assignment_terminal_status`) puis :
+
+- redéfinir `public.sync_after_package_delivery(uuid)` pour enregistrer `DELIVERED` au lieu de `COMPLETED` ;
+- redéfinir `public.assign_package_to_courier(uuid,uuid)` avec le même contrôle de disponibilité que la version actuellement déployée, mais en traitant `DELIVERED` comme terminal dans la clause d'exclusion : `status not in ('CANCELLED','DELIVERED')` ;
+- conserver la validation du chauffeur actif, le verrouillage/conditionnement atomique de l'état du colis et les ACL de chaque fonction.
 
 La correction doit conserver :
 - les gardes de propriété et de mission active ;
@@ -66,11 +81,12 @@ La correction doit conserver :
 
 Sur la base locale reconstruite uniquement :
 1. vérifier que `DELIVERED` existe dans `pg_enum` et que `COMPLETED` n'est pas une valeur de `delivery_status` ;
-2. vérifier la définition de `sync_after_package_delivery` et refuser la chaîne `status='COMPLETED'` sur `delivery_assignments` ;
-3. exécuter un scénario complet de retrait puis livraison avec une affectation et des preuves factices ;
-4. confirmer que le colis et l'affectation passent tous deux à `DELIVERED` ;
-5. répéter le callback et vérifier qu'aucune seconde livraison ni double événement financier/logistique n'est créé ;
-6. vérifier les refus pour un autre coursier, un code invalide, une mission annulée et une mission sans preuve requise.
+2. vérifier que `assign_package_to_courier` ne compare plus `delivery_status` à `COMPLETED` ;
+3. vérifier que `sync_after_package_delivery` n'écrit plus `COMPLETED` dans `delivery_assignments.status` ;
+4. exécuter un scénario complet de retrait puis livraison avec une affectation et des preuves factices ;
+5. confirmer que le colis et l'affectation passent tous deux à `DELIVERED` ;
+6. répéter le callback et vérifier qu'aucune seconde livraison ni double événement financier/logistique n'est créé ;
+7. vérifier les refus pour un autre coursier, un code invalide, une mission annulée et une mission sans preuve requise.
 
 Ensuite exécuter `supabase db reset --local` et `supabase test db --local` sur le nouveau commit avant toute discussion de migration distante.
 
