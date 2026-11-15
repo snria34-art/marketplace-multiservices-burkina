@@ -107,6 +107,6 @@ Un test widget est ajouté pour vérifier qu'en l'absence d'affectation active, 
 - Le contrôle serveur d'affectation active est présent dans les migrations versionnées ; aucune nouvelle migration GPS n'a été appliquée durant cette passe.
 - Le test widget de refus sans mission et les tests de parcours coursier ont réussi dans le run Flutter `43735673176` (47 tests, compilation Web réussie).
 - La correction qui arrête le suivi lorsque la liste contient uniquement des missions terminées est dans `cebbe868`; la correction qui remet l'état de partage à l'arrêt après une erreur d'ouverture du flux est dans `9980093e`.
-- Le build Android debug du run `43735673369` était encore en cours lors de la dernière vérification ; le build Android du commit antérieur `cebbe868` avait réussi. Aucun APK n'a été testé sur un téléphone réel ; le build iOS n'a pas été lancé (job manuel sur macOS).
+- Le build Android debug non signé du run `43735673369` a réussi sur le commit `9980093e`. La CI Flutter du même commit a réussi (47 tests et compilation Web). Aucun APK n'a été installé ni testé sur un téléphone réel ; le build iOS n'a pas été lancé (job manuel sur macOS).
 - App Store / Google Play : les permissions de localisation en arrière-plan demandent un examen dédié et une justification conforme à la fonction principale de livraison. La présence des clés natives ne garantit pas l'approbation des stores.
 - La politique de conservation GPS est encore à définir (RIA-31).
