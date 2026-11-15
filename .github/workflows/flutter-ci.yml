@@ -9,6 +9,7 @@ on:
       - 'pubspec.yaml'
       - 'pubspec.lock'
       - 'analysis_options.yaml'
+      - '.github/workflows/flutter-ci.yml'
   pull_request:
     branches: [main]
     paths:
@@ -34,7 +35,7 @@ jobs:
     timeout-minutes: 25
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           persist-credentials: false
 
