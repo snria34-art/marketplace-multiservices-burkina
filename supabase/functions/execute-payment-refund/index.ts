@@ -85,7 +85,7 @@ Deno.serve(async (req: Request) => {
   });
 
   if (provider !== "WAVE") {
-    await adminClient
+    const { error: manualUpdateError } = await adminClient
       .from("refunds")
       .update({
         status: "APPROVED",
@@ -98,6 +98,13 @@ Deno.serve(async (req: Request) => {
       })
       .eq("id", refundId);
 
+    if (manualUpdateError) {
+      return json({
+        error: "refund_state_update_failed",
+        refund_id: refundId,
+      }, 500);
+    }
+
     return json({
       ok: false,
       manual_required: true,
@@ -109,26 +116,43 @@ Deno.serve(async (req: Request) => {
 
   const waveApiKey = Deno.env.get("WAVE_API_KEY");
   if (!waveApiKey) {
-    await adminClient.from("refunds").update({ status: "APPROVED" }).eq(
-      "id",
-      refundId,
-    );
+    const { error: resetError } = await adminClient
+      .from("refunds")
+      .update({ status: "APPROVED" })
+      .eq("id", refundId);
+    if (resetError) {
+      return json({
+        error: "refund_state_update_failed",
+        refund_id: refundId,
+      }, 500);
+    }
     return json({ error: "wave_not_configured", refund_id: refundId }, 503);
   }
 
-  const waveResponse = await fetch(
-    "https://api.wave.com/v1/checkout/sessions/" +
-      encodeURIComponent(providerReference) +
-      "/refund",
-    {
-      method: "POST",
-      headers: { Authorization: "Bearer " + waveApiKey },
-    },
-  );
+  let waveResponse: Response;
+  try {
+    waveResponse = await fetch(
+      "https://api.wave.com/v1/checkout/sessions/" +
+        encodeURIComponent(providerReference) +
+        "/refund",
+      {
+        method: "POST",
+        headers: { Authorization: "Bearer " + waveApiKey },
+      },
+    );
+  } catch (_) {
+    // The provider may have received the request before the connection failed.
+    // Keep the refund in PROCESSING so it cannot be blindly submitted again.
+    return json({
+      error: "wave_refund_result_unknown",
+      refund_id: refundId,
+      manual_reconciliation_required: true,
+    }, 502);
+  }
 
   const responseText = await waveResponse.text();
   if (!waveResponse.ok) {
-    await adminClient
+    const { error: failureUpdateError } = await adminClient
       .from("refunds")
       .update({
         status: "FAILED",
@@ -141,6 +165,14 @@ Deno.serve(async (req: Request) => {
         ).slice(0, 1000),
       })
       .eq("id", refundId);
+
+    if (failureUpdateError) {
+      return json({
+        error: "refund_state_update_failed",
+        provider_status: waveResponse.status,
+        refund_id: refundId,
+      }, 500);
+    }
 
     return json({
       error: "wave_refund_failed",
