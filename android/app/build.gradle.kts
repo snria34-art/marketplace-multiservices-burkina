@@ -13,6 +13,56 @@ if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(FileInputStream(keystorePropertiesFile))
 }
 
+val requiredSigningProperties = listOf(
+    "keyAlias",
+    "keyPassword",
+    "storeFile",
+    "storePassword",
+)
+
+fun validateReleaseSigningConfiguration() {
+    if (!keystorePropertiesFile.isFile) {
+        throw GradleException(
+            "Release signing is not configured. Create android/key.properties " +
+                "and provide a protected upload keystore before building a release."
+        )
+    }
+
+    val missingSigningProperties = requiredSigningProperties.filter {
+        keystoreProperties.getProperty(it).isNullOrBlank()
+    }
+    if (missingSigningProperties.isNotEmpty()) {
+        throw GradleException(
+            "Missing Android release signing properties: " +
+                missingSigningProperties.joinToString(", ")
+        )
+    }
+
+    val releaseKeystore = project.file(keystoreProperties.getProperty("storeFile"))
+    if (!releaseKeystore.isFile) {
+        throw GradleException(
+            "Android release keystore does not exist at: ${releaseKeystore.path}"
+        )
+    }
+}
+
+// Validate only when Gradle has actually selected a Release packaging task.
+// Android evaluates every build type during configuration, including Debug;
+// throwing inside buildTypes.release therefore incorrectly blocks Debug builds.
+gradle.taskGraph.whenReady { taskGraph ->
+    val releasePackagingRequested = taskGraph.allTasks.any { task ->
+        val taskName = task.name.lowercase()
+        taskName.contains("release") &&
+            (taskName.startsWith("assemble") ||
+                taskName.startsWith("bundle") ||
+                taskName.startsWith("package"))
+    }
+
+    if (releasePackagingRequested) {
+        validateReleaseSigningConfiguration()
+    }
+}
+
 android {
     namespace = "com.marketplaceburkina.marketplace_multiservices_burkina"
     compileSdk = flutter.compileSdkVersion
@@ -34,7 +84,7 @@ android {
     }
 
     signingConfigs {
-        if (keystorePropertiesFile.exists()) {
+        if (keystorePropertiesFile.isFile) {
             create("release") {
                 keyAlias = keystoreProperties.getProperty("keyAlias")
                 keyPassword = keystoreProperties.getProperty("keyPassword")
@@ -46,37 +96,12 @@ android {
 
     buildTypes {
         release {
-            if (!keystorePropertiesFile.isFile) {
-                throw GradleException(
-                    "Release signing is not configured. Create android/key.properties " +
-                        "and provide a protected upload keystore before building a release."
-                )
+            // Debug builds do not need a release keystore. Release packaging is
+            // blocked by validateReleaseSigningConfiguration() when credentials
+            // are missing or incomplete.
+            if (keystorePropertiesFile.isFile) {
+                signingConfig = signingConfigs.getByName("release")
             }
-
-            val requiredSigningProperties = listOf(
-                "keyAlias",
-                "keyPassword",
-                "storeFile",
-                "storePassword",
-            )
-            val missingSigningProperties = requiredSigningProperties.filter {
-                keystoreProperties.getProperty(it).isNullOrBlank()
-            }
-            if (missingSigningProperties.isNotEmpty()) {
-                throw GradleException(
-                    "Missing Android release signing properties: " +
-                        missingSigningProperties.joinToString(", ")
-                )
-            }
-
-            val releaseKeystore = file(keystoreProperties.getProperty("storeFile"))
-            if (!releaseKeystore.isFile) {
-                throw GradleException(
-                    "Android release keystore does not exist at: ${releaseKeystore.path}"
-                )
-            }
-
-            signingConfig = signingConfigs.getByName("release")
         }
     }
 }
