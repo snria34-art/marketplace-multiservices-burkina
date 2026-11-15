@@ -238,3 +238,58 @@ Sources publiques :
 - Exploitation commerciale : aucune preuve métrique accessible dans cette passe.
 - WhatsApp, livraison groupée multi-commandes et wallet client : non démontrés dans le code examiné.
 - Solde/ledger vendeur, achat groupé et workflow logistique des colis : présents, mais ce sont des fonctions différentes.
+
+
+---
+
+## Progression fonctionnelle — espaces préparés et contrôles en cours
+
+### WhatsApp Business
+
+- Page `/whatsapp` ajoutée et accessible depuis la page d'accueil.
+- Elle distingue clairement la future intégration officielle et la messagerie interne existante.
+- Aucun numéro, compte WhatsApp Business, webhook, modèle de message ou secret externe n'est connecté.
+- L'assistant conversationnel futur est cadré autour de la recherche, du suivi de commande, du support et du transfert vers un agent.
+- **État réel : espace préparé, intégration externe non activée.**
+
+### Portefeuille client
+
+- Page `/wallet` créée et protégée par authentification.
+- Elle explique la différence entre le portefeuille client prépayé et le solde comptable vendeur basé sur `seller_ledger`.
+- Aucun dépôt, solde client, paiement depuis wallet, retrait ou transfert n'a été simulé ou activé.
+- **État réel : espace préparé, fonctionnalité financière non implémentée.** La conception du ledger client, des dépôts idempotents, des remboursements de dépôt, des retraits, des limites et du rapprochement prestataire doit précéder tout mouvement d'argent.
+
+### Tournée groupée côté coursier
+
+- Un modèle pur `CourierRoutePlan` regroupe les affectations actives déjà reçues par le coursier connecté.
+- L'écran `/courier` affiche une carte « Tournée groupée », ordonne d'abord les retraits puis les livraisons et permet d'ouvrir chaque étape dans Maps.
+- Chaque colis garde sa propre affectation, sa preuve photo et son code de confirmation.
+- Le bouton Accepter lit maintenant `assignment_id`, qui est le champ retourné par `get_courier_assignments()`, avec compatibilité de lecture pour l'ancien champ `id`.
+- Des tests couvrent l'ordre des étapes, les retraits déjà accomplis, les statuts inactifs et la lecture de l'identifiant.
+- **Limite explicite :** cette première livraison est une agrégation d'itinéraire côté application. Elle ne crée pas de ligne dans `delivery_routes`/`delivery_stops`, ne fusionne pas des affectations de livreurs différents, ne réassigne pas de commandes et ne calcule pas un trajet routier optimal. Ces tables existent déjà, mais leurs policies ne permettent pas à l'application cliente de créer/éditer une tournée. Une RPC serveur transactionnelle et des tests de propriété/étapes/état seront nécessaires dans une migration dédiée.
+
+### Réseau de partenaires vérifié
+
+- Fonction Edge `admin-partner-network` créée pour calculer les indicateurs avec une clé serveur, après vérification d'un JWT, d'un profil actif et d'un compte `admin_users.active`.
+- L'API agrège des nombres et n'envoie pas les identifiants ou données personnelles dans sa réponse.
+- Le tableau d'administration `/admin/partner-network` distingue vendeurs, boutiques, prestataires, coursiers actifs, coursiers actuellement en mission et comptes ayant déjà livré/terminé une prestation.
+- Un vendeur « actif » exige un compte actif, la vérification du vendeur et au moins une boutique active et vérifiée.
+- Un prestataire « actif » exige un compte actif, un profil fournisseur activé et vérifié et au moins une prestation publiée/active.
+- Un coursier « compte actif » signifie rôle COURIER et profil actif ; cela ne signifie pas disponible en ligne. « En mission » exige une affectation active. Les opérations terminées sont des indicateurs historiques.
+- L'endpoint vérifie les accès ; `supabase/config.toml` le déclare avec `verify_jwt = true`.
+- **Limite live :** la fonction n'a pas été déployée vers Supabase et aucun projet n'est visible dans le connecteur durant cette passe. Le dashboard ne doit pas afficher de nombres inventés : il signale une indisponibilité tant que l'Edge Function n'est pas déployée par le propriétaire. Les totaux de vrais partenaires restent non vérifiés.
+
+### Anomalie supplémentaire découverte pendant l'audit
+
+Le statut `delivery_status` contient `DELIVERED` mais pas `COMPLETED`. La migration `20260921085013_v62_delivery_events_and_parent_sync.sql` tente pourtant de mettre `delivery_assignments.status` à `COMPLETED` durant `sync_after_package_delivery`. Le runbook [AUD-24](runbooks/aud-24-delivery-assignment-terminal-status.md) décrit le constat et la correction à réaliser par une nouvelle migration.
+
+Cette incohérence peut faire échouer la confirmation de livraison dans une transaction. L'impact sur le projet hébergé n'a pas été vérifié live ; aucune modification de base distante n'a été faite. Le compteur de coursiers ayant une affectation `DELIVERED` doit donc être interprété avec cette réserve tant que la migration de correction n'a pas été créée via la CLI, testée localement et appliquée après autorisation.
+
+### Validation technique déclenchée
+
+- La CI Edge a d'abord révélé un problème de typage dans l'agrégateur. Une correction a été faite ; la dernière validation Edge suit le commit `2ac4968`.
+- Flutter CI sur le commit `1a8572f` est en cours.
+- Android Debug sur le commit `a4dba57` est en cours.
+- Le job iOS reste volontairement ignoré (runner macOS manuel).
+- Le workflow DB local `43732504970` a réussi, avec reconstruction de la base et pgTAP ; ce run précède uniquement les pages et le code UI, qui n'introduisent pas de migration SQL.
+- Ces validations ne signifient pas que WhatsApp, le portefeuille, les statistiques partenaires ou les routes groupées persistées fonctionnent en production.
