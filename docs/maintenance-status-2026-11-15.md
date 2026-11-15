@@ -21,9 +21,9 @@ Le workflow `.github/workflows/supabase-db-tests.yml` a été renforcé sur la b
 
 Après vérification de la documentation CLI, le workflow conserve bien `supabase db reset --local` après `supabase start` : cette commande recrée la base PostgreSQL locale, applique toutes les migrations et charge le seed de test configuré. La suite pgTAP est ensuite exécutée explicitement contre cette base locale. Le reset reste strictement local ; aucun `--remote`, `--linked`, DB URL ou secret distant n'est configuré.
 
-### Verrou Vercel — déploiements Git suspendus
+### Verrou Vercel — portée limitée à la branche de maintenance
 
-Le fichier `vercel.json` contient désormais :
+Le fichier `vercel.json` de cette branche contient désormais :
 
 ```json
 "git": {
@@ -31,9 +31,11 @@ Le fichier `vercel.json` contient désormais :
 }
 ```
 
-Ce paramètre désactive les déploiements Git automatiques pour toutes les branches, y compris la branche de production, tant qu'il reste en place. Il ne supprime pas un déploiement déjà créé et ne garantit pas l'annulation d'un build déjà en cours. La réactivation devra être faite séparément après autorisation et fin de maintenance.
+Cette configuration désactive les déploiements Git automatiques pour les commits qui portent cette configuration. **Elle n'est pas un réglage central du projet Vercel et ne protège pas une branche dont le propre commit ne contient pas ce paramètre.** Vérification faite : le fichier `vercel.json` de `main` conserve son contenu antérieur et ne comporte pas `git.deploymentEnabled`. Un push sur `main` pourrait donc toujours déclencher un déploiement automatique selon les paramètres du projet.
 
-Des statuts GitHub `Vercel: failure` sont présents sur les commits Flutter `5428bc9` et Edge `f2384db`. L'API Vercel refuse actuellement l'accès en lecture au scope `ridiastore` (403) et aucune équipe n'est retournée par la découverte de contexte ; le détail des déploiements et leurs journaux ne sont donc pas vérifiables depuis cette session. Aucun outil de création, promotion, annulation ou suppression de déploiement n'a été appelé.
+La désactivation projet-wide doit être confirmée dans Vercel Dashboard → Project Settings → Git, ou avec un accès API autorisé. Cette session ne peut pas vérifier ni modifier ce réglage : l'API Vercel refuse le scope `ridiastore` (403) et le contexte connecté ne retourne aucune équipe. Ne pas considérer la suspension globale de Vercel comme acquise.
+
+Des statuts GitHub `Vercel: failure` ont été observés sur les commits Flutter `5428bc9` et Edge `f2384db`. Leur détail et d'éventuels Previews existants ne sont pas vérifiables depuis cette session. Aucun outil de création, promotion, annulation ou suppression de déploiement n'a été appelé.
 
 ### Limites qui restent ouvertes
 
