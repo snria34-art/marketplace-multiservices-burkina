@@ -144,8 +144,9 @@ Les valeurs financières calculées sont enregistrées au moment de l'approbatio
 Sous réserve de validation comptable, la convention cohérente avec le modèle brut `SALE` + `COMMISSION` est :
 
 - à la vente : `SALE = +base brute`, `COMMISSION = -commission` ;
-- pour le retour partiel d'une ligne : `REFUND = -débit brut vendeur`, `COMMISSION_REVERSAL = +commission de cette quantité` ;
-- impact net vendeur : `-seller_gross_debit + commission_reversal_amount`.
+- pour le retour partiel d'une ligne : l'allocation conserve le débit vendeur net approuvé et la commission à contre-passer séparément ; le ledger reçoit `REFUND = -(seller_net_debit + commission_reversal_amount)` et `COMMISSION_REVERSAL = +commission_reversal_amount` ;
+- impact net vendeur : `-seller_net_debit` exactement ;
+- la ligne `commissions` reste `POSTED` pendant un remboursement partiel et passe à `REVERSED` uniquement lorsque le cumul des contre-passations allouées atteint `commission_amount` ;
 
 Pour un groupe entièrement annulé avant règlement vendeur, l'inversion complète peut utiliser `SALE_REVERSAL` et `COMMISSION_REVERSAL`. Pour un retour partiel, ne pas appeler `reverse_seller_group`, car cette routine annule toute la base de commission du groupe.
 
