@@ -1,5 +1,5 @@
 begin;
-select plan(13);
+select plan(15);
 select ok(to_regclass('public.refund_allocations') is not null, 'refund allocation table exists');
 select ok((select relrowsecurity from pg_class where oid='public.refund_allocations'::regclass), 'allocation table has RLS');
 select ok(not has_table_privilege('anon','public.refund_allocations','SELECT')
@@ -26,3 +26,10 @@ select ok(position('v_allocation.id' in pg_get_functiondef('public.reconcile_ref
   and position('status = ''RECONCILED''' in pg_get_functiondef('public.reconcile_refund_accounting(uuid)'::regprocedure)) > 0, 'ledger uses allocation id and hold clears only after posting');
 select * from finish();
 rollback;
+
+select ok(to_regprocedure('public.record_provider_refund_confirmation(uuid,text)') is not null,
+  'manual provider-confirmation recovery RPC exists');
+select ok(position('refund_not_processing' in pg_get_functiondef('public.record_provider_refund_confirmation(uuid,text)'::regprocedure)) > 0
+  and position('provider_refund_reference_conflict' in pg_get_functiondef('public.record_provider_refund_confirmation(uuid,text)'::regprocedure)) > 0
+  and position('status = ''COMPLETED''' in pg_get_functiondef('public.record_provider_refund_confirmation(uuid,text)'::regprocedure)) > 0,
+  'recovery accepts only processing refunds and is idempotent on the same provider reference');
