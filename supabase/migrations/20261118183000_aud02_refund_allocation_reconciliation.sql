@@ -262,3 +262,74 @@ revoke all on function public.reconcile_refund_accounting(uuid) from public, ano
 grant execute on function public.reconcile_refund_accounting(uuid) to authenticated;
 
 commit;
+
+
+-- Manual recovery path for a provider-confirmed refund whose local completion failed.
+-- An administrator must verify the provider dashboard/reference before calling this RPC.
+create or replace function public.record_provider_refund_confirmation(
+  p_refund_id uuid,
+  p_provider_reference text
+)
+returns boolean
+language plpgsql
+security definer
+set search_path = pg_catalog, public, private
+as $function$
+declare
+  v_refund public.refunds%rowtype;
+  v_payment public.payments%rowtype;
+  v_total_refunded numeric(14,2);
+begin
+  if auth.uid() is null or not private.is_admin() then
+    raise exception 'admin_access_required' using errcode = '42501';
+  end if;
+  if p_refund_id is null or nullif(trim(p_provider_reference),'') is null
+     or length(trim(p_provider_reference)) > 200 then
+    raise exception 'provider_refund_reference_invalid';
+  end if;
+
+  select * into v_refund
+  from public.refunds where id = p_refund_id for update;
+  if not found then raise exception 'refund_not_found'; end if;
+
+  if v_refund.status = 'COMPLETED' then
+    if trim(coalesce(v_refund.provider_reference,'')) = trim(p_provider_reference) then
+      return true;
+    end if;
+    raise exception 'provider_refund_reference_conflict';
+  end if;
+  if v_refund.status <> 'PROCESSING' then
+    raise exception 'refund_not_processing';
+  end if;
+
+  select * into v_payment
+  from public.payments where id = v_refund.payment_id for update;
+  if not found then raise exception 'payment_not_found'; end if;
+  if v_payment.currency <> 'XOF' or v_refund.currency <> 'XOF' then
+    raise exception 'refund_currency_not_supported';
+  end if;
+
+  update public.refunds
+  set status = 'COMPLETED',
+      provider_reference = trim(p_provider_reference),
+      completed_at = coalesce(completed_at, now())
+  where id = p_refund_id;
+
+  select coalesce(sum(amount),0) into v_total_refunded
+  from public.refunds
+  where payment_id = v_payment.id and status = 'COMPLETED';
+
+  update public.payments
+  set status = case when v_total_refunded >= v_payment.amount
+                    then 'REFUNDED'::public.payment_status
+                    else 'PARTIALLY_REFUNDED'::public.payment_status end,
+      updated_at = now()
+  where id = v_payment.id
+    and status in ('SUCCEEDED','PARTIALLY_REFUNDED','REFUNDED');
+
+  return true;
+end;
+$function$;
+
+revoke all on function public.record_provider_refund_confirmation(uuid,text) from public, anon;
+grant execute on function public.record_provider_refund_confirmation(uuid,text) to authenticated;
