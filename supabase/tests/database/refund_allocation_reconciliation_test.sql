@@ -50,12 +50,14 @@ select ok(position('refund_commission_reversal_exceeds_original'
   in pg_get_functiondef('public.set_refund_allocations(uuid,jsonb)'::regprocedure)) > 0,
   'commission reversal is bounded by a locked posted commission');
 select ok(position('''COMMISSION_REVERSAL''' in pg_get_functiondef('public.reconcile_refund_accounting(uuid)'::regprocedure)) > 0
+  and position('commission_accounting_mode = ''GROSS_LEDGER''' in pg_get_functiondef('public.reconcile_refund_accounting(uuid)'::regprocedure)) > 0
   and position('-(v_allocation.seller_net_debit + v_allocation.commission_reversal_amount)'
     in pg_get_functiondef('public.reconcile_refund_accounting(uuid)'::regprocedure)) > 0,
-  'ledger posts gross refund debit and positive commission reversal separately');
-select ok(position('set status = ''REVERSED''' in pg_get_functiondef('public.reconcile_refund_accounting(uuid)'::regprocedure)) > 0
+  'gross-ledger mode posts refund debit and positive commission reversal separately');
+select ok(position('case when c.status = ''POSTED'' then ''REVERSED'' else ''CANCELLED'' end'
+    in pg_get_functiondef('public.reconcile_refund_accounting(uuid)'::regprocedure)) > 0
   and position('>= c.commission_amount' in pg_get_functiondef('public.reconcile_refund_accounting(uuid)'::regprocedure)) > 0,
-  'commission status changes only after full cumulative reversal');
+  'posted commission is reversed and pending commission cancelled only after full cumulative reversal');
 
 select ok(position('ra2.ledger_posted_at is not null'
   in pg_get_functiondef('public.reconcile_refund_accounting(uuid)'::regprocedure)) > 0
