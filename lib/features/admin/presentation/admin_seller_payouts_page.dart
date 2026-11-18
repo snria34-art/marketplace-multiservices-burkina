@@ -81,7 +81,18 @@ class _AdminSellerPayoutsPageState
                       ? referenceController.text
                       : reasonController.text)
                   .trim();
-              if (value.isEmpty) return;
+              if (value.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      paid
+                          ? 'La référence du prestataire est obligatoire.'
+                          : 'Le motif de l’échec est obligatoire.',
+                    ),
+                  ),
+                );
+                return;
+              }
               Navigator.of(dialogContext).pop(true);
             },
             child: const Text('Confirmer'),
