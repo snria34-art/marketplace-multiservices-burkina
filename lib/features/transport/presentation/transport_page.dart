@@ -108,7 +108,19 @@ class _TransportPageState extends ConsumerState<TransportPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Transport')),
+      appBar: AppBar(
+        title: const Text('Transport'),
+        actions: [
+          IconButton(
+            tooltip: 'Actualiser',
+            onPressed: () => setState(() {
+              _tripsFuture = _loadTrips();
+              _ticketsFuture = _loadTickets();
+            }),
+            icon: const Icon(Icons.refresh),
+          ),
+        ],
+      ),
       body: ListView(
         padding: const EdgeInsets.all(12),
         children: [
@@ -122,6 +134,20 @@ class _TransportPageState extends ConsumerState<TransportPage> {
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Center(child: CircularProgressIndicator());
+              }
+
+              if (snapshot.hasError) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Impossible de charger les départs.'),
+                    TextButton.icon(
+                      onPressed: () => setState(() => _tripsFuture = _loadTrips()),
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('Réessayer'),
+                    ),
+                  ],
+                );
               }
 
               final trips =
