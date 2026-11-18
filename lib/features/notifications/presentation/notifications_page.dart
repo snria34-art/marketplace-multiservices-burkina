@@ -81,35 +81,17 @@ class _NotificationsPageState
 
 
   Future<List<Map<String, dynamic>>> _load() async {
-    final client = ref.read(supabaseProvider);
-    final user = client?.auth.currentUser;
-
-    if (client == null || user == null) return const [];
-
-    final rows = await client
-        .from('notifications')
-        .select('id,type,title,body,data,read_at,created_at')
-        .eq('user_id', user.id)
-        .order('created_at', ascending: false)
-        .limit(100);
-
-    return (rows as List)
-        .map((row) => Map<String, dynamic>.from(row as Map))
-        .toList();
+    final repository = ref.read(notificationRepositoryProvider);
+    if (repository == null) return const [];
+    return repository.list();
   }
 
   Future<void> _markRead(String id) async {
-    final client = ref.read(supabaseProvider);
-    final user = client?.auth.currentUser;
-
-    if (client == null || user == null) return;
+    final repository = ref.read(notificationRepositoryProvider);
+    if (repository == null) return;
 
     try {
-      await client
-          .from('notifications')
-          .update({'read_at': DateTime.now().toUtc().toIso8601String()})
-          .eq('id', id)
-          .eq('user_id', user.id);
+      await repository.markRead(id);
 
       if (!mounted) return;
       setState(() => _future = _load());
