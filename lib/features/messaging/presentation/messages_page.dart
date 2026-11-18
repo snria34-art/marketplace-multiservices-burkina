@@ -202,6 +202,7 @@ class _MessagesPageState extends ConsumerState<MessagesPage> {
           ? _ConversationList(
               future: _future,
               onOpen: _openConversation,
+              onRetry: () => setState(() => _future = _loadConversations()),
             )
           : _ConversationView(
               key: ValueKey(_conversationId),
