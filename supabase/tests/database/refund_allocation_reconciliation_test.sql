@@ -1,5 +1,5 @@
 begin;
-select plan(20);
+select plan(21);
 select ok(to_regclass('public.refund_allocations') is not null, 'refund allocation table exists');
 select ok((select relrowsecurity from pg_class where oid='public.refund_allocations'::regclass), 'allocation table has RLS');
 select ok(not has_table_privilege('anon','public.refund_allocations','SELECT')
@@ -49,6 +49,11 @@ select ok(position('''COMMISSION_REVERSAL''' in pg_get_functiondef('public.recon
 select ok(position('set status = ''REVERSED''' in pg_get_functiondef('public.reconcile_refund_accounting(uuid)'::regprocedure)) > 0
   and position('>= c.commission_amount' in pg_get_functiondef('public.reconcile_refund_accounting(uuid)'::regprocedure)) > 0,
   'commission status changes only after full cumulative reversal');
+
+select ok(position('ra2.ledger_posted_at is not null'
+  in pg_get_functiondef('public.reconcile_refund_accounting(uuid)'::regprocedure)) > 0
+  and position('from public.commissions' in pg_get_functiondef('public.reconcile_refund_accounting(uuid)'::regprocedure)) > 0,
+  'commission status waits for posted ledger reversals and locks commission rows');
 
 select * from finish();
 rollback;
