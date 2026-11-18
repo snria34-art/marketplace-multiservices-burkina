@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js@^2.116.0/edge-runtime.d.ts";
 import { createClient, type SupabaseClient } from "jsr:@supabase/supabase-js@2";
+import { isUnregisteredFcmToken } from "../_shared/fcm_error.ts";
 
 type Json = Record<string, unknown>;
 
@@ -383,17 +384,7 @@ async function processNotification(
           data,
         );
 
-        const details = Array.isArray(result.body?.error?.details)
-          ? result.body.error.details
-          : [];
-        const fcmError = details.find(
-          (detail: Json) =>
-            detail["@type"] ===
-              "type.googleapis.com/google.firebase.fcm.v1.FcmError",
-        ) as Json | undefined;
-        const errorCode = fcmError?.errorCode;
-        const invalidToken = !result.ok &&
-          (errorCode === "UNREGISTERED" || result.status === 404);
+        const invalidToken = isUnregisteredFcmToken(result);
         const deliveryStatus = result.ok
           ? "SENT"
           : invalidToken
