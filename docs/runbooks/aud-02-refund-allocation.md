@@ -363,3 +363,18 @@ Le JSON saisi par l'administrateur doit reprendre les UUID affichés dans la fen
 La migration `20261118203000_aud02_remove_legacy_refund_ledger_debit.sql` remplace `complete_refund(uuid,text)` : elle confirme le remboursement et met à jour les statuts paiement/commande, mais ne crée plus aucune écriture `seller_ledger`. Les écritures vendeurs sont exclusivement produites par `reconcile_refund_accounting` à partir de `refund_allocations` immuables et approuvées. Le droit d'exécution de `complete_refund` reste réservé à `service_role`.
 
 Protection de l'historique : si une ancienne version de `complete_refund` a déjà créé une écriture `REFUND` portant le même `reference_id`, le rapprochement refuse de republier une écriture et renvoie `refund_legacy_ledger_entries_present`. Ces dossiers historiques doivent être examinés manuellement avant toute reprise ; ne pas supprimer ni compenser automatiquement leurs écritures.
+
+## Point bloquant finance vendeur — finalisation des ventes livrées
+
+La revue transversale du 18 novembre 2026 confirme que `sync_after_package_delivery(uuid)` met à jour les affectations et synchronise l'état parent, mais n'appelle aucun finaliseur de commission. Les fonctions `finalize_seller_group(uuid,numeric)` et `finalize_seller_group_financials(uuid)` existent, mais aucun appelant SQL interne, trigger, job ou appel Flutter/Edge n'a été identifié dans le dépôt.
+
+Ne pas ajouter un appel automatique aveugle à `finalize_seller_group_financials` : `orders.discount_total` est stocké au niveau commande et n'est pas ventilé de façon immuable par groupe/article. Le finaliseur basé sur `order_groups.subtotal` peut donc créditer un montant supérieur à la part réellement due au vendeur lorsqu'une remise est appliquée. Le choix entre remise financée par le vendeur et remise financée par la plateforme doit être explicite et figé au checkout.
+
+Avant d'activer la finalisation automatique :
+1. définir et enregistrer la ventilation exacte de la remise en XOF, avec résidu déterministe ;
+2. déterminer la base de commission et le financement des frais de livraison ;
+3. choisir une seule convention comptable canonique (SALE net ou SALE brut + COMMISSION séparée) ;
+4. connecter le finaliseur au passage effectif du groupe à DELIVERED, avec idempotence et tests de concurrence ;
+5. vérifier que les remboursements AUD-02 utilisent la même convention.
+
+L'interface vendeur accepte désormais les demandes de retrait et l'administration dispose d'une file de traitement. Cela ne remplace pas la finalisation automatique des ventes et ne doit pas être présenté comme une certification du solde vendeur.
