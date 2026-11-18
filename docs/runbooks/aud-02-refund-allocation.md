@@ -139,18 +139,17 @@ Les valeurs financières calculées sont enregistrées au moment de l'approbatio
 9. **Concurrence :** les remboursements concurrents verrouillent le paiement et les lignes/groupes concernés ; le cumul demandé, en cours et terminé ne dépasse pas le montant payé et remboursable.
 10. **Statuts :** un groupe ne devient `REFUNDED` que lorsque ses propres montants remboursables et quantités ont été totalement traités ; un remboursement total de commande ne doit pas être déduit du seul statut de paiement si les allocations racontent autre chose.
 
-### 3.5 Convention de ledger à retenir
+### 3.5 Convention de ledger et contre-passation de commission
 
-Sous réserve de validation comptable, la convention cohérente avec le modèle brut `SALE` + `COMMISSION` est :
+Le dépôt contient deux conventions historiques, toutes deux prises en charge explicitement par la nouvelle procédure d'allocation, sans les mélanger :
 
-- à la vente : `SALE = +base brute`, `COMMISSION = -commission` ;
-- pour le retour partiel d'une ligne : l'allocation conserve le débit vendeur net approuvé et la commission à contre-passer séparément ; le ledger reçoit `REFUND = -(seller_net_debit + commission_reversal_amount)` et `COMMISSION_REVERSAL = +commission_reversal_amount` ;
-- impact net vendeur : `-seller_net_debit` exactement ;
-- la ligne `commissions` reste `POSTED` pendant un remboursement partiel et passe à `REVERSED` uniquement lorsque le cumul des contre-passations allouées atteint `commission_amount` ;
+- **Modèle brut `GROSS_LEDGER`** : `SALE = +base brute`, `COMMISSION = -commission`. Pour un retour partiel, le ledger reçoit `REFUND = -(seller_net_debit + commission_reversal_amount)` puis `COMMISSION_REVERSAL = +commission_reversal_amount`. L'impact vendeur net reste exactement `-seller_net_debit`. La commission `POSTED` ne passe à `REVERSED` qu'après contre-passation complète.
+- **Modèle net `NET_SALE`** : `SALE = base brute - commission`, commission `PENDING`, aucune écriture `COMMISSION` séparée. Le ledger reçoit uniquement `REFUND = -seller_net_debit` ; il ne faut surtout pas ajouter de crédit `COMMISSION_REVERSAL`, car la commission a déjà été retenue dans le crédit de vente. La commission `PENDING` passe à `CANCELLED` uniquement lorsque la part correspondante est entièrement neutralisée.
+- **Mode inconnu ou écritures incohérentes** : l'allocation est refusée. La procédure déduit le mode des écritures `SALE`/`COMMISSION` effectivement présentes et le conserve dans `refund_allocations.commission_accounting_mode`.
 
-Pour un groupe entièrement annulé avant règlement vendeur, l'inversion complète peut utiliser `SALE_REVERSAL` et `COMMISSION_REVERSAL`. Pour un retour partiel, ne pas appeler `reverse_seller_group`, car cette routine annule toute la base de commission du groupe.
+La commission n'est jamais modifiée au prorata dans ses champs `base_amount`, `rate` ou `commission_amount`. Les contre-passations partielles sont suivies par allocation ; le statut ne change qu'une fois le montant d'origine intégralement contre-passé et comptabilisé.
 
-**Important :** il faut d'abord choisir une seule convention de comptabilisation et confirmer laquelle est utilisée par les appels backend réels. Ne pas mélanger le modèle `SALE` brut + `COMMISSION` négative avec le modèle `SALE` déjà net.
+Ne pas appeler `reverse_seller_group` pour un retour partiel : cette routine annule toute la base de commission du groupe.
 
 ### 3.6 Contraintes réelles du registre et risque de conflit multi-boutiques
 
