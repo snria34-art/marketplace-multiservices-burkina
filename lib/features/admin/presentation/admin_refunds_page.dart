@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -94,6 +96,99 @@ class _AdminRefundsPageState extends ConsumerState<AdminRefundsPage> {
     );
   }
 
+  Future<void> _ensureAllocation(String refundId) async {
+    final client = ref.read(supabaseProvider);
+    if (client == null) throw StateError('Connexion Supabase indisponible.');
+
+    final existing = await client.rpc(
+      'get_refund_allocation_status',
+      params: {'p_refund_id': refundId},
+    );
+    if (existing == true) return;
+
+    final candidates = await client.rpc(
+      'get_refund_allocation_candidates',
+      params: {'p_refund_id': refundId},
+    );
+    final rows = candidates is List
+        ? candidates.map((row) => Map<String, dynamic>.from(row as Map)).toList()
+        : <Map<String, dynamic>>[];
+    final controller = TextEditingController(
+      text: '[\\n  {\\n    "allocation_type": "ITEM",\\n    "order_item_id": "REMPLACER_UUID_ARTICLE",\\n    "quantity": 1,\\n    "customer_amount": 0,\\n    "seller_net_debit": 0,\\n    "commission_reversal_amount": 0,\\n    "platform_funded_amount": 0\\n  }\\n]',
+    );
+
+    final payload = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Ventilation comptable obligatoire'),
+        content: SizedBox(
+          width: 560,
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Saisir les allocations validées par la comptabilité. '
+                  'Ne pas répartir au prorata. Les montants doivent être des XOF entiers.',
+                ),
+                const SizedBox(height: 12),
+                const Text('Articles de la commande :'),
+                ...rows.map((row) => Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: SelectableText(
+                    'Article: ${row['order_item_id']}\\n'
+                    'Groupe: ${row['order_group_id']} • Vendeur: ${row['seller_id']}\\n'
+                    'Quantité commandée: ${row['ordered_quantity']} • Total ligne: ${row['line_total']} XOF',
+                  ),
+                )),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: controller,
+                  minLines: 8,
+                  maxLines: 14,
+                  keyboardType: TextInputType.multiline,
+                  decoration: const InputDecoration(
+                    labelText: 'Allocations JSON',
+                    border: OutlineInputBorder(),
+                    helperText: 'La somme customer_amount doit être exactement égale au remboursement.',
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Annuler'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, controller.text.trim()),
+            child: const Text('Valider la ventilation'),
+          ),
+        ],
+      ),
+    );
+    final raw = controller.text;
+    controller.dispose();
+    if (!mounted || payload == null) {
+      throw StateError('Ventilation annulée : aucun remboursement exécuté.');
+    }
+
+    final decoded = jsonDecode(payload);
+    if (decoded is! List || decoded.isEmpty) {
+      throw FormatException('Les allocations doivent être un tableau JSON non vide.');
+    }
+    await client.rpc(
+      'set_refund_allocations',
+      params: {
+        'p_refund_id': refundId,
+        'p_allocations': decoded,
+      },
+    );
+  }
+
   Future<void> _completeManual(String refundId) async {
     final controller = TextEditingController();
     final reference = await showDialog<String>(
@@ -126,6 +221,7 @@ class _AdminRefundsPageState extends ConsumerState<AdminRefundsPage> {
       () async {
         final client = ref.read(supabaseProvider);
         if (client == null) throw StateError('Connexion Supabase indisponible.');
+        await _ensureAllocation(refundId);
         return await client.rpc(
           'admin_complete_manual_refund',
           params: {
@@ -142,6 +238,7 @@ class _AdminRefundsPageState extends ConsumerState<AdminRefundsPage> {
     if (client == null) return;
 
     await _runAction(() async {
+      await _ensureAllocation(refundId);
       final response = await client.functions.invoke(
         'execute-payment-refund',
         body: {'refund_id': refundId},
