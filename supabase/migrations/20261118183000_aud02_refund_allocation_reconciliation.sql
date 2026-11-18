@@ -261,9 +261,6 @@ $function$;
 revoke all on function public.reconcile_refund_accounting(uuid) from public, anon;
 grant execute on function public.reconcile_refund_accounting(uuid) to authenticated;
 
-commit;
-
-
 -- Manual recovery path for a provider-confirmed refund whose local completion failed.
 -- An administrator must verify the provider dashboard/reference before calling this RPC.
 create or replace function public.record_provider_refund_confirmation(
