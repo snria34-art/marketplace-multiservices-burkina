@@ -24,12 +24,13 @@ select ok(position('refund_seller_sale_not_credited' in pg_get_functiondef('publ
 select ok(position('v_allocation.id' in pg_get_functiondef('public.reconcile_refund_accounting(uuid)'::regprocedure)) > 0
   and position('''REFUND''' in pg_get_functiondef('public.reconcile_refund_accounting(uuid)'::regprocedure)) > 0
   and position('status = ''RECONCILED''' in pg_get_functiondef('public.reconcile_refund_accounting(uuid)'::regprocedure)) > 0, 'ledger uses allocation id and hold clears only after posting');
-select * from finish();
-rollback;
-
 select ok(to_regprocedure('public.record_provider_refund_confirmation(uuid,text)') is not null,
   'manual provider-confirmation recovery RPC exists');
 select ok(position('refund_not_processing' in pg_get_functiondef('public.record_provider_refund_confirmation(uuid,text)'::regprocedure)) > 0
   and position('provider_refund_reference_conflict' in pg_get_functiondef('public.record_provider_refund_confirmation(uuid,text)'::regprocedure)) > 0
   and position('status = ''COMPLETED''' in pg_get_functiondef('public.record_provider_refund_confirmation(uuid,text)'::regprocedure)) > 0,
   'recovery accepts only processing refunds and is idempotent on the same provider reference');
+
+select * from finish();
+rollback;
+
