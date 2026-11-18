@@ -383,8 +383,7 @@ class _AdminRefundsPageState extends ConsumerState<AdminRefundsPage> {
                         ),
                       if (provider == 'CINETPAY' &&
                           (status == 'APPROVED' ||
-                              status == 'PROCESSING' ||
-                              status == 'FAILED'))
+                              status == 'PROCESSING'))
                         const PopupMenuItem(
                           value: 'manual_complete',
                           child: Text('Confirmer remboursement manuel'),
