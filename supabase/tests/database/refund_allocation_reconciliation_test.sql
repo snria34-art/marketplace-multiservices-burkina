@@ -1,5 +1,5 @@
 begin;
-select plan(25);
+select plan(29);
 select ok(to_regclass('public.refund_allocations') is not null, 'refund allocation table exists');
 select ok((select relrowsecurity from pg_class where oid='public.refund_allocations'::regclass), 'allocation table has RLS');
 select ok(not has_table_privilege('anon','public.refund_allocations','SELECT')
@@ -78,6 +78,24 @@ select ok(position('v_commission_mode := ''GROSS_LEDGER''' in pg_get_functiondef
 select ok(position('commission_accounting_mode = ''GROSS_LEDGER''' in pg_get_functiondef('public.reconcile_refund_accounting(uuid)'::regprocedure)) > 0
   and position('commission_accounting_mode = ''NET_SALE''' in pg_get_functiondef('public.reconcile_refund_accounting(uuid)'::regprocedure)) > 0,
   'reconciliation uses distinct ledger treatment for gross-sale and net-sale conventions');
+
+select ok(to_regprocedure('public.get_refund_allocation_candidates(uuid)') is not null
+  and to_regprocedure('public.get_refund_allocation_status(uuid)') is not null,
+  'admin allocation review RPCs exist');
+select ok(position('refund_allocations_required_or_unbalanced'
+  in pg_get_functiondef('public.admin_begin_refund(uuid)'::regprocedure)) > 0
+  and position('r.status = ''APPROVED''' in pg_get_functiondef('public.admin_begin_refund(uuid)'::regprocedure)) > 0,
+  'provider execution requires an approved refund and exact allocation');
+select ok(position('perform public.reconcile_refund_accounting(p_refund_id)'
+  in pg_get_functiondef('public.admin_complete_manual_refund(uuid,text)'::regprocedure)) > 0
+  and position('refund_allocations_required_or_unbalanced'
+  in pg_get_functiondef('public.admin_complete_manual_refund(uuid,text)'::regprocedure)) > 0,
+  'manual provider confirmation reconciles only after balanced allocation');
+select ok(has_function_privilege('authenticated','public.get_refund_allocation_candidates(uuid)','EXECUTE')
+  and not has_function_privilege('anon','public.get_refund_allocation_candidates(uuid)','EXECUTE')
+  and has_function_privilege('authenticated','public.get_refund_allocation_status(uuid)','EXECUTE')
+  and not has_function_privilege('anon','public.get_refund_allocation_status(uuid)','EXECUTE'),
+  'allocation review RPCs are admin-only authenticated functions');
 
 select * from finish();
 rollback;
