@@ -1,5 +1,5 @@
 begin;
-select plan(29);
+select plan(30);
 select ok(to_regclass('public.refund_allocations') is not null, 'refund allocation table exists');
 select ok((select relrowsecurity from pg_class where oid='public.refund_allocations'::regclass), 'allocation table has RLS');
 select ok(not has_table_privilege('anon','public.refund_allocations','SELECT')
@@ -96,6 +96,10 @@ select ok(has_function_privilege('authenticated','public.get_refund_allocation_c
   and has_function_privilege('authenticated','public.get_refund_allocation_status(uuid)','EXECUTE')
   and not has_function_privilege('anon','public.get_refund_allocation_status(uuid)','EXECUTE'),
   'allocation review RPCs are admin-only authenticated functions');
+
+select ok(position('private.is_admin()' in pg_get_functiondef('public.get_refund_allocation_candidates(uuid)'::regprocedure)) > 0
+  and position('private.is_admin()' in pg_get_functiondef('public.get_refund_allocation_status(uuid)'::regprocedure)) > 0,
+  'allocation review functions enforce administrator authorization');
 
 select * from finish();
 rollback;
