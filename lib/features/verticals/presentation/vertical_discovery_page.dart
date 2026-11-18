@@ -3142,7 +3142,24 @@ class _VerticalDiscoveryPageState
           }
           if (snapshot.hasError) {
             return Center(
-              child: Text('Erreur : ' + snapshot.error.toString()),
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      'Impossible de charger les offres de ce service.',
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 8),
+                    FilledButton.icon(
+                      onPressed: _refresh,
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('Réessayer'),
+                    ),
+                  ],
+                ),
+              ),
             );
           }
 
