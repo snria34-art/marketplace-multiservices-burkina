@@ -273,6 +273,22 @@ Deno.serve(async (req: Request) => {
       error: "refund_completion_failed",
       refund_provider_confirmed: true,
       refund_id: refundId,
+      manual_reconciliation_required: true,
+    }, 409);
+  }
+
+  // The provider has confirmed the refund. Reconcile the immutable allocations
+  // through the authenticated admin session; never call Wave again on failure.
+  const { error: reconciliationError } = await userClient.rpc(
+    "reconcile_refund_accounting",
+    { p_refund_id: refundId },
+  );
+  if (reconciliationError) {
+    return json({
+      error: "refund_accounting_reconciliation_failed",
+      refund_provider_confirmed: true,
+      refund_id: refundId,
+      manual_reconciliation_required: true,
     }, 409);
   }
 
