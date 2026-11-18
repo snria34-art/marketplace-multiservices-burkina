@@ -33,7 +33,16 @@ class _RestaurantsPageState extends ConsumerState<RestaurantsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Restaurants')),
+      appBar: AppBar(
+        title: const Text('Restaurants'),
+        actions: [
+          IconButton(
+            tooltip: 'Actualiser',
+            onPressed: () => setState(() => _future = _load()),
+            icon: const Icon(Icons.refresh),
+          ),
+        ],
+      ),
       body: FutureBuilder<List<Map<String, dynamic>>>(
         future: _future,
         builder: (context, snapshot) {
@@ -43,7 +52,18 @@ class _RestaurantsPageState extends ConsumerState<RestaurantsPage> {
 
           if (snapshot.hasError) {
             return Center(
-              child: Text('Erreur : ' + snapshot.error.toString()),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text('Impossible de charger les restaurants.'),
+                  const SizedBox(height: 8),
+                  FilledButton.icon(
+                    onPressed: () => setState(() => _future = _load()),
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('Réessayer'),
+                  ),
+                ],
+              ),
             );
           }
 
