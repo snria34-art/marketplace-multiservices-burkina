@@ -345,7 +345,19 @@ async function processNotification(
     const results = await mapWithConcurrency(pendingDevices, 5, async (device) => {
       const deviceId = String(device.id ?? "").trim();
       const token = String(device.push_token ?? "").trim();
-      if (!deviceId || !token) {
+      if (!deviceId) throw new Error("FCM_DEVICE_ID_INVALID");
+      if (!token) {
+        const invalid = await adminClient
+          .from("notification_push_deliveries")
+          .upsert({
+            notification_id: notificationId,
+            device_id: deviceId,
+            status: "INVALID",
+            last_attempt_at: new Date().toISOString(),
+            sent_at: null,
+            last_error: "FCM_TOKEN_EMPTY",
+          }, { onConflict: "notification_id,device_id" });
+        if (invalid.error) throw invalid.error;
         return { token, ok: false, terminal: true, status: 0 };
       }
 
