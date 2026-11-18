@@ -242,6 +242,68 @@ class _AdminRefundsPageState extends ConsumerState<AdminRefundsPage> {
       'Remboursement fournisseur confirmé.',
     );
   }
+  Future<void> _reconcile(String refundId) async {
+    await _runAction(
+      () async {
+        final client = ref.read(supabaseProvider);
+        if (client == null) throw StateError('Connexion Supabase indisponible.');
+        return await client.rpc(
+          'reconcile_refund_accounting',
+          params: {'p_refund_id': refundId},
+        );
+      },
+      'Rapprochement comptable terminé.',
+    );
+  }
+
+  Future<void> _recoverWaveConfirmation(String refundId) async {
+    final controller = TextEditingController();
+    final reference = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Confirmer le remboursement Wave déjà reçu'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(
+            labelText: 'Référence du remboursement Wave',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Annuler'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, controller.text.trim()),
+            child: const Text('Confirmer'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (!mounted || reference == null || reference.isEmpty) return;
+
+    await _runAction(
+      () async {
+        final client = ref.read(supabaseProvider);
+        if (client == null) throw StateError('Connexion Supabase indisponible.');
+        await _ensureAllocation(refundId);
+        await client.rpc(
+          'record_provider_refund_confirmation',
+          params: {
+            'p_refund_id': refundId,
+            'p_provider_reference': reference,
+          },
+        );
+        return await client.rpc(
+          'reconcile_refund_accounting',
+          params: {'p_refund_id': refundId},
+        );
+      },
+      'Confirmation Wave et rapprochement comptable enregistrés.',
+    );
+  }
+
   Future<void> _execute(String refundId) async {
     final client = ref.read(supabaseProvider);
     if (client == null) return;
@@ -363,6 +425,8 @@ class _AdminRefundsPageState extends ConsumerState<AdminRefundsPage> {
                       if (value == 'approve') _approve(id);
                       if (value == 'reject') _reject(id);
                       if (value == 'execute') _execute(id);
+                      if (value == 'reconcile') _reconcile(id);
+                      if (value == 'recover_wave') _recoverWaveConfirmation(id);
                       if (value == 'manual_complete') _completeManual(id);
                     },
                     itemBuilder: (_) => [
@@ -380,6 +444,17 @@ class _AdminRefundsPageState extends ConsumerState<AdminRefundsPage> {
                         const PopupMenuItem(
                           value: 'execute',
                           child: Text('Exécuter'),
+                        ),
+                      if (provider == 'WAVE' && status == 'PROCESSING')
+                        const PopupMenuItem(
+                          value: 'recover_wave',
+                          child: Text('Confirmer Wave déjà remboursé'),
+                        ),
+                      if (status == 'COMPLETED' &&
+                          accountingStatus == 'PENDING_ALLOCATION')
+                        const PopupMenuItem(
+                          value: 'reconcile',
+                          child: Text('Reprendre le rapprochement comptable'),
                         ),
                       if (provider == 'CINETPAY' &&
                           (status == 'APPROVED' ||
