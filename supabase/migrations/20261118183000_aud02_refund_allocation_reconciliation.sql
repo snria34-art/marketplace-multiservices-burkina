@@ -231,6 +231,19 @@ begin
   if v_count = 0 then raise exception 'refund_allocations_required'; end if;
   if v_total <> v_refund.amount then raise exception 'refund_allocation_total_mismatch'; end if;
 
+  -- Lock affected commission rows in a stable order. A concurrent allocation or
+  -- reconciliation for the same order group must observe the latest reversal total.
+  for v_seller in
+    select distinct order_group_id
+    from public.refund_allocations
+    where refund_id = p_refund_id and commission_reversal_amount > 0
+    order by order_group_id
+  loop
+    perform 1 from public.commissions
+    where order_group_id = v_seller.order_group_id
+    for update;
+  end loop;
+
   -- Stable seller lock order serializes reconciliation against payout requests.
   for v_seller in
     select distinct seller_id from public.refund_allocations
@@ -304,6 +317,7 @@ begin
       from public.refund_allocations ra2
       join public.refunds r2 on r2.id = ra2.refund_id
       where ra2.order_group_id = c.order_group_id
+        and ra2.ledger_posted_at is not null
         and r2.status not in ('REJECTED','CANCELLED')
     ) >= c.commission_amount;
 
