@@ -1,5 +1,5 @@
 begin;
-select plan(30);
+select plan(33);
 select ok(to_regclass('public.refund_allocations') is not null, 'refund allocation table exists');
 select ok((select relrowsecurity from pg_class where oid='public.refund_allocations'::regclass), 'allocation table has RLS');
 select ok(not has_table_privilege('anon','public.refund_allocations','SELECT')
@@ -100,6 +100,17 @@ select ok(has_function_privilege('authenticated','public.get_refund_allocation_c
 select ok(position('private.is_admin()' in pg_get_functiondef('public.get_refund_allocation_candidates(uuid)'::regprocedure)) > 0
   and position('private.is_admin()' in pg_get_functiondef('public.get_refund_allocation_status(uuid)'::regprocedure)) > 0,
   'allocation review functions enforce administrator authorization');
+
+select ok(position('insert into public.seller_ledger' in
+  pg_get_functiondef('public.complete_refund(uuid,text)'::regprocedure)) = 0,
+  'provider completion does not write prorated seller ledger debits');
+select ok(has_function_privilege('service_role','public.complete_refund(uuid,text)','EXECUTE')
+  and not has_function_privilege('authenticated','public.complete_refund(uuid,text)','EXECUTE')
+  and not has_function_privilege('anon','public.complete_refund(uuid,text)','EXECUTE'),
+  'provider completion remains restricted to service role');
+select ok(position('refund_legacy_ledger_entries_present'
+  in pg_get_functiondef('public.reconcile_refund_accounting(uuid)'::regprocedure)) > 0,
+  'legacy seller refund ledger entries block duplicate allocation posting');
 
 select * from finish();
 rollback;
