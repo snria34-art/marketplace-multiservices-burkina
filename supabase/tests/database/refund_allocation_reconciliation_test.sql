@@ -1,5 +1,5 @@
 begin;
-select plan(21);
+select plan(22);
 select ok(to_regclass('public.refund_allocations') is not null, 'refund allocation table exists');
 select ok((select relrowsecurity from pg_class where oid='public.refund_allocations'::regclass), 'allocation table has RLS');
 select ok(not has_table_privilege('anon','public.refund_allocations','SELECT')
@@ -56,6 +56,11 @@ select ok(position('ra2.ledger_posted_at is not null'
   in pg_get_functiondef('public.reconcile_refund_accounting(uuid)'::regprocedure)) > 0
   and position('from public.commissions' in pg_get_functiondef('public.reconcile_refund_accounting(uuid)'::regprocedure)) > 0,
   'commission status waits for posted ledger reversals and locks commission rows');
+
+select ok(position('refund_not_eligible_for_allocation' in pg_get_functiondef('public.set_refund_allocations(uuid,jsonb)'::regprocedure)) > 0
+  and position('v_refund.status not in (''APPROVED'',''PROCESSING'',''COMPLETED'')'
+    in pg_get_functiondef('public.set_refund_allocations(uuid,jsonb)'::regprocedure)) > 0,
+  'allocation can be frozen after approval or attached to an in-flight/completed recovery');
 
 select * from finish();
 rollback;
