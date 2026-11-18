@@ -55,6 +55,7 @@ import '../../features/admin/presentation/admin_platform_health_page.dart';
 import '../../features/admin/presentation/admin_review_moderation_page.dart';
 import '../../features/admin/presentation/admin_accounts_page.dart';
 import '../../features/admin/presentation/admin_refunds_page.dart';
+import '../../features/admin/presentation/admin_seller_payouts_page.dart';
 import '../../features/admin/presentation/admin_partner_network_page.dart';
 import '../../features/whatsapp/presentation/whatsapp_assistant_page.dart';
 import '../../features/wallet/presentation/customer_wallet_page.dart';
@@ -331,6 +332,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/admin/accounts',
         builder: (_, _) => const AdminAccountsPage(),
+      ),
+      GoRoute(
+        path: '/admin/seller-payouts',
+        builder: (_, _) => const AdminSellerPayoutsPage(),
       ),
       GoRoute(
         path: '/admin/refunds',
