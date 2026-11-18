@@ -170,7 +170,6 @@ class _AdminRefundsPageState extends ConsumerState<AdminRefundsPage> {
         ],
       ),
     );
-    final raw = controller.text;
     controller.dispose();
     if (!mounted || payload == null) {
       throw StateError('Ventilation annulée : aucun remboursement exécuté.');
