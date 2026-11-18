@@ -341,3 +341,18 @@ La procédure détecte la convention historique depuis les écritures réelles d
 Les écritures du ledger utilisent `refund_allocation.id` comme référence unique. La commission reste dans son statut d'origine pendant les contre-passations partielles. Quand le cumul des allocations effectivement comptabilisées (`ledger_posted_at` renseigné) atteint `commission_amount`, la commission `POSTED` passe à `REVERSED`, tandis qu'une commission `PENDING` passe à `CANCELLED`. La procédure ne modifie jamais `base_amount`, `rate` ou `commission_amount`.
 
 **Limite d'intégration :** l'écran admin et l'Edge Function doivent encore appeler l'allocation avant l'exécution fournisseur dans le flux normal. Tant que cette intégration n'est pas réalisée, le gel comptable reste actif et les retraits ne doivent pas être libérés.
+
+### Addendum — intégration du flux d'exécution (18 novembre 2026)
+
+La migration `20261118194500_aud02_refund_execution_gate.sql` relie désormais le contrôle d'allocation au déclenchement fournisseur :
+
+- `get_refund_allocation_candidates` expose à l'administrateur les UUID des articles, groupes, vendeurs, quantités commandées et totaux de ligne ; aucune donnée n'est accessible anonymement.
+- `get_refund_allocation_status` permet à l'écran de vérifier si une allocation complète existe déjà.
+- `AdminRefundsPage` affiche les candidats et demande le JSON de ventilation approuvé avant l'exécution Wave ou la confirmation CinetPay. Les montants ne sont jamais calculés ou ventilés automatiquement par l'interface.
+- `admin_begin_refund` exige maintenant le statut `APPROVED` et une allocation dont la somme `customer_amount` égale exactement le montant du remboursement. Une demande sans allocation est refusée avant la transition vers `PROCESSING`.
+- Après confirmation Wave, l'Edge Function appelle `complete_refund`, puis `reconcile_refund_accounting` avec la session administrateur. Si le second appel échoue, la réponse signale que le prestataire a déjà confirmé : aucun nouvel appel Wave n'est lancé.
+- `admin_complete_manual_refund` exige la même allocation et exécute la confirmation locale et le rapprochement dans une transaction SQL.
+
+Le JSON saisi par l'administrateur doit reprendre les UUID affichés dans la fenêtre et contenir, pour chaque ligne `ITEM`, `quantity`, `customer_amount`, `seller_net_debit`, `commission_reversal_amount` et `platform_funded_amount`. Les montants sont en XOF entiers et leur somme par ligne doit être équilibrée. Une ligne `PLATFORM_ADJUSTMENT` ne peut être financée que par la plateforme. Toute ambiguïté de commission, quantité excessive, double allocation ou somme incorrecte est rejetée par la RPC.
+
+**Limites restantes :** le système ne calcule pas automatiquement la ventilation contractuelle des coupons, frais de livraison ou retours partiels ; la comptabilité doit fournir et approuver ces montants. Le client ne choisit toujours pas des articles/quantités au moment de créer sa demande. Les remboursements Wave partiels restent refusés par le contrôle existant. Les migrations et tests ajoutés n'ont pas été exécutés sur PostgreSQL isolé dans cette session ; aucune base distante ni aucun prestataire n'a été contacté.
