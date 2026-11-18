@@ -254,6 +254,15 @@ class _MechanicsPageState extends ConsumerState<MechanicsPage> {
         title: const Text('Mécaniciens'),
         actions: [
           IconButton(
+            tooltip: 'Actualiser',
+            onPressed: () => setState(() {
+              _mechanicsFuture = _loadMechanics();
+              _quotesFuture = _loadQuotes();
+              _isMechanicFuture = _loadOwnMechanic();
+            }),
+            icon: const Icon(Icons.refresh),
+          ),
+          IconButton(
             onPressed: _request,
             icon: const Icon(Icons.car_repair_outlined),
             tooltip: 'Demander un mécanicien',
@@ -284,6 +293,22 @@ class _MechanicsPageState extends ConsumerState<MechanicsPage> {
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Center(child: CircularProgressIndicator());
+              }
+
+              if (snapshot.hasError) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Impossible de charger les mécaniciens.'),
+                    TextButton.icon(
+                      onPressed: () => setState(
+                        () => _mechanicsFuture = _loadMechanics(),
+                      ),
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('Réessayer'),
+                    ),
+                  ],
+                );
               }
 
               final items =
@@ -333,6 +358,23 @@ class _MechanicsPageState extends ConsumerState<MechanicsPage> {
           FutureBuilder<List<Map<String, dynamic>>>(
             future: _quotesFuture,
             builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              if (snapshot.hasError) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Impossible de charger les devis reçus.'),
+                    TextButton.icon(
+                      onPressed: () => setState(() => _quotesFuture = _loadQuotes()),
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('Réessayer'),
+                    ),
+                  ],
+                );
+              }
+
               final quotes =
                   snapshot.data ?? const <Map<String, dynamic>>[];
 
