@@ -147,8 +147,8 @@ class _AdminRefundsPageState extends ConsumerState<AdminRefundsPage> {
                 ...rows.map((row) => Padding(
                   padding: const EdgeInsets.only(bottom: 8),
                   child: SelectableText(
-                    'Article: ${row['order_item_id']}\\n'
-                    'Groupe: ${row['order_group_id']} • Vendeur: ${row['seller_id']}\\n'
+                    'Article: ${row['order_item_id']}\n'
+                    'Groupe: ${row['order_group_id']} • Vendeur: ${row['seller_id']}\n'
                     'Quantité commandée: ${row['ordered_quantity']} • Total ligne: ${row['line_total']} XOF',
                   ),
                 )),
