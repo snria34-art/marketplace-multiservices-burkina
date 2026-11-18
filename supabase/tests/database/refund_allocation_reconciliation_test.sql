@@ -46,7 +46,7 @@ select ok(
   'customer amount equation separates net seller debit, commission reversal and platform funding');
 select ok(position('refund_commission_reversal_exceeds_original'
   in pg_get_functiondef('public.set_refund_allocations(uuid,jsonb)'::regprocedure)) > 0
-  and position('refund_commission_not_posted'
+  and position('refund_commission_ledger_convention_unknown'
   in pg_get_functiondef('public.set_refund_allocations(uuid,jsonb)'::regprocedure)) > 0,
   'commission reversal is bounded by a locked posted commission');
 select ok(position('''COMMISSION_REVERSAL''' in pg_get_functiondef('public.reconcile_refund_accounting(uuid)'::regprocedure)) > 0
