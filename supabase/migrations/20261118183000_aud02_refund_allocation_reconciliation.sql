@@ -40,7 +40,7 @@ alter table public.refund_allocations enable row level security;
 revoke all on public.refund_allocations from public, anon, authenticated;
 
 comment on table public.refund_allocations is
-  'Immutable allocation for provider-confirmed refunds. Seller liability is explicitly approved; no cross-seller prorating.';
+  'Immutable allocation frozen after approval and before provider execution, or attached to an in-flight/completed recovery. Seller liability is explicitly approved; no cross-seller prorating.';
 comment on column public.refund_allocations.seller_net_debit is
   'Final net seller liability explicitly approved by finance after commission reversal.';
 comment on column public.refund_allocations.commission_reversal_amount is
