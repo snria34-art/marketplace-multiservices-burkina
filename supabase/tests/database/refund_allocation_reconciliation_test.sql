@@ -1,5 +1,5 @@
 begin;
-select plan(15);
+select plan(20);
 select ok(to_regclass('public.refund_allocations') is not null, 'refund allocation table exists');
 select ok((select relrowsecurity from pg_class where oid='public.refund_allocations'::regclass), 'allocation table has RLS');
 select ok(not has_table_privilege('anon','public.refund_allocations','SELECT')
@@ -30,6 +30,25 @@ select ok(position('refund_not_processing' in pg_get_functiondef('public.record_
   and position('provider_refund_reference_conflict' in pg_get_functiondef('public.record_provider_refund_confirmation(uuid,text)'::regprocedure)) > 0
   and position('status = ''COMPLETED''' in pg_get_functiondef('public.record_provider_refund_confirmation(uuid,text)'::regprocedure)) > 0,
   'recovery accepts only processing refunds and is idempotent on the same provider reference');
+
+select ok(exists (select 1 from information_schema.columns where table_schema='public'
+  and table_name='refund_allocations' and column_name='commission_reversal_amount'),
+  'allocation stores a separate commission reversal amount');
+select ok(position('seller_net_debit + commission_reversal_amount + platform_funded_amount = customer_amount'
+  in pg_get_functiondef('public.set_refund_allocations(uuid,jsonb)'::regprocedure)) > 0,
+  'customer amount equation separates net seller debit, commission reversal and platform funding');
+select ok(position('refund_commission_reversal_exceeds_original'
+  in pg_get_functiondef('public.set_refund_allocations(uuid,jsonb)'::regprocedure)) > 0
+  and position('refund_commission_not_posted'
+  in pg_get_functiondef('public.set_refund_allocations(uuid,jsonb)'::regprocedure)) > 0,
+  'commission reversal is bounded by a locked posted commission');
+select ok(position('''COMMISSION_REVERSAL''' in pg_get_functiondef('public.reconcile_refund_accounting(uuid)'::regprocedure)) > 0
+  and position('-(v_allocation.seller_net_debit + v_allocation.commission_reversal_amount)'
+    in pg_get_functiondef('public.reconcile_refund_accounting(uuid)'::regprocedure)) > 0,
+  'ledger posts gross refund debit and positive commission reversal separately');
+select ok(position('set status = ''REVERSED''' in pg_get_functiondef('public.reconcile_refund_accounting(uuid)'::regprocedure)) > 0
+  and position('>= c.commission_amount' in pg_get_functiondef('public.reconcile_refund_accounting(uuid)'::regprocedure)) > 0,
+  'commission status changes only after full cumulative reversal');
 
 select * from finish();
 rollback;
