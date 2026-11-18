@@ -34,10 +34,15 @@ select ok(position('refund_not_processing' in pg_get_functiondef('public.record_
 select ok(exists (select 1 from information_schema.columns where table_schema='public'
   and table_name='refund_allocations' and column_name='commission_reversal_amount'),
   'allocation stores a separate commission reversal amount');
-select ok(position('seller_net_debit + commission_reversal_amount + platform_funded_amount = customer_amount'
-  in (select pg_get_constraintdef(oid) from pg_constraint
-      where conname = 'refund_allocation_funding_balanced'
-        and conrelid = 'public.refund_allocations'::regclass)) > 0,
+select ok(
+  position('seller_net_debit' in (select pg_get_constraintdef(oid) from pg_constraint
+    where conname = 'refund_allocation_funding_balanced' and conrelid = 'public.refund_allocations'::regclass)) > 0
+  and position('commission_reversal_amount' in (select pg_get_constraintdef(oid) from pg_constraint
+    where conname = 'refund_allocation_funding_balanced' and conrelid = 'public.refund_allocations'::regclass)) > 0
+  and position('platform_funded_amount' in (select pg_get_constraintdef(oid) from pg_constraint
+    where conname = 'refund_allocation_funding_balanced' and conrelid = 'public.refund_allocations'::regclass)) > 0
+  and position('customer_amount' in (select pg_get_constraintdef(oid) from pg_constraint
+    where conname = 'refund_allocation_funding_balanced' and conrelid = 'public.refund_allocations'::regclass)) > 0,
   'customer amount equation separates net seller debit, commission reversal and platform funding');
 select ok(position('refund_commission_reversal_exceeds_original'
   in pg_get_functiondef('public.set_refund_allocations(uuid,jsonb)'::regprocedure)) > 0
