@@ -25,6 +25,161 @@ class _SellerFinancePageState extends ConsumerState<SellerFinancePage> {
     _future = _load();
   }
 
+  Future<void> _requestPayout() async {
+    final repo = ref.read(sellerFinanceRepositoryProvider);
+    if (repo == null) return;
+
+    final amountController = TextEditingController();
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        var provider = 'ORANGE_MONEY';
+        var submitting = false;
+        String? error;
+
+        return StatefulBuilder(
+          builder: (context, setDialogState) => AlertDialog(
+            title: const Text('Demander un retrait'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: amountController,
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: false,
+                  ),
+                  decoration: const InputDecoration(
+                    labelText: 'Montant en XOF',
+                    helperText: 'Saisissez un montant entier disponible.',
+                  ),
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String>(
+                  value: provider,
+                  decoration: const InputDecoration(
+                    labelText: 'Moyen de paiement',
+                  ),
+                  items: const [
+                    DropdownMenuItem(
+                      value: 'ORANGE_MONEY',
+                      child: Text('Orange Money'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'WAVE',
+                      child: Text('Wave'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'MOOV_MONEY',
+                      child: Text('Moov Money'),
+                    ),
+                  ],
+                  onChanged: submitting
+                      ? null
+                      : (value) {
+                          if (value != null) {
+                            setDialogState(() => provider = value);
+                          }
+                        },
+                ),
+                if (error != null) ...[
+                  const SizedBox(height: 12),
+                  Text(
+                    error!,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: submitting
+                    ? null
+                    : () => Navigator.of(dialogContext).pop(),
+                child: const Text('Annuler'),
+              ),
+              FilledButton(
+                onPressed: submitting
+                    ? null
+                    : () async {
+                        final amount = num.tryParse(
+                          amountController.text.trim(),
+                        );
+                        if (amount == null ||
+                            amount <= 0 ||
+                            amount != amount.truncate()) {
+                          setDialogState(() {
+                            error = 'Entrez un montant XOF entier valide.';
+                          });
+                          return;
+                        }
+
+                        setDialogState(() {
+                          submitting = true;
+                          error = null;
+                        });
+                        try {
+                          final sellerId = await repo.sellerId();
+                          if (sellerId == null) {
+                            throw StateError('Compte vendeur introuvable.');
+                          }
+                          await repo.requestPayout(
+                            sellerId: sellerId,
+                            amount: amount,
+                            provider: provider,
+                          );
+                          if (!dialogContext.mounted) return;
+                          Navigator.of(dialogContext).pop();
+                          if (!mounted) return;
+                          setState(() => _future = _load());
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'Demande de retrait enregistrée.',
+                              ),
+                            ),
+                          );
+                        } catch (e) {
+                          setDialogState(() {
+                            submitting = false;
+                            error = _payoutErrorMessage(e);
+                          });
+                        }
+                      },
+                child: submitting
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Text('Confirmer'),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+    amountController.dispose();
+  }
+
+  String _payoutErrorMessage(Object error) {
+    final message = error.toString();
+    if (message.contains('seller_payout_blocked_by_refund_reconciliation')) {
+      return 'Retrait bloqué : un remboursement de commande doit encore être rapproché.';
+    }
+    if (message.contains('insufficient_seller_balance')) {
+      return 'Solde disponible insuffisant pour ce montant.';
+    }
+    if (message.contains('seller_not_eligible')) {
+      return 'Le compte vendeur doit être vérifié pour demander un retrait.';
+    }
+    if (message.contains('amount_invalid')) {
+      return 'Le montant demandé est invalide.';
+    }
+    return 'Demande impossible pour le moment. Vérifiez votre solde et réessayez.';
+  }
+
   Future<_FinanceSnapshot> _load() async {
     final repo = ref.read(sellerFinanceRepositoryProvider);
     if (repo == null) {
@@ -112,6 +267,12 @@ class _SellerFinancePageState extends ConsumerState<SellerFinancePage> {
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                 ),
+              ),
+              const SizedBox(height: 12),
+              FilledButton.icon(
+                onPressed: data.balance > 0 ? _requestPayout : null,
+                icon: const Icon(Icons.account_balance_wallet_outlined),
+                label: const Text('Demander un retrait'),
               ),
               const SizedBox(height: 12),
               Text(
