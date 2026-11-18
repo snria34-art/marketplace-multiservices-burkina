@@ -217,10 +217,12 @@ class _ConversationList extends StatelessWidget {
   const _ConversationList({
     required this.future,
     required this.onOpen,
+    required this.onRetry,
   });
 
   final Future<List<Map<String, dynamic>>> future;
   final ValueChanged<String> onOpen;
+  final VoidCallback onRetry;
 
   @override
   Widget build(BuildContext context) {
@@ -229,6 +231,29 @@ class _ConversationList extends StatelessWidget {
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
+        }
+
+        if (snapshot.hasError) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    'Impossible de charger les conversations.',
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 8),
+                  FilledButton.icon(
+                    onPressed: onRetry,
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('Réessayer'),
+                  ),
+                ],
+              ),
+            ),
+          );
         }
 
         final items =
