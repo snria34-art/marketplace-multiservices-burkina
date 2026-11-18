@@ -35,6 +35,17 @@
 - La présence des fichiers Firebase natifs, de la clé APNs et des secrets de serveur n'est pas certifiée.
 - Les parcours de rotation de token, désactivation après déconnexion, réseau indisponible et réinstallation doivent être validés sur appareils de test.
 
+### Correction de fiabilité ajoutée sur la branche de maintenance
+
+- Ajout de `notification_push_deliveries`, une trace d'état par notification et appareil.
+- Les appareils dont l'envoi est déjà confirmé ne sont plus renvoyés lors d'une reprise.
+- Une notification partiellement délivrée reste en attente jusqu'à ce que chaque appareil actif ait un état terminal.
+- Les jetons invalides sont marqués et les appareils correspondants désactivés lorsqu'une réponse FCM confirme `UNREGISTERED`.
+- Une suite pgTAP statique vérifie la table, l'index unique et l'absence de droits client.
+- Le runbook `docs/runbooks/aud-03-notification-delivery.md` décrit l'ordre migration/Edge et les limites at-least-once.
+
+Cette correction est versionnée mais non exécutée : migration locale, pgTAP, FCM réel et APNs restent à tester. Les notifications historiques déjà marquées comme envoyées malgré des erreurs partielles ne sont pas réouvertes automatiquement.
+
 ## 3. CI native vérifiée
 
 - Flutter CI run [43764285828](https://github.com/snria34-art/marketplace-multiservices-burkina/actions/runs/43764285828) : succès, analyse, tests et build Web Debug ; 50 tests confirmés dans le rapport de suivi.
