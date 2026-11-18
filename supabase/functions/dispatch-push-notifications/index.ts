@@ -311,8 +311,30 @@ async function processNotification(
         })
         .eq("id", notificationId);
 
-      return { id: notificationId, sent: 0 };
+      return { id: notificationId, sent: 0, pending: 0 };
     }
+
+    const deviceIds = devices
+      .map((device) => String(device.id ?? "").trim())
+      .filter((id) => id.length > 0);
+    const deliveryRead = await adminClient
+      .from("notification_push_deliveries")
+      .select("device_id,status")
+      .eq("notification_id", notificationId)
+      .in("device_id", deviceIds);
+    if (deliveryRead.error) throw deliveryRead.error;
+
+    // A notification is complete only when every currently active device has
+    // a terminal result. Successful devices are never sent the same message
+    // again when another device needs a retry.
+    const terminalDeviceIds = new Set(
+      ((deliveryRead.data ?? []) as Json[])
+        .filter((row) => row.status === "SENT" || row.status === "INVALID")
+        .map((row) => String(row.device_id ?? "")),
+    );
+    const pendingDevices = devices.filter(
+      (device) => !terminalDeviceIds.has(String(device.id ?? "")),
+    );
 
     const title = String(notification.title ?? "Marketplace Burkina");
     const body = String(notification.body ?? "Nouvelle notification");
@@ -320,9 +342,24 @@ async function processNotification(
     data.notification_id = notificationId;
     data.type = String(notification.type ?? "general");
 
-    const results = await mapWithConcurrency(devices, 5, async (device) => {
+    const results = await mapWithConcurrency(pendingDevices, 5, async (device) => {
+      const deviceId = String(device.id ?? "").trim();
       const token = String(device.push_token ?? "").trim();
-      if (!token) return { token, ok: false, status: 0, body: null };
+      if (!deviceId || !token) {
+        return { token, ok: false, terminal: true, status: 0 };
+      }
+
+      const attemptedAt = new Date().toISOString();
+      const seed = await adminClient
+        .from("notification_push_deliveries")
+        .upsert({
+          notification_id: notificationId,
+          device_id: deviceId,
+          status: "PENDING",
+          last_attempt_at: attemptedAt,
+          last_error: null,
+        }, { onConflict: "notification_id,device_id", ignoreDuplicates: true });
+      if (seed.error) throw seed.error;
 
       try {
         const result = await sendToToken(
@@ -343,46 +380,99 @@ async function processNotification(
               "type.googleapis.com/google.firebase.fcm.v1.FcmError",
         ) as Json | undefined;
         const errorCode = fcmError?.errorCode;
+        const invalidToken = !result.ok &&
+          (errorCode === "UNREGISTERED" || result.status === 404);
+        const deliveryStatus = result.ok
+          ? "SENT"
+          : invalidToken
+          ? "INVALID"
+          : "PENDING";
+        const completedAt = new Date().toISOString();
 
-        if (
-          !result.ok && (errorCode === "UNREGISTERED" || result.status === 404)
-        ) {
-          await adminClient
+        if (invalidToken) {
+          const deactivated = await adminClient
             .from("notification_devices")
-            .update({ active: false, last_seen_at: new Date().toISOString() })
-            .eq("id", String(device.id ?? ""));
+            .update({ active: false, last_seen_at: completedAt })
+            .eq("id", deviceId);
+          if (deactivated.error) throw deactivated.error;
         }
 
-        return { token, ...result };
+        const recorded = await adminClient
+          .from("notification_push_deliveries")
+          .upsert({
+            notification_id: notificationId,
+            device_id: deviceId,
+            status: deliveryStatus,
+            last_attempt_at: completedAt,
+            sent_at: result.ok ? completedAt : null,
+            last_error: result.ok
+              ? null
+              : invalidToken
+              ? "FCM_TOKEN_INVALID"
+              : "FCM_SEND_FAILED",
+          }, { onConflict: "notification_id,device_id" });
+        if (recorded.error) throw recorded.error;
+
+        return {
+          token,
+          ok: result.ok,
+          terminal: result.ok || invalidToken,
+          status: result.status,
+        };
       } catch (error) {
         console.error(JSON.stringify({
           event: "fcm_device_send_failed",
           error: safeErrorInfo(error),
         }));
+        const recorded = await adminClient
+          .from("notification_push_deliveries")
+          .upsert({
+            notification_id: notificationId,
+            device_id: deviceId,
+            status: "PENDING",
+            last_attempt_at: new Date().toISOString(),
+            last_error: "FCM_SEND_FAILED",
+          }, { onConflict: "notification_id,device_id" });
+        if (recorded.error) throw recorded.error;
         return {
           token,
           ok: false,
+          terminal: false,
           status: 0,
-          body: { error: { message: "FCM_SEND_FAILED" } },
         };
       }
     });
 
+    const deliveryState = await adminClient
+      .from("notification_push_deliveries")
+      .select("device_id,status")
+      .eq("notification_id", notificationId)
+      .in("device_id", deviceIds);
+    if (deliveryState.error) throw deliveryState.error;
+
+    const stateRows = (deliveryState.data ?? []) as Json[];
+    const activeDeviceIds = new Set(deviceIds);
+    const terminalCount = stateRows.filter((row) =>
+      activeDeviceIds.has(String(row.device_id ?? "")) &&
+      (row.status === "SENT" || row.status === "INVALID")
+    ).length;
+    const pendingCount = Math.max(0, devices.length - terminalCount);
+    const invalidCount = stateRows.filter((row) =>
+      activeDeviceIds.has(String(row.device_id ?? "")) && row.status === "INVALID"
+    ).length;
     const sent = results.filter((item) => item.ok).length;
     const errors = results
-      .filter((item) => !item.ok)
+      .filter((item) => !item.ok && !item.terminal)
       .map(() => "FCM_SEND_FAILED")
       .slice(0, 5);
 
     await adminClient
       .from("notifications")
       .update({
-        push_sent_at: sent > 0 ? new Date().toISOString() : null,
+        push_sent_at: pendingCount === 0 ? new Date().toISOString() : null,
         push_processing_at: null,
         push_attempts: Number(notification.push_attempts ?? 0) + 1,
-        push_error: sent > 0
-          ? errors.length ? "FCM_SEND_FAILED" : null
-          : "FCM_SEND_FAILED",
+        push_error: pendingCount > 0 ? "FCM_SEND_FAILED" : null,
       })
       .eq("id", notificationId);
 
@@ -390,6 +480,8 @@ async function processNotification(
       id: notificationId,
       sent,
       total: devices.length,
+      pending: pendingCount,
+      invalid: invalidCount,
       errors,
     };
   } catch (error) {
