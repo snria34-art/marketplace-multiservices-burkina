@@ -333,3 +333,5 @@ $function$;
 
 revoke all on function public.record_provider_refund_confirmation(uuid,text) from public, anon;
 grant execute on function public.record_provider_refund_confirmation(uuid,text) to authenticated;
+
+commit;
