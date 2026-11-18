@@ -327,14 +327,18 @@ L'action « Exécuter » de l'écran admin a été limitée à `WAVE` + `APPROVE
 
 ### Contrat d'allocation et contre-passation de commission (AUD-02)
 
-La RPC `set_refund_allocations(refund_id, allocations)` accepte un remboursement `APPROVED`, `PROCESSING` ou `COMPLETED` : le flux normal doit figer l'allocation après approbation et avant l'appel prestataire ; les statuts `PROCESSING`/`COMPLETED` servent uniquement à raccorder une tentative déjà engagée ou confirmée.
+La RPC `set_refund_allocations(refund_id, allocations)` accepte un remboursement `APPROVED`, `PROCESSING` ou `COMPLETED`. Le flux normal doit figer l'allocation après approbation et avant l'appel prestataire ; `PROCESSING`/`COMPLETED` servent uniquement à raccorder une tentative déjà engagée ou confirmée.
 
-Pour une ligne article, les montants sont exprimés en XOF entiers et doivent respecter :
+Pour chaque ligne article, les montants XOF entiers respectent :
 
 `customer_amount = seller_net_debit + commission_reversal_amount + platform_funded_amount`
 
-Exemple : remboursement client 1 000 XOF, dette nette vendeur approuvée 900 XOF, contre-passation de commission 100 XOF, financement plateforme 0 XOF. Le ledger reçoit `REFUND -1 000` et `COMMISSION_REVERSAL +100`, soit un impact vendeur net de -900 XOF. Les deux écritures portent le même `refund_allocation.id` comme référence, ce qui les rend idempotentes par allocation.
+La procédure détecte la convention historique depuis les écritures réelles du groupe et la fige dans `commission_accounting_mode` :
 
-Une commission reste `POSTED` tant que les contre-passations effectivement comptabilisées sont partielles. Elle passe à `REVERSED` uniquement lorsque la somme des allocations dont `ledger_posted_at` est renseigné atteint le montant de commission d'origine. La procédure ne modifie jamais `base_amount`, `rate` ou `commission_amount`.
+- **`GROSS_LEDGER`** : `SALE` brut et `COMMISSION` négative séparée. Pour un remboursement client de 1 000 XOF avec débit vendeur net approuvé de 900 XOF et contre-passation de commission de 100 XOF, le ledger reçoit `REFUND -1 000` puis `COMMISSION_REVERSAL +100`. L'impact vendeur net est exactement -900 XOF.
+- **`NET_SALE`** : le `SALE` crédité est déjà net et la commission est `PENDING`, sans écriture `COMMISSION` négative. Avec les mêmes montants, le ledger reçoit seulement `REFUND -900` ; la commission déjà retenue n'est jamais recréditée au vendeur. Sa part de 100 XOF est neutralisée côté commission/plateforme, pas par un crédit vendeur.
+- Si les écritures ne correspondent sans ambiguïté à aucun de ces modèles, l'allocation est refusée. Aucun mode ne peut être choisi arbitrairement par le client ou l'interface.
 
-**Limite d'intégration :** l'écran admin et l'Edge Function doivent encore appeler l'allocation dans cet ordre avant l'exécution fournisseur. Tant que cette intégration n'est pas réalisée, le gel comptable reste actif et les retraits ne doivent pas être libérés.
+Les écritures du ledger utilisent `refund_allocation.id` comme référence unique. La commission reste dans son statut d'origine pendant les contre-passations partielles. Quand le cumul des allocations effectivement comptabilisées (`ledger_posted_at` renseigné) atteint `commission_amount`, la commission `POSTED` passe à `REVERSED`, tandis qu'une commission `PENDING` passe à `CANCELLED`. La procédure ne modifie jamais `base_amount`, `rate` ou `commission_amount`.
+
+**Limite d'intégration :** l'écran admin et l'Edge Function doivent encore appeler l'allocation avant l'exécution fournisseur dans le flux normal. Tant que cette intégration n'est pas réalisée, le gel comptable reste actif et les retraits ne doivent pas être libérés.
