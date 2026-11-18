@@ -435,6 +435,12 @@ class _AdminDashboardPageState
               ),
               const SizedBox(height: 8),
               FilledButton.icon(
+                onPressed: () => context.push('/admin/seller-payouts'),
+                icon: const Icon(Icons.account_balance_wallet_outlined),
+                label: const Text('Traiter les retraits vendeurs'),
+              ),
+              const SizedBox(height: 8),
+              FilledButton.icon(
                 onPressed: _sendPushTest,
                 icon: const Icon(Icons.notifications_active_outlined),
                 label: const Text('Tester une notification push'),
