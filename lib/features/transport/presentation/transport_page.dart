@@ -213,6 +213,23 @@ class _TransportPageState extends ConsumerState<TransportPage> {
           FutureBuilder<List<Map<String, dynamic>>>(
             future: _ticketsFuture,
             builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              if (snapshot.hasError) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Impossible de charger vos billets.'),
+                    TextButton.icon(
+                      onPressed: () => setState(() => _ticketsFuture = _loadTickets()),
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('Réessayer'),
+                    ),
+                  ],
+                );
+              }
+
               final tickets =
                   snapshot.data ?? const <Map<String, dynamic>>[];
 
