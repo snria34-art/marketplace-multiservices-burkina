@@ -323,3 +323,18 @@ La relecture de `AdminRefundsPage` et des fonctions SQL montre que l'interface a
 En conséquence, les retraits des vendeurs associés restent bloqués après un remboursement exécuté tant que le rapprochement n'est pas résolu par un mécanisme serveur privilégié. Cette limitation doit être traitée comme un blocage opérationnel à planifier, pas comme une raison de supprimer le gel ou d'autoriser une modification directe de la table privée.
 
 L'action « Exécuter » de l'écran admin a été limitée à `WAVE` + `APPROVED` : `admin_begin_refund` n'accepte pas `FAILED`/`PROCESSING` et CinetPay nécessite sa confirmation manuelle. Les résultats fournisseur ambigus ne doivent jamais être relancés automatiquement.
+
+
+### Contrat d'allocation et contre-passation de commission (AUD-02)
+
+La RPC `set_refund_allocations(refund_id, allocations)` accepte un remboursement `APPROVED`, `PROCESSING` ou `COMPLETED` : le flux normal doit figer l'allocation après approbation et avant l'appel prestataire ; les statuts `PROCESSING`/`COMPLETED` servent uniquement à raccorder une tentative déjà engagée ou confirmée.
+
+Pour une ligne article, les montants sont exprimés en XOF entiers et doivent respecter :
+
+`customer_amount = seller_net_debit + commission_reversal_amount + platform_funded_amount`
+
+Exemple : remboursement client 1 000 XOF, dette nette vendeur approuvée 900 XOF, contre-passation de commission 100 XOF, financement plateforme 0 XOF. Le ledger reçoit `REFUND -1 000` et `COMMISSION_REVERSAL +100`, soit un impact vendeur net de -900 XOF. Les deux écritures portent le même `refund_allocation.id` comme référence, ce qui les rend idempotentes par allocation.
+
+Une commission reste `POSTED` tant que les contre-passations effectivement comptabilisées sont partielles. Elle passe à `REVERSED` uniquement lorsque la somme des allocations dont `ledger_posted_at` est renseigné atteint le montant de commission d'origine. La procédure ne modifie jamais `base_amount`, `rate` ou `commission_amount`.
+
+**Limite d'intégration :** l'écran admin et l'Edge Function doivent encore appeler l'allocation dans cet ordre avant l'exécution fournisseur. Tant que cette intégration n'est pas réalisée, le gel comptable reste actif et les retraits ne doivent pas être libérés.
