@@ -114,7 +114,7 @@ class _AdminRefundsPageState extends ConsumerState<AdminRefundsPage> {
         ? candidates.map((row) => Map<String, dynamic>.from(row as Map)).toList()
         : <Map<String, dynamic>>[];
     final controller = TextEditingController(
-      text: '[\\n  {\\n    "allocation_type": "ITEM",\\n    "order_item_id": "REMPLACER_UUID_ARTICLE",\\n    "quantity": 1,\\n    "customer_amount": 0,\\n    "seller_net_debit": 0,\\n    "commission_reversal_amount": 0,\\n    "platform_funded_amount": 0\\n  }\\n]',
+      text: '[\n  {\n    "allocation_type": "ITEM",\n    "order_item_id": "REMPLACER_UUID_ARTICLE",\n    "quantity": 1,\n    "customer_amount": 0,\n    "seller_net_debit": 0,\n    "commission_reversal_amount": 0,\n    "platform_funded_amount": 0\n  }\n]',
     );
 
     final payload = await showDialog<String>(
@@ -137,8 +137,8 @@ class _AdminRefundsPageState extends ConsumerState<AdminRefundsPage> {
                 ...rows.map((row) => Padding(
                   padding: const EdgeInsets.only(bottom: 8),
                   child: SelectableText(
-                    'Article: ${row['order_item_id']}\\n'
-                    'Groupe: ${row['order_group_id']} • Vendeur: ${row['seller_id']}\\n'
+                    'Article: ${row['order_item_id']}\n'
+                    'Groupe: ${row['order_group_id']} • Vendeur: ${row['seller_id']}\n'
                     'Quantité commandée: ${row['ordered_quantity']} • Total ligne: ${row['line_total']} XOF',
                   ),
                 )),
