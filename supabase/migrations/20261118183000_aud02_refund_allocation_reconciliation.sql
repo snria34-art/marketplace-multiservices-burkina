@@ -332,25 +332,38 @@ begin
   for v_allocation in
     select * from public.refund_allocations where refund_id = p_refund_id order by id
   loop
-    if v_allocation.seller_net_debit > 0
-       or (v_allocation.commission_accounting_mode = 'GROSS_LEDGER' and v_allocation.commission_reversal_amount > 0) then
+    if v_allocation.commission_accounting_mode = 'GROSS_LEDGER' then
       insert into public.seller_ledger(
         seller_id, order_group_id, entry_type, amount, currency, reference_id
       ) values (
         v_allocation.seller_id, v_allocation.order_group_id, 'REFUND',
-        -(v_allocation.seller_net_debit
-          + case when v_allocation.commission_accounting_mode = 'GROSS_LEDGER'
-                 then v_allocation.commission_reversal_amount else 0 end),
+        -(v_allocation.seller_net_debit + v_allocation.commission_reversal_amount),
         'XOF', v_allocation.id
       );
-    end if;
-    if v_allocation.commission_accounting_mode = 'GROSS_LEDGER'
-       and v_allocation.commission_reversal_amount > 0 then
+      if v_allocation.commission_reversal_amount > 0 then
+        insert into public.seller_ledger(
+          seller_id, order_group_id, entry_type, amount, currency, reference_id
+        ) values (
+          v_allocation.seller_id, v_allocation.order_group_id, 'COMMISSION_REVERSAL',
+          v_allocation.commission_reversal_amount, 'XOF', v_allocation.id
+        );
+      end if;
+    elsif v_allocation.commission_accounting_mode = 'NET_SALE' then
+      -- The commission was already withheld from SALE; never credit it again.
+      if v_allocation.seller_net_debit > 0 then
+        insert into public.seller_ledger(
+          seller_id, order_group_id, entry_type, amount, currency, reference_id
+        ) values (
+          v_allocation.seller_id, v_allocation.order_group_id, 'REFUND',
+          -v_allocation.seller_net_debit, 'XOF', v_allocation.id
+        );
+      end if;
+    elsif v_allocation.seller_net_debit > 0 then
       insert into public.seller_ledger(
         seller_id, order_group_id, entry_type, amount, currency, reference_id
       ) values (
-        v_allocation.seller_id, v_allocation.order_group_id, 'COMMISSION_REVERSAL',
-        v_allocation.commission_reversal_amount, 'XOF', v_allocation.id
+        v_allocation.seller_id, v_allocation.order_group_id, 'REFUND',
+        -v_allocation.seller_net_debit, 'XOF', v_allocation.id
       );
     end if;
   end loop;
