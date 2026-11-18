@@ -7,6 +7,7 @@ import '../../features/cart/data/cart_repository.dart';
 import '../../features/catalog/data/catalog_repository.dart';
 import '../../features/checkout/data/checkout_repository.dart';
 import '../../features/messaging/data/messaging_repository.dart';
+import '../../features/notifications/data/notification_repository.dart';
 import '../../features/seller/data/seller_repository.dart';
 import '../../features/seller/data/seller_products_repository.dart';
 import '../../features/verticals/data/vertical_repository.dart';
@@ -38,6 +39,12 @@ final checkoutRepositoryProvider = Provider<CheckoutRepository?>((ref) {
 final messagingRepositoryProvider = Provider<MessagingRepository?>((ref) {
   final client = ref.watch(supabaseProvider);
   return client == null ? null : MessagingRepository(client);
+});
+
+final notificationRepositoryProvider =
+    Provider<NotificationRepository?>((ref) {
+  final client = ref.watch(supabaseProvider);
+  return client == null ? null : NotificationRepository(client);
 });
 
 final sellerRepositoryProvider = Provider<SellerRepository?>((ref) {
