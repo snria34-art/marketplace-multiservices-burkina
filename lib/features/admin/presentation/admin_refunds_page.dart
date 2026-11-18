@@ -113,18 +113,17 @@ class _AdminRefundsPageState extends ConsumerState<AdminRefundsPage> {
     final rows = candidates is List
         ? candidates.map((row) => Map<String, dynamic>.from(row as Map)).toList()
         : <Map<String, dynamic>>[];
+    final template = rows.map((row) => <String, dynamic>{
+      'allocation_type': 'ITEM',
+      'order_item_id': row['order_item_id'],
+      'quantity': 1,
+      'customer_amount': 0,
+      'seller_net_debit': 0,
+      'commission_reversal_amount': 0,
+      'platform_funded_amount': 0,
+    }).toList();
     final controller = TextEditingController(
-      text: '''[
-  {
-    "allocation_type": "ITEM",
-    "order_item_id": "REMPLACER_UUID_ARTICLE",
-    "quantity": 1,
-    "customer_amount": 0,
-    "seller_net_debit": 0,
-    "commission_reversal_amount": 0,
-    "platform_funded_amount": 0
-  }
-]''',
+      text: const JsonEncoder.withIndent('  ').convert(template),
     );
 
     final payload = await showDialog<String>(
@@ -140,7 +139,7 @@ class _AdminRefundsPageState extends ConsumerState<AdminRefundsPage> {
               children: [
                 const Text(
                   'Saisir les allocations validées par la comptabilité. '
-                  'Ne pas répartir au prorata. Les montants doivent être des XOF entiers.',
+                  'Ne pas répartir au prorata. Les montants doivent être des XOF entiers. Supprimer les articles non concernés, ajuster les quantités et montants, puis ajouter une ligne PLATFORM_ADJUSTMENT si nécessaire.',
                 ),
                 const SizedBox(height: 12),
                 const Text('Articles de la commande :'),
