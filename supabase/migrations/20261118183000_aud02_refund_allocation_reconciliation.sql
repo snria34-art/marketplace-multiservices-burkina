@@ -14,12 +14,17 @@ create table if not exists public.refund_allocations (
   customer_amount numeric(14,2) not null check (customer_amount > 0 and customer_amount = trunc(customer_amount)),
   seller_net_debit numeric(14,2) not null default 0 check (seller_net_debit >= 0 and seller_net_debit = trunc(seller_net_debit)),
   commission_reversal_amount numeric(14,2) not null default 0 check (commission_reversal_amount >= 0 and commission_reversal_amount = trunc(commission_reversal_amount)),
+  commission_accounting_mode text not null default 'NONE' check (commission_accounting_mode in ('NONE','GROSS_LEDGER','NET_SALE')),
   platform_funded_amount numeric(14,2) not null default 0 check (platform_funded_amount >= 0 and platform_funded_amount = trunc(platform_funded_amount)),
   currency text not null default 'XOF' check (currency = 'XOF'),
   created_by uuid references auth.users(id) on delete set null,
   created_at timestamptz not null default now(),
   ledger_posted_at timestamptz,
   constraint refund_allocation_funding_balanced check (seller_net_debit + commission_reversal_amount + platform_funded_amount = customer_amount),
+  constraint refund_allocation_commission_mode_valid check (
+    (commission_reversal_amount = 0 and commission_accounting_mode = 'NONE')
+    or (commission_reversal_amount > 0 and commission_accounting_mode in ('GROSS_LEDGER','NET_SALE'))
+  ),
   constraint refund_allocation_shape_valid check (
     (allocation_type = 'ITEM' and order_group_id is not null and order_item_id is not null
       and seller_id is not null and quantity is not null and quantity > 0)
@@ -44,7 +49,9 @@ comment on table public.refund_allocations is
 comment on column public.refund_allocations.seller_net_debit is
   'Final net seller liability explicitly approved by finance after commission reversal.';
 comment on column public.refund_allocations.commission_reversal_amount is
-  'Positive reversal of the original posted commission. Gross seller refund debit equals seller_net_debit plus this amount.';
+  'Explicit amount of original commission reversed/cancelled for this return; ledger treatment depends on the recorded commission accounting mode.';
+comment on column public.refund_allocations.commission_accounting_mode is
+  'GROSS_LEDGER reverses a separately debited commission in seller_ledger; NET_SALE cancels a commission withheld from the net SALE credit without a second seller-ledger credit.';
 
 create or replace function public.set_refund_allocations(p_refund_id uuid, p_allocations jsonb)
 returns integer
@@ -59,6 +66,7 @@ declare
   v_group public.order_groups%rowtype;
   v_commission public.commissions%rowtype;
   v_existing_commission_reversal numeric(14,2);
+  v_commission_mode text := 'NONE';
   v_seller_id uuid;
   v_existing_qty integer;
   v_existing_amount numeric(14,2);
@@ -99,6 +107,7 @@ begin
       commission_reversal_amount numeric, platform_funded_amount numeric
     )
   loop
+    v_commission_mode := 'NONE';
     if v_entry.customer_amount is null or v_entry.customer_amount <= 0
        or v_entry.customer_amount <> trunc(v_entry.customer_amount)
        or coalesce(v_entry.seller_net_debit,0) < 0
@@ -129,9 +138,48 @@ begin
         from public.commissions
         where order_group_id = v_group.id and seller_id = v_seller_id
         for update;
-        if not found or v_commission.status <> 'POSTED' then
-          raise exception 'refund_commission_not_posted';
+        if not found then
+          raise exception 'refund_commission_not_found';
         end if;
+
+        if v_commission.status = 'POSTED'
+           and exists (
+             select 1 from public.seller_ledger sl
+             where sl.seller_id = v_seller_id and sl.order_group_id = v_group.id
+               and sl.entry_type = 'SALE' and sl.amount = v_commission.base_amount
+           )
+           and exists (
+             select 1 from public.seller_ledger sl
+             where sl.seller_id = v_seller_id and sl.order_group_id = v_group.id
+               and sl.entry_type = 'COMMISSION' and sl.amount = -v_commission.commission_amount
+           ) then
+          v_commission_mode := 'GROSS_LEDGER';
+        elsif v_commission.status = 'PENDING'
+           and not exists (
+             select 1 from public.seller_ledger sl
+             where sl.seller_id = v_seller_id and sl.order_group_id = v_group.id
+               and sl.entry_type = 'COMMISSION'
+           )
+           and (
+             (v_commission.base_amount > v_commission.commission_amount and exists (
+               select 1 from public.seller_ledger sl
+               where sl.seller_id = v_seller_id and sl.order_group_id = v_group.id
+                 and sl.entry_type = 'SALE'
+                 and sl.amount = v_commission.base_amount - v_commission.commission_amount
+             ))
+             or
+             (v_commission.base_amount = v_commission.commission_amount
+               and not exists (
+                 select 1 from public.seller_ledger sl
+                 where sl.seller_id = v_seller_id and sl.order_group_id = v_group.id
+                   and sl.entry_type = 'SALE'
+               ))
+           ) then
+          v_commission_mode := 'NET_SALE';
+        else
+          raise exception 'refund_commission_ledger_convention_unknown';
+        end if;
+
         select coalesce(sum(commission_reversal_amount),0)
         into v_existing_commission_reversal
         from public.refund_allocations ra
@@ -159,12 +207,12 @@ begin
       insert into public.refund_allocations(
         refund_id, order_id, order_group_id, order_item_id, seller_id,
         allocation_type, quantity, customer_amount, seller_net_debit,
-        commission_reversal_amount, platform_funded_amount, currency, created_by
+        commission_reversal_amount, commission_accounting_mode, platform_funded_amount, currency, created_by
       ) values (
         p_refund_id, v_refund.order_id, v_group.id, v_item.id, v_seller_id,
         'ITEM', v_entry.quantity, v_entry.customer_amount,
         coalesce(v_entry.seller_net_debit,0), coalesce(v_entry.commission_reversal_amount,0),
-        coalesce(v_entry.platform_funded_amount,0),
+        v_commission_mode, coalesce(v_entry.platform_funded_amount,0),
         'XOF', auth.uid()
       );
     elsif v_entry.allocation_type = 'PLATFORM_ADJUSTMENT' then
@@ -249,7 +297,7 @@ begin
   -- Stable seller lock order serializes reconciliation against payout requests.
   for v_seller in
     select distinct seller_id from public.refund_allocations
-    where refund_id = p_refund_id and (seller_net_debit + commission_reversal_amount) > 0 order by seller_id
+    where refund_id = p_refund_id and (seller_net_debit > 0 or (commission_accounting_mode = 'GROSS_LEDGER' and commission_reversal_amount > 0)) order by seller_id
   loop
     perform 1 from public.sellers where id = v_seller.seller_id for update;
   end loop;
@@ -257,7 +305,7 @@ begin
   for v_allocation in
     select * from public.refund_allocations where refund_id = p_refund_id order by id
   loop
-    if (v_allocation.seller_net_debit + v_allocation.commission_reversal_amount) > 0 and not exists (
+    if (v_allocation.seller_net_debit > 0 or (v_allocation.commission_accounting_mode = 'GROSS_LEDGER' and v_allocation.commission_reversal_amount > 0)) and not exists (
       select 1 from public.seller_ledger sl
       where sl.seller_id = v_allocation.seller_id
         and sl.order_group_id = v_allocation.order_group_id
@@ -284,15 +332,20 @@ begin
   for v_allocation in
     select * from public.refund_allocations where refund_id = p_refund_id order by id
   loop
-    if (v_allocation.seller_net_debit + v_allocation.commission_reversal_amount) > 0 then
+    if v_allocation.seller_net_debit > 0
+       or (v_allocation.commission_accounting_mode = 'GROSS_LEDGER' and v_allocation.commission_reversal_amount > 0) then
       insert into public.seller_ledger(
         seller_id, order_group_id, entry_type, amount, currency, reference_id
       ) values (
         v_allocation.seller_id, v_allocation.order_group_id, 'REFUND',
-        -(v_allocation.seller_net_debit + v_allocation.commission_reversal_amount), 'XOF', v_allocation.id
+        -(v_allocation.seller_net_debit
+          + case when v_allocation.commission_accounting_mode = 'GROSS_LEDGER'
+                 then v_allocation.commission_reversal_amount else 0 end),
+        'XOF', v_allocation.id
       );
     end if;
-    if v_allocation.commission_reversal_amount > 0 then
+    if v_allocation.commission_accounting_mode = 'GROSS_LEDGER'
+       and v_allocation.commission_reversal_amount > 0 then
       insert into public.seller_ledger(
         seller_id, order_group_id, entry_type, amount, currency, reference_id
       ) values (
@@ -306,8 +359,8 @@ begin
 
   -- Partial returns retain POSTED; only a fully reversed commission changes status.
   update public.commissions c
-  set status = 'REVERSED'
-  where c.status = 'POSTED'
+  set status = case when c.status = 'POSTED' then 'REVERSED' else 'CANCELLED' end
+  where c.status in ('POSTED','PENDING')
     and exists (
       select 1 from public.refund_allocations ra
       where ra.refund_id = p_refund_id
