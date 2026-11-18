@@ -75,7 +75,9 @@ begin
 
   select * into v_refund from public.refunds where id = p_refund_id for update;
   if not found then raise exception 'refund_not_found'; end if;
-  if v_refund.status <> 'COMPLETED' then raise exception 'provider_refund_not_confirmed'; end if;
+  if v_refund.status not in ('APPROVED','PROCESSING','COMPLETED') then
+    raise exception 'refund_not_eligible_for_allocation';
+  end if;
   if v_refund.currency <> 'XOF' or v_refund.amount <> trunc(v_refund.amount) then
     raise exception 'refund_currency_or_amount_invalid';
   end if;
