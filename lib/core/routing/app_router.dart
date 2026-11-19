@@ -422,6 +422,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     authRefresh.dispose();
   });
 
+  // The router owns its auth refresh subscription. Dispose both when Riverpod
+  // rebuilds this provider (for example, when Supabase attaches after startup).
+  ref.onDispose(() {
+    authRefresh.dispose();
+    router.dispose();
+  });
+
   return router;
 });
 
