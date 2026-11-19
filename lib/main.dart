@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -25,7 +28,16 @@ Future<void> main() async {
 
   WidgetsBinding.instance.addPostFrameCallback((_) {
     if (client != null) {
-      PushNotificationService.instance.initialize(client);
+      unawaited(() async {
+        try {
+          await PushNotificationService.instance.initialize(client);
+        } catch (error, stackTrace) {
+          if (kDebugMode) {
+            debugPrint('Initialisation push indisponible: $error');
+            debugPrintStack(stackTrace: stackTrace);
+          }
+        }
+      }());
     }
   });
 }
