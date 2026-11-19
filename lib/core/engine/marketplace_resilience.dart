@@ -85,10 +85,10 @@ class MarketplaceResilience {
   Duration _backoff(int attempt) {
     var milliseconds = baseDelay.inMilliseconds;
     for (var i = 1; i < attempt && milliseconds < maxDelay.inMilliseconds; i++) {
-      milliseconds = (milliseconds * 2).clamp(0, maxDelay.inMilliseconds);
+      milliseconds = (milliseconds * 2).clamp(0, maxDelay.inMilliseconds).toInt();
     }
     return Duration(
-      milliseconds: milliseconds.clamp(0, maxDelay.inMilliseconds),
+      milliseconds: milliseconds.clamp(0, maxDelay.inMilliseconds).toInt(),
     );
   }
 
