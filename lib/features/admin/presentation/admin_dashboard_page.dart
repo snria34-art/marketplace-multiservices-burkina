@@ -324,7 +324,7 @@ class _AdminDashboardPageState
               child: Padding(
                 padding: const EdgeInsets.all(24),
                 child: Text(
-                  'Impossible de charger le tableau de bord administrateur. Réessayez.'
+                  'Impossible de charger le tableau de bord administrateur. Réessayez.',
                   textAlign: TextAlign.center,
                 ),
               ),
