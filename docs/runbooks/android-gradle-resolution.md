@@ -4,11 +4,15 @@ The Android debug workflow installs a Gradle init script before building. It add
 Maven Central and Google Maven to plugin resolution for the main Android build and
 included builds loaded by Flutter.
 
-The Android app uses AGP 9.1.0 with the Kotlin Gradle Plugin pinned to 2.4.0 in
-`settings.gradle.kts`. AGP 9's built-in Kotlin mode is disabled temporarily
-(`android.builtInKotlin=false`) so Flutter 3.47.2 and Android plugins that still
-apply KGP use the same explicitly declared version. This is a compatibility
-configuration, not a bypass of Flutter's dependency validation.
+The Android app uses a conservative toolchain supported by Flutter 3.47.2:
+- Android Gradle Plugin 8.11.1
+- Gradle 8.14
+- Kotlin Gradle Plugin 2.2.20
+
+KGP 2.2.20 satisfies Flutter 3.47.2's minimum version and is compatible with
+AGP 8.11.1 and Gradle 8.14. The app explicitly applies
+`org.jetbrains.kotlin.android`; this avoids the lower built-in Kotlin version
+bundled by AGP 9 in this Flutter release.
 
 For a local Android build, run:
 

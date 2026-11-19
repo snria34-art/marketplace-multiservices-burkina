@@ -17,14 +17,14 @@ pluginManagement {
     }
 
     plugins {
-        // AGP 9 built-in Kotlin 2.2.10 is below Flutter 3.47.2's KGP minimum.
-        id("org.jetbrains.kotlin.android") version "2.4.0"
+        // Flutter 3.47.2 requires Kotlin Gradle Plugin 2.2.20 or newer.
+        id("org.jetbrains.kotlin.android") version "2.2.20"
     }
 }
 
 plugins {
     id("dev.flutter.flutter-plugin-loader") version "1.0.0"
-    id("com.android.application") version "9.1.0" apply false
+    id("com.android.application") version "8.11.1" apply false
 }
 
 include(":app")
