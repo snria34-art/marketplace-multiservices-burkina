@@ -28,7 +28,7 @@ class SupabaseConfig {
         url: url,
         publishableKey: key,
         debug: false,
-      );
+      ).timeout(const Duration(seconds: 12));
       return Supabase.instance.client;
     } catch (error, stackTrace) {
       if (kDebugMode) {
