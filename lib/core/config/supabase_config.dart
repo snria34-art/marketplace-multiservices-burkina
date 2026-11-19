@@ -17,9 +17,8 @@ class SupabaseConfig {
 
   static bool get isConfigured => url.isNotEmpty && key.isNotEmpty;
 
-  /// Backend startup is isolated from UI startup: a missing or temporarily
-  /// invalid backend must not crash the app shell. Server-backed actions stay
-  /// unavailable until a valid client exists.
+  /// Initializes the backend independently from UI startup. Callers should
+  /// await this in a background task so a slow backend cannot delay the shell.
   static Future<SupabaseClient?> initialize() async {
     if (!isConfigured) return null;
 
@@ -28,7 +27,7 @@ class SupabaseConfig {
         url: url,
         publishableKey: key,
         debug: false,
-      ).timeout(const Duration(seconds: 12));
+      );
       return Supabase.instance.client;
     } catch (error, stackTrace) {
       if (kDebugMode) {
