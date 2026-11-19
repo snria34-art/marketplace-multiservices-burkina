@@ -188,7 +188,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 
   final router = GoRouter(
     refreshListenable: authRefresh,
-    redirect: (context, state) => _guardRoute(client, state),
+    redirect: (context, state) => _guardRoute(client, state).timeout(
+      const Duration(seconds: 12),
+      onTimeout: () => '/access-status?reason=verification_unavailable',
+    ),
     navigatorKey: appNavigatorKey,
     initialLocation: '/',
     routes: [
