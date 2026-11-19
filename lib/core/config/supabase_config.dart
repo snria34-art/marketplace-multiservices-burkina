@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class SupabaseConfig {
@@ -16,14 +17,25 @@ class SupabaseConfig {
 
   static bool get isConfigured => url.isNotEmpty && key.isNotEmpty;
 
+  /// Backend startup is isolated from UI startup: a missing or temporarily
+  /// invalid backend must not crash the app shell. Server-backed actions stay
+  /// unavailable until a valid client exists.
   static Future<SupabaseClient?> initialize() async {
     if (!isConfigured) return null;
 
-    await Supabase.initialize(
-      url: url,
-      publishableKey: key,
-      debug: false,
-    );
-    return Supabase.instance.client;
+    try {
+      await Supabase.initialize(
+        url: url,
+        publishableKey: key,
+        debug: false,
+      );
+      return Supabase.instance.client;
+    } catch (error, stackTrace) {
+      if (kDebugMode) {
+        debugPrint('Supabase indisponible au démarrage: $error');
+        debugPrintStack(stackTrace: stackTrace);
+      }
+      return null;
+    }
   }
 }
