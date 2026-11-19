@@ -93,6 +93,71 @@ void main() {
       expect(resilience.consecutiveFailures, 0);
     });
 
+    test('does not let an older normal operation unlock a half-open probe', () async {
+      var now = DateTime.utc(2026);
+      final normalStarted = Completer<void>();
+      final releaseNormal = Completer<void>();
+      final probeStarted = Completer<void>();
+      final releaseProbe = Completer<void>();
+      final resilience = MarketplaceResilience(
+        failureThreshold: 1,
+        cooldown: const Duration(seconds: 1),
+        clock: () => now,
+        wait: (_) async {},
+      );
+
+      await expectLater(
+        resilience.run<String>(
+          () async => throw Exception('open circuit'),
+          retrySafe: false,
+          isRetryable: (_) => true,
+        ),
+        throwsException,
+      );
+
+      now = now.add(const Duration(seconds: 2));
+      final normal = resilience.run(
+        () async {
+          normalStarted.complete();
+          await releaseNormal.future;
+          return 'normal';
+        },
+        retrySafe: true,
+        isRetryable: (_) => true,
+      );
+      await normalStarted.future;
+
+      // Reset simulates an explicit health reset while an older request is
+      // still in flight; it must not corrupt probe ownership.
+      resilience.reset();
+      final probe = resilience.run(
+        () async {
+          probeStarted.complete();
+          await releaseProbe.future;
+          return 'probe';
+        },
+        retrySafe: true,
+        isRetryable: (_) => true,
+      );
+      await probeStarted.future;
+
+      releaseNormal.complete();
+      expect(await normal, 'normal');
+
+      // The normal request's completion must not unlock the probe.
+      await expectLater(
+        resilience.run(
+          () async => 'must be blocked',
+          retrySafe: true,
+          isRetryable: (_) => true,
+        ),
+        throwsStateError,
+      );
+
+      releaseProbe.complete();
+      expect(await probe, 'probe');
+    });
+
     test('times out stalled operations within the configured bound', () async {
       final resilience = MarketplaceResilience(
         operationTimeout: const Duration(milliseconds: 5),
