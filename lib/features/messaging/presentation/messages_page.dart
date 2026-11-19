@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../../core/errors/backend_error_message.dart';
 import '../../../core/providers/repository_providers.dart';
 import '../data/messaging_repository.dart';
 
@@ -77,7 +78,7 @@ class _MessagesPageState extends ConsumerState<MessagesPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              'Actualisation instantanée indisponible : $error. Les messages seront actualisés périodiquement.',
+              'Actualisation instantanée indisponible. Les messages seront actualisés périodiquement.',
             ),
           ),
         );
@@ -97,7 +98,9 @@ class _MessagesPageState extends ConsumerState<MessagesPage> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Conversation ouverte, mais lecture non confirmée : $error'),
+          content: const Text(
+            'Conversation ouverte, mais statut de lecture non confirmé.',
+          ),
         ),
       );
     }
@@ -135,8 +138,10 @@ class _MessagesPageState extends ConsumerState<MessagesPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Impossible de contacter l’administration : ' +
-                error.toString(),
+            safeBackendErrorMessage(
+              error,
+              fallback: 'Impossible de contacter l’administration pour le moment.',
+            ),
           ),
         ),
       );
@@ -363,7 +368,10 @@ class _ConversationViewState
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Envoi impossible : ' + error.toString(),
+            safeBackendErrorMessage(
+            error,
+            fallback: 'Envoi impossible pour le moment. Réessayez.',
+          ),
           ),
         ),
       );
