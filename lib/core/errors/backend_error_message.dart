@@ -1,7 +1,7 @@
 /// Detects exception and database diagnostics embedded in UI messages.
 bool containsRawBackendErrorDetails(String message) {
   return RegExp(
-    r'(?:[A-Za-z]+Exception|Exception:|Error:|PGRST\\d*|SQLSTATE|Postgrest|'
+    r'(?:[A-Za-z]+Exception|Exception:|Error:|PGRST\d*|SQLSTATE|Postgrest|'
     r'row-level security|permission denied|JWT expired|failed host lookup|'
     r'timed out|not_authenticated|bad state:|duplicate key|violates .* constraint|'
     r'unauthorized|forbidden|connection reset|connection refused|'

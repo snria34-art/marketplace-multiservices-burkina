@@ -1,6 +1,7 @@
 import 'package:image_picker/image_picker.dart';
 
 import '../../../core/media/upload_media_validator.dart';
+import 'seller_product_validation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class SellerProductsRepository {
@@ -20,7 +21,11 @@ class SellerProductsRepository {
 
     if ((rows as List).isEmpty) return null;
 
-    return (rows.first as Map)['id']?.toString();
+    final sellerId = (rows.first as Map)['id']?.toString().trim();
+    if (sellerId == null || !isValidSellerProductUuid(sellerId)) {
+      throw StateError('seller_id_invalid');
+    }
+    return sellerId;
   }
 
   Future<List<Map<String, dynamic>>> shops() async {
@@ -85,22 +90,37 @@ class SellerProductsRepository {
     bool isExpirable = false,
     DateTime? expiryDate,
   }) async {
+    final issue = validateSellerProductDraft(
+      shopId: shopId,
+      name: name,
+      price: price,
+      categoryId: categoryId,
+      initialStock: initialStock,
+      isExpirable: isExpirable,
+      expiryDate: expiryDate,
+    );
+    if (issue != null) throw StateError(issue);
+
     final raw = await client.rpc(
       'create_seller_product',
       params: {
-        'p_shop_id': shopId,
-        'p_name': name,
+        'p_shop_id': shopId.trim(),
+        'p_name': name.trim(),
         'p_price': price,
-        'p_category_id': categoryId,
-        'p_description': description,
+        'p_category_id': categoryId?.trim().isEmpty == true
+            ? null
+            : categoryId?.trim(),
+        'p_description': description?.trim(),
         'p_initial_stock': initialStock,
         'p_is_expirable': isExpirable,
         'p_expiry_date':
             expiryDate?.toIso8601String().split('T').first,
       },
     );
-
-    return raw.toString();
+    if (!isValidSellerProductResponse(raw)) {
+      throw StateError('product_response_invalid');
+    }
+    return raw.toString().trim();
   }
 
   Future<void> uploadProductImage({
@@ -110,6 +130,10 @@ class SellerProductsRepository {
   }) async {
     final user = client.auth.currentUser;
     if (user == null) throw StateError('Authentification requise.');
+    if (!isValidSellerProductUuid(productId)) throw StateError('product_id_invalid');
+    final roleIssue = validateSellerProductImageRole(imageRole);
+    if (roleIssue != null) throw StateError(roleIssue);
+    final normalizedImageRole = imageRole.trim().toUpperCase();
     const maxBytes = 5 * 1024 * 1024;
     final fileSize = await file.length();
     if (fileSize <= 0 || fileSize > maxBytes) {
@@ -158,10 +182,10 @@ class SellerProductsRepository {
       await client.rpc('add_seller_product_image', params: {
         'p_product_id': productId,
         'p_storage_path': path,
-        'p_image_role': imageRole,
-        'p_alt_text': imageRole == 'PACKAGING'
+        'p_image_role': normalizedImageRole,
+        'p_alt_text': normalizedImageRole == 'PACKAGING'
             ? 'Photo de l’emballage'
-            : imageRole == 'LABEL'
+            : normalizedImageRole == 'LABEL'
                 ? 'Photo de l’étiquette'
                 : 'Photo du produit',
       });
@@ -177,15 +201,17 @@ class SellerProductsRepository {
   }
 
   Future<void> submitForReview(String productId) async {
+    if (!isValidSellerProductUuid(productId)) throw StateError('product_id_invalid');
     await client.rpc('submit_seller_product_for_review', params: {
-      'p_product_id': productId,
+      'p_product_id': productId.trim(),
     });
   }
 
   Future<void> analyzeProduct(String productId) async {
+    if (!isValidSellerProductUuid(productId)) throw StateError('product_id_invalid');
     await client.functions.invoke(
       'analyze-product',
-      body: {'product_id': productId},
+      body: {'product_id': productId.trim()},
     );
   }
 
@@ -193,10 +219,13 @@ class SellerProductsRepository {
     required String productId,
     required int quantity,
   }) async {
+    if (!isValidSellerProductUuid(productId)) throw StateError('product_id_invalid');
+    final issue = validateSellerStockQuantity(quantity);
+    if (issue != null) throw StateError(issue);
     await client.rpc(
       'set_seller_stock',
       params: {
-        'p_product_id': productId,
+        'p_product_id': productId.trim(),
         'p_quantity': quantity,
       },
     );
@@ -205,9 +234,10 @@ class SellerProductsRepository {
   Future<List<Map<String, dynamic>>> variantInventory(
     String productId,
   ) async {
+    if (!isValidSellerProductUuid(productId)) throw StateError('product_id_invalid');
     final rows = await client.rpc(
       'get_seller_product_variant_inventory',
-      params: {'p_product_id': productId},
+      params: {'p_product_id': productId.trim()},
     );
     return _maps(rows);
   }
@@ -216,10 +246,13 @@ class SellerProductsRepository {
     required String variantId,
     required int quantity,
   }) async {
+    if (!isValidSellerProductUuid(variantId)) throw StateError('variant_id_invalid');
+    final issue = validateSellerStockQuantity(quantity);
+    if (issue != null) throw StateError(issue);
     await client.rpc(
       'set_seller_variant_stock',
       params: {
-        'p_variant_id': variantId,
+        'p_variant_id': variantId.trim(),
         'p_quantity': quantity,
       },
     );

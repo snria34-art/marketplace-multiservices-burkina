@@ -16,6 +16,10 @@ void main() {
       isTrue,
     );
     expect(
+      containsRawBackendErrorDetails('PostgrestException: PGRST116'),
+      isTrue,
+    );
+    expect(
       containsRawBackendErrorDetails('Connectez-vous pour continuer.'),
       isFalse,
     );
