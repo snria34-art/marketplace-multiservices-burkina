@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../../core/errors/backend_error_message.dart';
 import '../../../core/providers/repository_providers.dart';
 
 class NotificationsPage extends ConsumerStatefulWidget {
@@ -98,7 +99,14 @@ class _NotificationsPageState
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Lecture de la notification impossible : $error')),
+        SnackBar(
+          content: Text(
+            safeBackendErrorMessage(
+              error,
+              fallback: 'Lecture de la notification impossible. Réessayez.',
+            ),
+          ),
+        ),
       );
     }
   }
