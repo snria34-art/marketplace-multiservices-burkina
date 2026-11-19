@@ -22,6 +22,8 @@ RUN set -eux; \
     echo "447878859d01ca9bfdb99a85f245af07ed8a15fedcd9d189c4749e8e92d1f185  /tmp/flutter.tar.xz" | sha256sum --check --status; \
     mkdir -p /opt; tar -xJf /tmp/flutter.tar.xz -C /opt; rm /tmp/flutter.tar.xz
 
+RUN git config --global --add safe.directory /opt/flutter
+
 WORKDIR /app
 COPY pubspec.yaml pubspec.lock ./
 RUN flutter config --enable-web && flutter pub get --enforce-lockfile
