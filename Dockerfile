@@ -16,6 +16,27 @@ RUN set -eux; \
     test -n "${SUPABASE_URL}"; \
     test -n "${SUPABASE_PUBLISHABLE_KEY}"; \
     case "${SUPABASE_URL}" in https://*.supabase.co) ;; *) echo "Invalid SUPABASE_URL" >&2; exit 1 ;; esac; \
+    printf '%s' "${SUPABASE_PUBLISHABLE_KEY}" | grep -Eq '^sb_publishable_[A-Za-z0-9._-]{12,}$|^eyJ[^.]+\\.[^.]+\\.[^.]+      "https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_3.47.2-stable.tar.xz" \
+      -o /tmp/flutter.tar.xz; \
+    echo "447878859d01ca9bfdb99a85f245af07ed8a15fedcd9d189c4749e8e92d1f185  /tmp/flutter.tar.xz" | sha256sum --check --status; \
+    mkdir -p /opt; tar -xJf /tmp/flutter.tar.xz -C /opt; rm /tmp/flutter.tar.xz
+
+RUN git config --global --add safe.directory /opt/flutter
+
+WORKDIR /app
+COPY pubspec.yaml pubspec.lock ./
+RUN flutter config --enable-web && flutter pub get --enforce-lockfile
+COPY . .
+RUN flutter build web --release \
+    --dart-define=SUPABASE_URL="${SUPABASE_URL}" \
+    --dart-define=SUPABASE_PUBLISHABLE_KEY="${SUPABASE_PUBLISHABLE_KEY}"
+
+FROM nginx:stable-alpine AS runtime
+ENV PORT=8080
+COPY --from=build /app/build/web /usr/share/nginx/html
+COPY nginx/default.conf.template /etc/nginx/templates/default.conf.template
+EXPOSE 8080
+ || { echo "SUPABASE_PUBLISHABLE_KEY must be a valid publishable key or legacy anon JWT" >&2; exit 1; }; \
     curl --fail --location --silent --show-error --retry 3 \
       "https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_3.47.2-stable.tar.xz" \
       -o /tmp/flutter.tar.xz; \
