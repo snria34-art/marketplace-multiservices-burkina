@@ -12,31 +12,41 @@ class _CachedSignedUrl {
 }
 
 class CatalogRepository {
-  CatalogRepository(this.client);
+  CatalogRepository(this.client, {MarketplaceResilience? resilience})
+      : _resilience = resilience ?? MarketplaceResilience();
 
   final SupabaseClient client;
+  final MarketplaceResilience _resilience;
   final Map<String, _CachedSignedUrl> _imageUrlCache = {};
 
   Future<List<Map<String, dynamic>>> categoryTypes() async {
-    final rows = await client
-        .from('category_types')
-        .select('id,name,slug,is_active,sort_order')
-        .eq('is_active', true)
-        .order('sort_order')
-        .limit(50);
+    final rows = await _resilience.run(
+      () => client
+          .from('category_types')
+          .select('id,name,slug,is_active,sort_order')
+          .eq('is_active', true)
+          .order('sort_order')
+          .limit(50),
+      retrySafe: true,
+      isRetryable: (error) => error is TimeoutException,
+    );
 
     return _maps(rows);
   }
 
   Future<List<Map<String, dynamic>>> categories() async {
-    final rows = await client
-        .from('categories')
-        .select(
-          'id,category_type_id,parent_id,name,slug,icon_url,image_url,is_active,sort_order',
-        )
-        .eq('is_active', true)
-        .order('sort_order')
-        .limit(200);
+    final rows = await _resilience.run(
+      () => client
+          .from('categories')
+          .select(
+            'id,category_type_id,parent_id,name,slug,icon_url,image_url,is_active,sort_order',
+          )
+          .eq('is_active', true)
+          .order('sort_order')
+          .limit(200),
+      retrySafe: true,
+      isRetryable: (error) => error is TimeoutException,
+    );
 
     return _maps(rows);
   }
@@ -65,9 +75,11 @@ class CatalogRepository {
       query = query.eq('category_id', categoryId);
     }
 
-    final rows = await query
-        .order('created_at', ascending: false)
-        .range(offset, end);
+    final rows = await _resilience.run(
+      () => query.order('created_at', ascending: false).range(offset, end),
+      retrySafe: true,
+      isRetryable: (error) => error is TimeoutException,
+    );
 
     return _maps(rows);
   }
