@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'app.dart';
 import 'core/auth/auth_recovery_state.dart';
@@ -33,7 +32,7 @@ Future<void> _initializeBackend(ProviderContainer container) async {
     if (client == null) return;
 
     AuthRecoveryState.attach(client);
-    container.read(supabaseProvider.notifier).setClient(client);
+    container.read(supabaseClientProvider.notifier).setClient(client);
 
     // Push setup is non-critical and must not block backend availability.
     try {
