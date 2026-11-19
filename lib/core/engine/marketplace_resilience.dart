@@ -49,6 +49,7 @@ class MarketplaceResilience {
       throw ArgumentError.value(maxAttempts, 'maxAttempts', 'Must be >= 1');
     }
 
+    var ownsProbe = false;
     final openedAt = _openedAt;
     if (openedAt != null) {
       if (_clock().difference(openedAt) < cooldown) {
@@ -58,6 +59,7 @@ class MarketplaceResilience {
         throw StateError('Vérification de disponibilité déjà en cours.');
       }
       _probeInFlight = true;
+      ownsProbe = true;
     }
 
     try {
@@ -81,7 +83,9 @@ class MarketplaceResilience {
       }
       throw StateError('Échec inattendu de la politique de reprise.');
     } finally {
-      _probeInFlight = false;
+      // A normal operation that started before the circuit opened must not
+      // release a half-open probe lock owned by a different operation.
+      if (ownsProbe) _probeInFlight = false;
     }
   }
 
@@ -106,6 +110,6 @@ class MarketplaceResilience {
   void reset() {
     _consecutiveFailures = 0;
     _openedAt = null;
-    _probeInFlight = false;
+    // Do not unlock an active half-open probe from another in-flight call.
   }
 }
