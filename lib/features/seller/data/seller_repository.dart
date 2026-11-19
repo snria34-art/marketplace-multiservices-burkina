@@ -1,5 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'seller_payout_validation.dart';
+
 class SellerRepository {
   const SellerRepository(this.client);
 
@@ -26,7 +28,11 @@ class SellerRepository {
         .limit(1);
 
     if ((rows as List).isEmpty) return null;
-    return (rows.first as Map)['id']?.toString();
+    final id = (rows.first as Map)['id']?.toString().trim();
+    if (id == null || !isCanonicalUuid(id)) {
+      throw StateError('seller_id_invalid');
+    }
+    return id;
   }
 
   Future<num> balance(String sellerId) async {
@@ -72,16 +78,29 @@ class SellerRepository {
     required num amount,
     required String provider,
   }) async {
+    final issue = validateSellerPayoutRequest(
+      sellerId: sellerId,
+      amount: amount,
+      provider: provider,
+    );
+    if (issue != null) throw StateError(issue);
+
     final raw = await client.rpc(
       'request_seller_payout_secure',
       params: {
-        'p_seller_id': sellerId,
+        'p_seller_id': sellerId.trim(),
         'p_amount': amount,
-        'p_provider': provider,
+        'p_provider': provider.trim().toUpperCase(),
       },
     );
 
-    return raw.toString();
+    final payoutId = raw?.toString().trim() ?? '';
+    if (!isValidSellerPayoutResponse(payoutId)) {
+      // The server may have committed the request but returned an unexpected
+      // response shape. Do not invite an automatic retry and risk duplication.
+      throw StateError('payout_response_invalid');
+    }
+    return payoutId;
   }
 
   Future<List<Map<String, dynamic>>> payouts(String sellerId) async {

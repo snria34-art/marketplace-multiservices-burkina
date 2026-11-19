@@ -21,6 +21,13 @@ String sellerPayoutErrorMessage(Object error) {
       message.contains('seller_not_owned')) {
     return 'Le compte vendeur doit être vérifié et associé à votre compte.';
   }
+  if (message.contains('seller_id_invalid') ||
+      message.contains('seller_not_found')) {
+    return 'Compte vendeur introuvable ou invalide. Actualisez la page puis réessayez.';
+  }
+  if (message.contains('payout_response_invalid')) {
+    return 'La demande a peut-être été enregistrée. Actualisez la page et vérifiez la liste des demandes avant de réessayer.';
+  }
   if (message.contains('amount_invalid')) {
     return 'Le montant demandé est invalide.';
   }
