@@ -15,9 +15,14 @@ import '../../features/verticals/data/vertical_repository.dart';
 /// Holds the backend client independently from the Flutter shell lifecycle.
 /// The app can render immediately and receive the client when initialization
 /// finishes, without requiring a restart.
-final supabaseProvider =
+final supabaseClientProvider =
     NotifierProvider<SupabaseClientNotifier, SupabaseClient?>(
   SupabaseClientNotifier.new,
+);
+
+/// Stable read provider retained for existing tests and provider overrides.
+final supabaseProvider = Provider<SupabaseClient?>(
+  (ref) => ref.watch(supabaseClientProvider),
 );
 
 class SupabaseClientNotifier extends Notifier<SupabaseClient?> {
