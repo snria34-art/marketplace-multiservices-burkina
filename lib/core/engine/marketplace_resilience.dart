@@ -67,8 +67,12 @@ class MarketplaceResilience {
       for (var attempt = 1; attempt <= attempts; attempt++) {
         try {
           final result = await operation().timeout(operationTimeout);
-          _consecutiveFailures = 0;
-          _openedAt = null;
+          // A request that began before the circuit opened cannot close a
+          // half-open circuit while its dedicated probe is still running.
+          if (!(_probeInFlight && !ownsProbe)) {
+            _consecutiveFailures = 0;
+            _openedAt = null;
+          }
           return result;
         } catch (error) {
           final canRetry = retrySafe &&
@@ -110,6 +114,6 @@ class MarketplaceResilience {
   void reset() {
     _consecutiveFailures = 0;
     _openedAt = null;
-    // Do not unlock an active half-open probe from another in-flight call.
+    _probeInFlight = false;
   }
 }
