@@ -1,6 +1,6 @@
 name: Native debug validation
 
-# Manual validation only. No release signing, store upload or deployment.
+# Debug validation only. No release signing, store upload or deployment.
 on:
   push:
     branches: ['maintenance/audit-01-07-2026-11-15']
@@ -9,6 +9,7 @@ on:
       - 'lib/**'
       - 'pubspec.yaml'
       - 'pubspec.lock'
+      - 'scripts/prepare-android-gradle.sh'
       - '.github/workflows/native-build.yml'
   workflow_dispatch:
 
@@ -48,6 +49,9 @@ jobs:
 
       - name: Resolve locked dependencies
         run: flutter pub get --enforce-lockfile
+
+      - name: Configure repositories for Flutter included Gradle build
+        run: bash scripts/prepare-android-gradle.sh
 
       - name: Build Android debug APK
         run: flutter build apk --debug

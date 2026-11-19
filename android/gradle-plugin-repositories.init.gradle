@@ -1,0 +1,9 @@
+// Add Maven Central and Google Maven to plugin resolution for every Gradle build,
+// including Flutter's included build under the Flutter SDK.
+gradle.beforeSettings { settings ->
+    settings.pluginManagement.repositories {
+        mavenCentral()
+        google()
+        gradlePluginPortal()
+    }
+}
