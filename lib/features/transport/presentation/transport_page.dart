@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/errors/backend_error_message.dart';
 import '../../../core/providers/repository_providers.dart';
 import '../data/transport_repository.dart';
 
@@ -99,7 +100,7 @@ class _TransportPageState extends ConsumerState<TransportPage> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Réservation impossible : ' + error.toString()),
+          content: Text(safeBackendErrorMessage(error, fallback: 'Réservation de transport impossible. Vérifiez les informations et réessayez.')),
         ),
       );
     }

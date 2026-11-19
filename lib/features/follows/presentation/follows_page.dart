@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/errors/backend_error_message.dart';
 import '../../../core/providers/repository_providers.dart';
 import '../data/follows_repository.dart';
 
@@ -73,7 +74,7 @@ class _FollowsPageState extends ConsumerState<FollowsPage> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          'Opération impossible : ' + error.toString(),
+          safeBackendErrorMessage(error, fallback: 'Modification des abonnements impossible. Réessayez.'),
         ),
       ),
     );
@@ -131,7 +132,7 @@ class _FollowsPageState extends ConsumerState<FollowsPage> {
                 if (snapshot.hasError) {
                   return Center(
                     child: Text(
-                      'Erreur : ' + snapshot.error.toString(),
+                      'Impossible de charger vos abonnements. Réessayez.',
                     ),
                   );
                 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/errors/backend_error_message.dart';
 import '../../../core/providers/repository_providers.dart';
 
 class SellerShopPage extends ConsumerStatefulWidget {
@@ -97,7 +98,7 @@ class _SellerShopPageState extends ConsumerState<SellerShopPage> {
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Enregistrement refusé : ' + error.toString())),
+        SnackBar(content: Text(safeBackendErrorMessage(error, fallback: 'Enregistrement de la boutique impossible. Vérifiez les informations et réessayez.'))),
       );
     }
   }
@@ -125,7 +126,7 @@ class _SellerShopPageState extends ConsumerState<SellerShopPage> {
               child: Padding(
                 padding: const EdgeInsets.all(24),
                 child: Text(
-                  'Chargement impossible : ' + snapshot.error.toString(),
+                  'Impossible de charger la boutique. Réessayez.',
                   textAlign: TextAlign.center,
                 ),
               ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/errors/backend_error_message.dart';
 import '../../../core/providers/repository_providers.dart';
 import '../data/group_buy_repository.dart';
 
@@ -60,7 +61,7 @@ class _GroupBuyPageState extends ConsumerState<GroupBuyPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Impossible de rejoindre : ' + error.toString(),
+            safeBackendErrorMessage(error, fallback: 'Impossible de rejoindre cet achat groupé pour le moment. Réessayez.'),
           ),
         ),
       );
@@ -80,7 +81,7 @@ class _GroupBuyPageState extends ConsumerState<GroupBuyPage> {
 
           if (snapshot.hasError) {
             return Center(
-              child: Text('Erreur : ' + snapshot.error.toString()),
+              child: Text('Impossible de charger les achats groupés. Réessayez.'),
             );
           }
 

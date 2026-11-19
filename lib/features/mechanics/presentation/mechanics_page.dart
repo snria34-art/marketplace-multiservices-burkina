@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/location/device_location_service.dart';
+import '../../../core/errors/backend_error_message.dart';
 import '../../../core/providers/repository_providers.dart';
 import '../data/mechanic_repository.dart';
 
@@ -174,7 +175,7 @@ class _MechanicsPageState extends ConsumerState<MechanicsPage> {
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Mise à jour refusée : ' + error.toString())),
+        SnackBar(content: Text(safeBackendErrorMessage(error, fallback: 'Mise à jour du profil mécanicien impossible. Réessayez.'))),
       );
     }
   }
@@ -224,7 +225,7 @@ class _MechanicsPageState extends ConsumerState<MechanicsPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Impossible d’envoyer la demande : ' + error.toString(),
+            safeBackendErrorMessage(error, fallback: 'Envoi de la demande de réparation impossible. Réessayez.'),
           ),
         ),
       );
@@ -242,7 +243,7 @@ class _MechanicsPageState extends ConsumerState<MechanicsPage> {
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Devis indisponible : ' + error.toString())),
+        SnackBar(content: Text(safeBackendErrorMessage(error, fallback: 'Chargement du devis impossible. Réessayez.'))),
       );
     }
   }

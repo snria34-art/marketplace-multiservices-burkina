@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/location/device_location_service.dart';
+import '../../../core/errors/backend_error_message.dart';
 import '../../../core/providers/repository_providers.dart';
 
 class CheckoutPage extends ConsumerStatefulWidget {
@@ -131,7 +132,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Impossible de calculer la livraison : ' + error.toString(),
+            safeBackendErrorMessage(error, fallback: 'Calcul de la livraison impossible. Réessayez.'),
           ),
         ),
       );
@@ -193,7 +194,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Création de l’adresse impossible : ' + error.toString(),
+            safeBackendErrorMessage(error, fallback: 'Création de l’adresse impossible. Réessayez.'),
           ),
         ),
       );
@@ -281,7 +282,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Checkout impossible : ' + error.toString())),
+        SnackBar(content: Text(safeBackendErrorMessage(error, fallback: 'Validation de la commande impossible. Vérifiez le panier et réessayez.'))),
       );
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -308,7 +309,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
           if (snapshot.hasError) {
             return Center(
               child: Text(
-                'Erreur des adresses : ' + snapshot.error.toString(),
+                'Impossible de charger les adresses. Réessayez.',
               ),
             );
           }
@@ -530,7 +531,7 @@ class _AddressDialogState extends State<_AddressDialog> {
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Position indisponible : ' + error.toString())),
+        SnackBar(content: Text(safeBackendErrorMessage(error, fallback: 'Position indisponible. Vérifiez les autorisations de localisation et réessayez.'))),
       );
     }
   }

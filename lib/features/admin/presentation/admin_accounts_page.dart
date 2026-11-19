@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/errors/backend_error_message.dart';
 import '../../../core/providers/repository_providers.dart';
 
 class AdminAccountsPage extends ConsumerStatefulWidget {
@@ -97,7 +98,7 @@ class _AdminAccountsPageState extends ConsumerState<AdminAccountsPage> {
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Modification refusée : ' + error.toString())),
+        SnackBar(content: Text(safeBackendErrorMessage(error, fallback: 'Modification du compte impossible. Vérifiez les droits et réessayez.'))),
       );
     }
   }
@@ -136,7 +137,7 @@ class _AdminAccountsPageState extends ConsumerState<AdminAccountsPage> {
                   return const Center(child: CircularProgressIndicator());
                 }
                 if (snapshot.hasError) {
-                  return Center(child: Text('Erreur : ' + snapshot.error.toString()));
+                  return Center(child: Text('Impossible de charger les comptes. Réessayez.'));
                 }
 
                 final rows = (snapshot.data ?? const <Map<String, dynamic>>[])

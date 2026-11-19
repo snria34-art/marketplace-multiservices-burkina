@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/errors/backend_error_message.dart';
 import '../../../core/providers/repository_providers.dart';
 
 class CartPage extends ConsumerStatefulWidget {
@@ -51,7 +52,7 @@ class _CartPageState extends ConsumerState<CartPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Mise à jour impossible : ' + error.toString(),
+            safeBackendErrorMessage(error, fallback: 'Mise à jour du panier impossible. Réessayez.'),
           ),
         ),
       );
@@ -105,7 +106,7 @@ class _CartPageState extends ConsumerState<CartPage> {
                 if (snapshot.hasError) {
                   return Center(
                     child: Text(
-                      'Erreur du panier : ' + snapshot.error.toString(),
+                      'Impossible de charger le panier. Réessayez.',
                     ),
                   );
                 }

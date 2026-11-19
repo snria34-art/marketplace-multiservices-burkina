@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/errors/backend_error_message.dart';
 import '../../../core/providers/repository_providers.dart';
 
 class AdminRefundsPage extends ConsumerStatefulWidget {
@@ -334,7 +335,7 @@ class _AdminRefundsPageState extends ConsumerState<AdminRefundsPage> {
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Opération refusée : ' + error.toString())),
+        SnackBar(content: Text(safeBackendErrorMessage(error, fallback: 'Opération de remboursement refusée. Vérifiez les droits, le statut et le rapprochement comptable.'))),
       );
     } finally {
       if (mounted) setState(() => _working = false);
@@ -360,7 +361,7 @@ class _AdminRefundsPageState extends ConsumerState<AdminRefundsPage> {
             return const Center(child: CircularProgressIndicator());
           }
           if (snapshot.hasError) {
-            return Center(child: Text('Accès impossible : ' + snapshot.error.toString()));
+            return Center(child: Text('Impossible de charger les remboursements. Réessayez.'));
           }
 
           final items = snapshot.data ?? const <Map<String, dynamic>>[];

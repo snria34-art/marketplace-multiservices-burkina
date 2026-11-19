@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/errors/backend_error_message.dart';
 import '../../../core/providers/repository_providers.dart';
 import '../data/service_repository.dart';
 
@@ -112,7 +113,7 @@ class _ServicesPageState extends ConsumerState<ServicesPage> {
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erreur : ' + error.toString())),
+        SnackBar(content: Text(safeBackendErrorMessage(error, fallback: 'Action sur le service impossible. Réessayez.'))),
       );
     }
   }
@@ -191,7 +192,7 @@ class _ServicesPageState extends ConsumerState<ServicesPage> {
                     if (snapshot.hasError) {
                       return Center(
                         child: Text(
-                          'Erreur : ' + snapshot.error.toString(),
+                          'Impossible de charger les services. Réessayez.',
                         ),
                       );
                     }
