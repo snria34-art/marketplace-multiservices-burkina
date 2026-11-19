@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:video_player/video_player.dart';
 
+import '../../../core/errors/backend_error_message.dart';
 import '../../../core/providers/repository_providers.dart';
 
 class AdminReviewModerationPage extends ConsumerStatefulWidget {
@@ -103,7 +104,14 @@ class _AdminReviewModerationPageState
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Décision impossible : $error')),
+        SnackBar(
+          content: Text(
+            safeBackendErrorMessage(
+              error,
+              fallback: 'Décision de modération impossible. Vérifiez les droits et réessayez.',
+            ),
+          ),
+        ),
       );
     }
   }
@@ -144,7 +152,7 @@ class _AdminReviewModerationPageState
               child: Padding(
                 padding: const EdgeInsets.all(24),
                 child: Text(
-                  'Accès impossible : ${snapshot.error}\n\n'
+                  'Impossible de charger les avis à modérer. '
                   'Un compte administrateur actif est nécessaire.',
                   textAlign: TextAlign.center,
                 ),

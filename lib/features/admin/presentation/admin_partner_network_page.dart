@@ -78,7 +78,7 @@ class _AdminPartnerNetworkPageState
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      snapshot.error.toString(),
+                      'Impossible de charger le réseau partenaire. Vérifiez vos droits administrateur et réessayez.',
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.bodySmall,
                     ),

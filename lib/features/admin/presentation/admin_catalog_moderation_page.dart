@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:video_player/video_player.dart';
 
+import '../../../core/errors/backend_error_message.dart';
 import '../../../core/providers/repository_providers.dart';
 
 class AdminCatalogModerationPage extends ConsumerStatefulWidget {
@@ -125,7 +126,14 @@ class _AdminCatalogModerationPageState
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Décision refusée : $error')),
+        SnackBar(
+          content: Text(
+            safeBackendErrorMessage(
+              error,
+              fallback: 'Décision de modération refusée. Vérifiez les droits et réessayez.',
+            ),
+          ),
+        ),
       );
     }
   }
@@ -153,7 +161,7 @@ class _AdminCatalogModerationPageState
               child: Padding(
                 padding: const EdgeInsets.all(24),
                 child: Text(
-                  'Accès impossible : ${snapshot.error}\n\n'
+                  'Impossible de charger les éléments à modérer. '
                   'Vérifiez que votre compte possède un rôle administrateur actif.',
                   textAlign: TextAlign.center,
                 ),
