@@ -17,7 +17,7 @@ permissions:
 
 concurrency:
   group: native-debug-validation-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   android-debug:
