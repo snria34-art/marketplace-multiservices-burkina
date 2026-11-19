@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:marketplace_multiservices_burkina/core/engine/marketplace_resilience.dart';
 
@@ -89,6 +91,22 @@ void main() {
         'recovered',
       );
       expect(resilience.consecutiveFailures, 0);
+    });
+
+    test('times out stalled operations within the configured bound', () async {
+      final resilience = MarketplaceResilience(
+        operationTimeout: const Duration(milliseconds: 5),
+        wait: (_) async {},
+      );
+
+      await expectLater(
+        resilience.run(
+          () async => Future<void>.delayed(const Duration(seconds: 1)),
+          retrySafe: false,
+          isRetryable: (_) => true,
+        ),
+        throwsA(isA<TimeoutException>()),
+      );
     });
 
     test('does not retry non-retryable failures', () async {
