@@ -10,9 +10,11 @@ class MarketplaceResilience {
     this.cooldown = const Duration(seconds: 20),
     this.baseDelay = const Duration(milliseconds: 250),
     this.maxDelay = const Duration(seconds: 3),
+    this.operationTimeout = const Duration(seconds: 15),
     DateTime Function()? clock,
     Future<void> Function(Duration)? wait,
   })  : assert(failureThreshold > 0),
+        assert(operationTimeout > Duration.zero),
         _clock = clock ?? DateTime.now,
         _wait = wait ?? Future<void>.delayed;
 
@@ -20,6 +22,7 @@ class MarketplaceResilience {
   final Duration cooldown;
   final Duration baseDelay;
   final Duration maxDelay;
+  final Duration operationTimeout;
   final DateTime Function() _clock;
   final Future<void> Function(Duration) _wait;
 
@@ -61,7 +64,7 @@ class MarketplaceResilience {
       final attempts = retrySafe ? maxAttempts : 1;
       for (var attempt = 1; attempt <= attempts; attempt++) {
         try {
-          final result = await operation();
+          final result = await operation().timeout(operationTimeout);
           _consecutiveFailures = 0;
           _openedAt = null;
           return result;
