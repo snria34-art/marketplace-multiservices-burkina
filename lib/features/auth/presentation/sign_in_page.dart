@@ -35,7 +35,16 @@ class _SignInPageState extends ConsumerState<SignInPage> {
     final email = _email.text.trim();
     final password = _password.text;
 
-    final validEmail = RegExp(r'^[^@\\s]+@[^@\\s]+\\.[^@\\s]+
+    final validEmail =
+        RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email);
+    final minimumPasswordLength = _signUp ? 8 : 6;
+    if (!validEmail || password.length < minimumPasswordLength) {
+      _show(
+        'Vérifiez votre adresse email et saisissez un mot de passe '
+        'd’au moins $minimumPasswordLength caractères.',
+      );
+      return;
+    }
 
     setState(() => _loading = true);
     try {
