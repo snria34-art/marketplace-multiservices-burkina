@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/errors/backend_error_message.dart';
 import '../../../core/providers/repository_providers.dart';
 
 class AdminAssistantPage extends ConsumerStatefulWidget {
@@ -62,7 +63,10 @@ class _AdminAssistantPageState extends ConsumerState<AdminAssistantPage> {
       if (!mounted) return;
       setState(() => _messages.add({
         'role': 'assistant',
-        'text': 'Je ne peux pas répondre pour le moment : $error',
+        'text': safeBackendErrorMessage(
+          error,
+          fallback: 'Je ne peux pas répondre pour le moment. Réessayez.',
+        ),
       }));
     } finally {
       if (mounted) {

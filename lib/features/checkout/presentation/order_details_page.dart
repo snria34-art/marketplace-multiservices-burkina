@@ -127,7 +127,10 @@ class _OrderDetailsPageState extends ConsumerState<OrderDetailsPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Actualisation instantanée indisponible : $error. Utilisez Actualiser pour vérifier l’état.',
+            safeBackendErrorMessage(
+              error,
+              fallback: 'Actualisation instantanée indisponible. Utilisez Actualiser pour vérifier l’état.',
+            ),
           ),
         ),
       );
