@@ -93,7 +93,7 @@ void main() {
       expect(resilience.consecutiveFailures, 0);
     });
 
-    test('does not let an older normal operation unlock a half-open probe', () async {
+    test('does not let an older normal operation close a half-open circuit', () async {
       var now = DateTime.utc(2026);
       final normalStarted = Completer<void>();
       final releaseNormal = Completer<void>();
@@ -106,16 +106,6 @@ void main() {
         wait: (_) async {},
       );
 
-      await expectLater(
-        resilience.run<String>(
-          () async => throw Exception('open circuit'),
-          retrySafe: false,
-          isRetryable: (_) => true,
-        ),
-        throwsException,
-      );
-
-      now = now.add(const Duration(seconds: 2));
       final normal = resilience.run(
         () async {
           normalStarted.complete();
@@ -127,9 +117,16 @@ void main() {
       );
       await normalStarted.future;
 
-      // Reset simulates an explicit health reset while an older request is
-      // still in flight; it must not corrupt probe ownership.
-      resilience.reset();
+      await expectLater(
+        resilience.run<String>(
+          () async => throw Exception('open circuit'),
+          retrySafe: false,
+          isRetryable: (_) => true,
+        ),
+        throwsException,
+      );
+
+      now = now.add(const Duration(seconds: 2));
       final probe = resilience.run(
         () async {
           probeStarted.complete();
@@ -144,7 +141,8 @@ void main() {
       releaseNormal.complete();
       expect(await normal, 'normal');
 
-      // The normal request's completion must not unlock the probe.
+      // Completion of the older request must not reset the circuit or unlock
+      // the dedicated probe.
       await expectLater(
         resilience.run(
           () async => 'must be blocked',
@@ -156,6 +154,7 @@ void main() {
 
       releaseProbe.complete();
       expect(await probe, 'probe');
+      expect(resilience.consecutiveFailures, 0);
     });
 
     test('times out stalled operations within the configured bound', () async {
