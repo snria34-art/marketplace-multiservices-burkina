@@ -59,6 +59,7 @@ import '../../features/admin/presentation/admin_seller_payouts_page.dart';
 import '../../features/admin/presentation/admin_partner_network_page.dart';
 import '../../features/whatsapp/presentation/whatsapp_assistant_page.dart';
 import '../../features/wallet/presentation/customer_wallet_page.dart';
+import '../../features/businesses/presentation/businesses_mobility_page.dart';
 
 class _AuthRefreshListenable extends ChangeNotifier {
   _AuthRefreshListenable(SupabaseClient? client) {
@@ -288,6 +289,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/services',
         builder: (_, _) => const ServicesPage(),
+      ),
+      GoRoute(
+        path: '/businesses-mobility',
+        builder: (_, _) => const BusinessesMobilityPage(),
       ),
       GoRoute(
         path: '/messages',
