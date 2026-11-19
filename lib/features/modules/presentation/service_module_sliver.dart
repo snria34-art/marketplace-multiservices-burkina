@@ -20,10 +20,6 @@ class ServiceModuleSliver extends ConsumerWidget {
             .where((module) => _supportedRoutes.contains(module.route))
             .toList();
 
-        if (visible.isEmpty) {
-          return const SliverToBoxAdapter(child: SizedBox(height: 0));
-        }
-
         return SliverToBoxAdapter(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -40,9 +36,23 @@ class ServiceModuleSliver extends ConsumerWidget {
                 child: ListView.builder(
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                   scrollDirection: Axis.horizontal,
-                  itemCount: visible.length,
-                  itemBuilder: (_, index) =>
-                      _ModuleShortcut(module: visible[index]),
+                  itemCount: visible.length + 1,
+                  itemBuilder: (_, index) {
+                    if (index == 0) {
+                      return const _ModuleShortcut(
+                        module: MarketplaceModule(
+                          key: 'businesses_mobility',
+                          label: 'Entreprises & véhicules',
+                          route: '/businesses-mobility',
+                          iconName: 'directions_car',
+                          enabled: true,
+                          sortOrder: -1,
+                          config: {},
+                        ),
+                      );
+                    }
+                    return _ModuleShortcut(module: visible[index - 1]);
+                  },
                 ),
               ),
             ],
