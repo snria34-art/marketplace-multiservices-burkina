@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../../core/errors/backend_error_message.dart';
 import '../../../core/location/device_location_service.dart';
 import '../../../core/providers/repository_providers.dart';
 import '../data/vertical_repository.dart';
@@ -2880,8 +2881,14 @@ class _VerticalDiscoveryPageState
 
   void _info(String message) {
     if (!mounted) return;
+    final safeMessage = containsRawBackendErrorDetails(message)
+        ? safeBackendErrorMessage(
+            message,
+            fallback: 'Action impossible pour le moment. Vérifiez les informations et réessayez.',
+          )
+        : message;
     ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(message)));
+        .showSnackBar(SnackBar(content: Text(safeMessage)));
   }
 
   bool _hasAction(VerticalModule module) => const {

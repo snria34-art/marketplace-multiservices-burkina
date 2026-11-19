@@ -1,3 +1,15 @@
+/// Detects exception and database diagnostics embedded in UI messages.
+bool containsRawBackendErrorDetails(String message) {
+  return RegExp(
+    r'(?:[A-Za-z]+Exception|Exception:|Error:|PGRST\\d*|SQLSTATE|Postgrest|'
+    r'row-level security|permission denied|JWT expired|failed host lookup|'
+    r'timed out|not_authenticated|bad state:|duplicate key|violates .* constraint|'
+    r'unauthorized|forbidden|connection reset|connection refused|'
+    r'network is unreachable|invalid credentials)',
+    caseSensitive: false,
+  ).hasMatch(message);
+}
+
 /// Converts backend failures into messages safe to display to end users.
 /// Raw Postgres/PostgREST details must stay in diagnostic logs, not the UI.
 String safeBackendErrorMessage(

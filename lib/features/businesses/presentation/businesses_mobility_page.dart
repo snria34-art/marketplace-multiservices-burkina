@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/errors/backend_error_message.dart';
 import '../../../core/providers/repository_providers.dart';
 import '../../verticals/data/vertical_repository.dart';
 
@@ -48,7 +49,10 @@ class BusinessesMobilityPage extends ConsumerWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                error.toString(),
+                safeBackendErrorMessage(
+                  error,
+                  fallback: 'Vérifiez votre connexion et réessayez.',
+                ),
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.bodySmall,
               ),

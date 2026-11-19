@@ -4,6 +4,27 @@ import 'package:marketplace_multiservices_burkina/core/errors/backend_error_mess
 void main() {
   const fallback = 'Action impossible pour le moment.';
 
+  test('detects backend exception diagnostics but not ordinary user text', () {
+    expect(
+      containsRawBackendErrorDetails(
+        'Chargement impossible : PostgrestException: permission denied',
+      ),
+      isTrue,
+    );
+    expect(
+      containsRawBackendErrorDetails('Code SQLSTATE 42501'),
+      isTrue,
+    );
+    expect(
+      containsRawBackendErrorDetails('Connectez-vous pour continuer.'),
+      isFalse,
+    );
+    expect(
+      containsRawBackendErrorDetails('Aucune chambre disponible.'),
+      isFalse,
+    );
+  });
+
   test('maps expired sessions without exposing backend details', () {
     expect(
       safeBackendErrorMessage(Exception('JWT expired'), fallback: fallback),
