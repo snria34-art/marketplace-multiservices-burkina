@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../config/supabase_config.dart';
 import '../engine/marketplace_engine.dart';
+import '../engine/marketplace_resilience.dart';
 import '../../features/cart/data/cart_repository.dart';
 import '../../features/catalog/data/catalog_repository.dart';
 import '../../features/checkout/data/checkout_repository.dart';
@@ -17,13 +18,22 @@ final supabaseProvider = Provider<SupabaseClient?>((ref) {
   return Supabase.instance.client;
 });
 
+final marketplaceResilienceProvider = Provider<MarketplaceResilience>((ref) {
+  return MarketplaceResilience();
+});
+
 final marketplaceEngineProvider = Provider<MarketplaceEngine>((ref) {
   return MarketplaceEngine(ref.watch(supabaseProvider));
 });
 
 final catalogRepositoryProvider = Provider<CatalogRepository?>((ref) {
   final client = ref.watch(supabaseProvider);
-  return client == null ? null : CatalogRepository(client);
+  return client == null
+      ? null
+      : CatalogRepository(
+          client,
+          resilience: ref.watch(marketplaceResilienceProvider),
+        );
 });
 
 final cartRepositoryProvider = Provider<CartRepository?>((ref) {
