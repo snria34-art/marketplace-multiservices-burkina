@@ -7,6 +7,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/location/device_location_service.dart';
+import '../../../core/errors/backend_error_message.dart';
 import '../../../core/providers/repository_providers.dart';
 import '../../../core/widgets/account_session_action_button.dart';
 import '../data/courier_repository.dart';
@@ -201,7 +202,7 @@ class _CourierPageState extends ConsumerState<CourierPage>
       _locationInFlight = false;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Localisation indisponible : $error'),
+          content: Text('Localisation indisponible. Vérifiez le GPS et les autorisations de localisation.'),
           action: SnackBarAction(
             label: 'Paramètres',
             onPressed: () async {
@@ -441,7 +442,7 @@ class _CourierPageState extends ConsumerState<CourierPage>
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Action impossible : ' + error.toString())),
+        SnackBar(content: Text(safeBackendErrorMessage(error, fallback: 'Action coursier impossible. Vérifiez votre mission et réessayez.'))),
       );
     }
   }

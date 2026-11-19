@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/media/video_preview_controller_factory.dart';
 import '../../../core/media/upload_media_validator.dart';
+import '../../../core/errors/backend_error_message.dart';
 import '../../../core/providers/repository_providers.dart';
 
 class SellerModerationPage extends ConsumerStatefulWidget {
@@ -81,7 +82,7 @@ class _SellerModerationPageState extends ConsumerState<SellerModerationPage> {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               content: Text(
-                                'Capture photo impossible : $error',
+                                safeBackendErrorMessage(error, fallback: 'Capture photo impossible. Vérifiez les autorisations de la caméra.'),
                               ),
                             ),
                           );
@@ -133,7 +134,7 @@ class _SellerModerationPageState extends ConsumerState<SellerModerationPage> {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               content: Text(
-                                'Lecture de la vidéo impossible : $error',
+                                safeBackendErrorMessage(error, fallback: 'Lecture de la vidéo impossible sur cet appareil.'),
                               ),
                             ),
                           );
@@ -254,7 +255,7 @@ class _SellerModerationPageState extends ConsumerState<SellerModerationPage> {
       }
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Envoi impossible : $error')),
+        SnackBar(content: Text(safeBackendErrorMessage(error, fallback: 'Envoi du contenu impossible. Vérifiez votre connexion et réessayez.'))),
       );
     }
   }

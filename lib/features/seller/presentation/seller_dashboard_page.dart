@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/errors/backend_error_message.dart';
 import '../../../core/providers/repository_providers.dart';
 import '../../../core/widgets/account_session_action_button.dart';
 import '../data/seller_repository.dart';
@@ -98,7 +99,7 @@ class _SellerDashboardPageState
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Demande impossible : ' + error.toString(),
+            safeBackendErrorMessage(error, fallback: 'Demande vendeur impossible. Vérifiez votre compte et réessayez.'),
           ),
         ),
       );
@@ -168,7 +169,7 @@ class _SellerDashboardPageState
 
               if (snapshot.hasError) {
                 return Text(
-                  'Erreur vendeur : ' + snapshot.error.toString(),
+                  'Impossible de charger le tableau de bord vendeur. Réessayez.',
                 );
               }
 

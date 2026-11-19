@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/errors/backend_error_message.dart';
 import '../../../core/providers/repository_providers.dart';
 
 class AdminSellerPayoutsPage extends ConsumerStatefulWidget {
@@ -144,7 +145,7 @@ class _AdminSellerPayoutsPageState
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Action refusée : $error'),
+          content: Text(safeBackendErrorMessage(error, fallback: 'Action sur le retrait vendeur refusée. Vérifiez son statut et les droits.')),
         ),
       );
     }

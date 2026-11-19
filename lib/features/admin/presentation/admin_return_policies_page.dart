@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/errors/backend_error_message.dart';
 import '../../../core/providers/repository_providers.dart';
 
 class AdminReturnPoliciesPage extends ConsumerStatefulWidget {
@@ -49,7 +50,7 @@ class _AdminReturnPoliciesPageState extends ConsumerState<AdminReturnPoliciesPag
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Modification refusée : $error')),
+        SnackBar(content: Text(safeBackendErrorMessage(error, fallback: 'Modification de la politique de retour refusée. Vérifiez les droits et réessayez.'))),
       );
     } finally {
       if (mounted) setState(() => _saving.remove(id));

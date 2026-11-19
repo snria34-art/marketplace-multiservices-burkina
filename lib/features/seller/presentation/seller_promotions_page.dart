@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/errors/backend_error_message.dart';
 import '../../../core/providers/repository_providers.dart';
 
 class SellerPromotionsPage extends ConsumerStatefulWidget {
@@ -77,7 +78,7 @@ class _SellerPromotionsPageState
     try {
       shopId = (await _loadBase()).$1;
     } catch (error) {
-      _show('Création impossible : ' + error.toString());
+      _show(safeBackendErrorMessage(error, fallback: 'Création de la promotion impossible. Vérifiez les informations et réessayez.'));
       return;
     }
 
@@ -108,7 +109,7 @@ class _SellerPromotionsPageState
       _show('Promotion créée : ' + id.toString());
       setState(() => _future = _load());
     } catch (error) {
-      _show('Promotion refusée : ' + error.toString());
+      _show(safeBackendErrorMessage(error, fallback: 'Création de la promotion refusée. Vérifiez votre compte et réessayez.'));
     }
   }
 
@@ -126,7 +127,7 @@ class _SellerPromotionsPageState
       );
       if (mounted) setState(() => _future = _load());
     } catch (error) {
-      _show('Modification refusée : ' + error.toString());
+      _show(safeBackendErrorMessage(error, fallback: 'Modification de la promotion impossible. Réessayez.'));
     }
   }
 
@@ -164,7 +165,7 @@ class _SellerPromotionsPageState
               child: Padding(
                 padding: const EdgeInsets.all(20),
                 child: Text(
-                  'Erreur : ' + snapshot.error.toString(),
+                  'Impossible de charger les promotions vendeur. Réessayez.',
                   textAlign: TextAlign.center,
                 ),
               ),

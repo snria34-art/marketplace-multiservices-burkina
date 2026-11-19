@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/errors/backend_error_message.dart';
 import '../../../core/providers/repository_providers.dart';
 
 class AdminPlatformHealthPage extends ConsumerStatefulWidget {
@@ -52,7 +53,7 @@ class _AdminPlatformHealthPageState
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Vérification impossible : $error')),
+        SnackBar(content: Text(safeBackendErrorMessage(error, fallback: 'Vérification de santé impossible. Réessayez.'))),
       );
     } finally {
       if (mounted) setState(() => _running = false);
@@ -77,7 +78,7 @@ class _AdminPlatformHealthPageState
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Annulation impossible : $error')),
+        SnackBar(content: Text(safeBackendErrorMessage(error, fallback: 'Annulation du contrôle impossible. Réessayez.'))),
       );
     }
   }
@@ -95,7 +96,7 @@ class _AdminPlatformHealthPageState
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Réparation refusée : $error')),
+        SnackBar(content: Text(safeBackendErrorMessage(error, fallback: 'Réparation refusée. Vérifiez les droits et réessayez.'))),
       );
     }
   }

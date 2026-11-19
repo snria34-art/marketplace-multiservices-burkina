@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/errors/backend_error_message.dart';
 import '../../../core/providers/repository_providers.dart';
 import '../../../core/widgets/account_session_action_button.dart';
 
@@ -76,7 +77,7 @@ class _AdminDashboardPageState
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Modification refusée : ' + error.toString(),
+            safeBackendErrorMessage(error, fallback: 'Modification administrative refusée. Vérifiez les droits et réessayez.'),
           ),
         ),
       );
@@ -102,7 +103,7 @@ class _AdminDashboardPageState
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Test push impossible : ' + error.toString())),
+        SnackBar(content: Text(safeBackendErrorMessage(error, fallback: 'Test de notification push impossible. Vérifiez la configuration.'))),
       );
     }
   }
@@ -292,7 +293,7 @@ class _AdminDashboardPageState
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Activation refusée : ' + error.toString())),
+        SnackBar(content: Text(safeBackendErrorMessage(error, fallback: 'Activation refusée. Vérifiez les droits et réessayez.'))),
       );
     }
   }
@@ -323,8 +324,7 @@ class _AdminDashboardPageState
               child: Padding(
                 padding: const EdgeInsets.all(24),
                 child: Text(
-                  'Accès ou chargement impossible : ' +
-                      snapshot.error.toString(),
+                  'Impossible de charger le tableau de bord administrateur. Réessayez.'
                   textAlign: TextAlign.center,
                 ),
               ),
