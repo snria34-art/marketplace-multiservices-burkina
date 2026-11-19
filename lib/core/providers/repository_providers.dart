@@ -1,7 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../config/supabase_config.dart';
 import '../engine/marketplace_engine.dart';
 import '../engine/marketplace_resilience.dart';
 import '../../features/cart/data/cart_repository.dart';
@@ -13,10 +12,22 @@ import '../../features/seller/data/seller_repository.dart';
 import '../../features/seller/data/seller_products_repository.dart';
 import '../../features/verticals/data/vertical_repository.dart';
 
-final supabaseProvider = Provider<SupabaseClient?>((ref) {
-  if (!SupabaseConfig.isConfigured) return null;
-  return Supabase.instance.client;
-});
+/// Holds the backend client independently from the Flutter shell lifecycle.
+/// The app can render immediately and receive the client when initialization
+/// finishes, without requiring a restart.
+final supabaseProvider =
+    NotifierProvider<SupabaseClientNotifier, SupabaseClient?>(
+  SupabaseClientNotifier.new,
+);
+
+class SupabaseClientNotifier extends Notifier<SupabaseClient?> {
+  @override
+  SupabaseClient? build() => null;
+
+  void setClient(SupabaseClient? client) {
+    state = client;
+  }
+}
 
 final marketplaceResilienceProvider = Provider<MarketplaceResilience>((ref) {
   return MarketplaceResilience();
