@@ -63,15 +63,26 @@ import '../../features/businesses/presentation/businesses_mobility_page.dart';
 
 class _AuthRefreshListenable extends ChangeNotifier {
   _AuthRefreshListenable(SupabaseClient? client) {
-    _subscription = client?.auth.onAuthStateChange.listen((_) {
-      notifyListeners();
-    });
+    _subscription = client?.auth.onAuthStateChange.listen(
+      (_) => _notifyIfActive(),
+      onError: (Object error, StackTrace stackTrace) {
+        // Re-evaluate guarded routes on auth-stream failure. The route guard
+        // remains fail-closed if the backend cannot verify the session.
+        _notifyIfActive();
+      },
+    );
   }
 
   StreamSubscription<dynamic>? _subscription;
+  bool _disposed = false;
+
+  void _notifyIfActive() {
+    if (!_disposed) notifyListeners();
+  }
 
   @override
   void dispose() {
+    _disposed = true;
     _subscription?.cancel();
     super.dispose();
   }
