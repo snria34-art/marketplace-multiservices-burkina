@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/errors/backend_error_message.dart';
 import '../../../core/providers/repository_providers.dart';
 
 class PromotionsPage extends ConsumerStatefulWidget {
@@ -57,7 +58,7 @@ class _PromotionsPageState extends ConsumerState<PromotionsPage> {
           }
           if (snapshot.hasError) {
             return Center(
-              child: Text('Erreur : ' + snapshot.error.toString()),
+              child: Text('Impossible de charger les promotions. Réessayez.'),
             );
           }
 

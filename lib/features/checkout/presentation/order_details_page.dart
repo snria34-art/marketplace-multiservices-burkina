@@ -10,6 +10,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/media/video_preview_controller_factory.dart';
 import '../../../core/media/upload_media_validator.dart';
+import '../../../core/errors/backend_error_message.dart';
 import '../../../core/providers/repository_providers.dart';
 import '../models/xof_amount.dart';
 
@@ -305,7 +306,7 @@ class _OrderDetailsPageState extends ConsumerState<OrderDetailsPage> {
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Paiement impossible : ' + error.toString())),
+        SnackBar(content: Text(safeBackendErrorMessage(error, fallback: 'Paiement impossible. Vérifiez le statut de la commande et réessayez.'))),
       );
     }
   }
@@ -386,7 +387,7 @@ class _OrderDetailsPageState extends ConsumerState<OrderDetailsPage> {
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Remboursement refusé : ' + error.toString())),
+        SnackBar(content: Text(safeBackendErrorMessage(error, fallback: 'Demande de remboursement refusée. Vérifiez les conditions de la commande.'))),
       );
     }
   }
@@ -443,7 +444,7 @@ class _OrderDetailsPageState extends ConsumerState<OrderDetailsPage> {
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Litige refusé : ' + error.toString())));
+          .showSnackBar(SnackBar(content: Text(safeBackendErrorMessage(error, fallback: 'Ouverture du litige impossible. Réessayez.'))));
     }
   }
 
@@ -499,7 +500,7 @@ class _OrderDetailsPageState extends ConsumerState<OrderDetailsPage> {
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Retour refusé : ' + error.toString())));
+          .showSnackBar(SnackBar(content: Text(safeBackendErrorMessage(error, fallback: 'Demande de retour impossible. Vérifiez les conditions et réessayez.'))));
     }
   }
 
@@ -626,7 +627,7 @@ class _OrderDetailsPageState extends ConsumerState<OrderDetailsPage> {
       if (!mounted) return;
       final message = createdReviewId != null
           ? 'Avis enregistré, mais le média n’a pas pu être associé. Contactez le support si nécessaire.'
-          : 'Avis non envoyé : ' + error.toString();
+          : safeBackendErrorMessage(error, fallback: 'Avis non envoyé. Vérifiez votre connexion et réessayez.');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(message)),
       );
@@ -691,7 +692,7 @@ class _OrderDetailsPageState extends ConsumerState<OrderDetailsPage> {
             return Center(
               child: Padding(
                 padding: const EdgeInsets.all(20),
-                child: Text('Erreur : ' + snapshot.error.toString()),
+                child: Text('Impossible de charger les détails de cette commande. Réessayez.'),
               ),
             );
           }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/errors/backend_error_message.dart';
 import '../../../core/providers/repository_providers.dart';
 
 class SellerCouponsPage extends ConsumerStatefulWidget {
@@ -82,7 +83,7 @@ class _SellerCouponsPageState extends ConsumerState<SellerCouponsPage> {
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Coupon refusé : ' + error.toString())),
+        SnackBar(content: Text(safeBackendErrorMessage(error, fallback: 'Action sur le coupon impossible. Vérifiez les informations et réessayez.'))),
       );
     }
   }
@@ -100,7 +101,7 @@ class _SellerCouponsPageState extends ConsumerState<SellerCouponsPage> {
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Modification refusée : ' + error.toString())),
+        SnackBar(content: Text(safeBackendErrorMessage(error, fallback: 'Modification du coupon impossible. Réessayez.'))),
       );
     }
   }
@@ -129,7 +130,7 @@ class _SellerCouponsPageState extends ConsumerState<SellerCouponsPage> {
             return const Center(child: CircularProgressIndicator());
           }
           if (snapshot.hasError) {
-            return Center(child: Text('Erreur : ' + snapshot.error.toString()));
+            return Center(child: Text('Impossible de charger les coupons. Réessayez.'));
           }
 
           final coupons = snapshot.data ?? const <Map<String, dynamic>>[];

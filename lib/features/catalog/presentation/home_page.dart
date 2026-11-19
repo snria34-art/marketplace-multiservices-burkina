@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/errors/backend_error_message.dart';
 import '../../../core/providers/repository_providers.dart';
 import '../../../core/widgets/app_error_view.dart';
 import '../../../core/widgets/account_session_action_button.dart';
@@ -111,7 +112,7 @@ class _HomePageState extends ConsumerState<HomePage> {
       });
     } catch (error) {
       if (!mounted || requestId != _productRequestId) return;
-      setState(() => _productsError = error.toString());
+      setState(() => _productsError = safeBackendErrorMessage(error, fallback: 'Catalogue indisponible. Vérifiez Internet et réessayez.'));
     } finally {
       if (mounted && requestId == _productRequestId) {
         setState(() => _loadingProducts = false);
@@ -167,7 +168,7 @@ class _HomePageState extends ConsumerState<HomePage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Impossible d’ajouter le produit : ' + error.toString(),
+            safeBackendErrorMessage(error, fallback: 'Impossible d’ajouter ce produit au panier. Réessayez.'),
           ),
         ),
       );
@@ -198,8 +199,7 @@ class _HomePageState extends ConsumerState<HomePage> {
 
           if (snapshot.hasError) {
             return AppErrorView(
-              message: 'Impossible de charger le catalogue : ' +
-                  snapshot.error.toString(),
+              message: 'Catalogue indisponible. Réessayez.',
               onRetry: () {
                 setState(() => _metadataFuture = _loadMetadata());
               },

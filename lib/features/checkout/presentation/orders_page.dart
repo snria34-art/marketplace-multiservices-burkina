@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/errors/backend_error_message.dart';
 import '../../../core/providers/repository_providers.dart';
 
 class OrdersPage extends ConsumerStatefulWidget {
@@ -50,7 +51,7 @@ class _OrdersPageState extends ConsumerState<OrdersPage> {
           if (snapshot.hasError) {
             return Center(
               child: Text(
-                'Erreur des commandes : ' + snapshot.error.toString(),
+                'Impossible de charger les commandes. Réessayez.',
               ),
             );
           }

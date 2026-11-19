@@ -50,7 +50,7 @@ class _SellerStatsPageState extends ConsumerState<SellerStatsPage> {
             return const Center(child: CircularProgressIndicator());
           }
           if (snapshot.hasError) {
-            return Center(child: Text('Erreur : ' + snapshot.error.toString()));
+            return Center(child: Text('Impossible de charger les statistiques vendeur. Réessayez.'));
           }
 
           final shops = snapshot.data ?? const <Map<String, dynamic>>[];

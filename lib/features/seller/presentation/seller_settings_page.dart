@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/errors/backend_error_message.dart';
 import '../../../core/providers/repository_providers.dart';
 
 class SellerSettingsPage extends ConsumerStatefulWidget {
@@ -103,7 +104,7 @@ class _SellerSettingsPageState extends ConsumerState<SellerSettingsPage> {
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Modification refusée : ' + error.toString())),
+        SnackBar(content: Text(safeBackendErrorMessage(error, fallback: 'Modification des paramètres de boutique impossible. Réessayez.'))),
       );
     }
   }
@@ -127,7 +128,7 @@ class _SellerSettingsPageState extends ConsumerState<SellerSettingsPage> {
             return const Center(child: CircularProgressIndicator());
           }
           if (snapshot.hasError) {
-            return Center(child: Text('Erreur : ' + snapshot.error.toString()));
+            return Center(child: Text('Impossible de charger les paramètres de boutique. Réessayez.'));
           }
           final seller = snapshot.data;
           if (seller == null) return const SizedBox.shrink();
