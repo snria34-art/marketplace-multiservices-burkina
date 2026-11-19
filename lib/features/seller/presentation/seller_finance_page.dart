@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/providers/repository_providers.dart';
 import '../data/seller_repository.dart';
+import 'seller_finance_helpers.dart';
 
 final sellerFinanceRepositoryProvider = Provider<SellerRepository?>((ref) {
   final client = ref.watch(supabaseProvider);
@@ -103,14 +104,12 @@ class _SellerFinancePageState extends ConsumerState<SellerFinancePage> {
                 onPressed: submitting
                     ? null
                     : () async {
-                        final amount = num.tryParse(
-                          amountController.text.trim(),
+                        final amount = parsePositiveXofAmount(
+                          amountController.text,
                         );
-                        if (amount == null ||
-                            amount <= 0 ||
-                            amount != amount.truncate()) {
+                        if (amount == null) {
                           setDialogState(() {
-                            error = 'Entrez un montant XOF entier valide.';
+                            error = 'Entrez un montant XOF entier strictement positif.';
                           });
                           return;
                         }
@@ -163,22 +162,8 @@ class _SellerFinancePageState extends ConsumerState<SellerFinancePage> {
     amountController.dispose();
   }
 
-  String _payoutErrorMessage(Object error) {
-    final message = error.toString();
-    if (message.contains('seller_payout_blocked_by_refund_reconciliation')) {
-      return 'Retrait bloqué : un remboursement de commande doit encore être rapproché.';
-    }
-    if (message.contains('insufficient_seller_balance')) {
-      return 'Solde disponible insuffisant pour ce montant.';
-    }
-    if (message.contains('seller_not_eligible')) {
-      return 'Le compte vendeur doit être vérifié pour demander un retrait.';
-    }
-    if (message.contains('amount_invalid')) {
-      return 'Le montant demandé est invalide.';
-    }
-    return 'Demande impossible pour le moment. Vérifiez votre solde et réessayez.';
-  }
+  String _payoutErrorMessage(Object error) =>
+      sellerPayoutErrorMessage(error);
 
   Future<_FinanceSnapshot> _load() async {
     final repo = ref.read(sellerFinanceRepositoryProvider);
