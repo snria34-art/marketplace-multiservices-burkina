@@ -338,7 +338,7 @@ grant execute on function public.quote_restaurant_menu_item(uuid,jsonb) to anon,
 -- Keep customization selections in the cart and immutable price/name snapshots on orders.
 alter table public.cart_items
   add column if not exists restaurant_menu_item_id uuid
-    references public.restaurant_menu_items(id) on delete restrict,
+    references public.restaurant_menu_items(id) on delete set null,
   add column if not exists restaurant_selections jsonb not null default '{}'::jsonb;
 
 alter table public.order_items
@@ -442,6 +442,9 @@ begin
   limit 1;
 
   if v_menu_item_id is null then
+    if coalesce(v_selections, '{}'::jsonb) <> '{}'::jsonb then
+      raise exception 'restaurant_customization_unavailable';
+    end if;
     new.restaurant_customizations := '[]'::jsonb;
     return new;
   end if;
