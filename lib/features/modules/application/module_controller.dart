@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/providers/repository_providers.dart';
+import '../../../core/engine/marketplace_engine.dart';
 import '../domain/marketplace_module.dart';
 
 final enabledModulesProvider =

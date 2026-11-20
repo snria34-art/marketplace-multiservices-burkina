@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/providers/repository_providers.dart';
+import '../../../core/engine/marketplace_engine.dart';
 
 class PromotionsPage extends ConsumerStatefulWidget {
   const PromotionsPage({super.key});
