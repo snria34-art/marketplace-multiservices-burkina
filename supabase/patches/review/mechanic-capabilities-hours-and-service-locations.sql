@@ -203,7 +203,12 @@ begin
   update public.mechanic_capabilities
   set active=false
   where mechanic_id=v_mechanic
-    and vehicle_type <> all(p_vehicle_types);
+    and (
+      vehicle_type <> all(p_vehicle_types)
+      or service_type <> all(array(
+        select upper(trim(x)) from unnest(p_service_types) x
+      ))
+    );
 
   update public.mechanic_service_rates
   set active=false,updated_at=now()
