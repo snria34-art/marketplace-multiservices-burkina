@@ -81,8 +81,8 @@ select id,'Restaurant Démo','restaurant démo','Restaurant de démonstration lo
 from public.sellers where user_id='10000000-0000-4000-8000-000000000004'
 on conflict (normalized_name) do nothing;
 
-insert into public.restaurant_profiles(shop_id,cuisine_types,preparation_time_min,delivery_available)
-select id,array['LOCAL']::text[],25,true
+insert into public.restaurant_profiles(shop_id,restaurant_type,cuisine_types,preparation_time_min,delivery_available)
+select id,'TRADITIONAL',array['BURKINABE']::text[],25,true
 from public.shops where normalized_name='restaurant démo'
 on conflict (shop_id) do nothing;
 
