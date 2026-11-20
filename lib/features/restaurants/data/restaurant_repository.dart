@@ -1,9 +1,15 @@
+import 'dart:async';
+
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../../core/engine/marketplace_resilience.dart';
+
 class RestaurantRepository {
-  const RestaurantRepository(this.client);
+  RestaurantRepository(this.client, {MarketplaceResilience? resilience})
+      : _resilience = resilience ?? MarketplaceResilience();
 
   final SupabaseClient client;
+  final MarketplaceResilience _resilience;
 
 
   /// Saves a seller-owned option group. Prices are surcharge amounts in XOF.
@@ -190,7 +196,8 @@ class RestaurantRepository {
     String? cuisineType,
     int limit = 100,
   }) async {
-    final response = await client.rpc(
+    final response = await _resilience.run(
+      () => client.rpc(
       'search_restaurant_catalog',
       params: {
         'p_query': query.trim().isEmpty ? null : query.trim(),
@@ -198,6 +205,9 @@ class RestaurantRepository {
         'p_cuisine_type': cuisineType,
         'p_limit': limit,
       },
+    ),
+      retrySafe: true,
+      isRetryable: (error) => error is TimeoutException,
     );
     if (response is! List) {
       throw StateError('Réponse de recherche restaurant invalide.');
