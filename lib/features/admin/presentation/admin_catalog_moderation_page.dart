@@ -24,7 +24,7 @@ class _AdminCatalogModerationPageState
   }
 
   Future<List<Map<String, dynamic>>> _load() async {
-    final client = ref.read(supabaseProvider);
+    final client = ref.read(marketplaceAdminClientProvider);
     if (client == null || client.auth.currentUser == null) {
       throw StateError('Authentification administrateur requise.');
     }
@@ -111,7 +111,7 @@ class _AdminCatalogModerationPageState
     if (!mounted || note == null) return;
 
     try {
-      final client = ref.read(supabaseProvider);
+      final client = ref.read(marketplaceAdminClientProvider);
       if (client == null) throw StateError('Service indisponible.');
       await client.rpc('admin_decide_catalog_finding', params: {
         'p_finding_id': finding['finding_id'],
