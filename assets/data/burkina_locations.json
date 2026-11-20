@@ -1,71 +1,970 @@
 {
   "country": "Burkina Faso",
   "countryCode": "BF",
-  "administrativeReform": "2025-07-02",
-  "coverageNote": "17 regions and their regional capitals are listed. Complete neighbourhood coverage for every locality is not asserted: keep free-text entry for missing local names. Urban sector lists are populated for Ouagadougou and Bobo-Dioulasso from INSD/official sources.",
+  "referenceDate": "2025-12",
+  "administrativeBasis": "Réorganisation du territoire annoncée le 2 juillet 2025 : 17 régions et 47 provinces. Les communes ci-dessous sont issues du Tableau 1.1.01 de l'Annuaire statistique national 2024 de l'INSD.",
+  "coverage": {
+    "officialAreas": "Régions, provinces, communes, arrondissements, secteurs et villages rattachés publiés par l'INSD.",
+    "neighbourhoods": "Il n'existe pas dans la source nationale utilisée de liste exhaustive et unifiée de tous les noms de quartiers. Les quartiers libres doivent être saisis tels qu'indiqués par le client.",
+    "rule": "Ne jamais transformer un secteur ou un village en nom de quartier. Conserver l'adresse libre et le repère du client.",
+    "sourceTables": [
+      "INSD ASN 2024, tableau 1.1.01",
+      "INSD ASN 2024, tableau 1.1.03",
+      "INSD ASN 2024, tableau 1.1.04"
+    ]
+  },
   "sources": [
     "https://www.presidencedufaso.bf/conseil-des-ministres-du-2-juillet-2025/",
-    "https://www.matd.gov.bf/accueil/actualites/details?cHash=268871d043c3b736e5d3721ee1c06cb7&tx_news_pi1%5Baction%5D=detail&tx_news_pi1%5Bcontroller%5D=News&tx_news_pi1%5Bnews%5D=1079",
-    "https://www.insd.bf/sites/default/files/2023-12/Annuaire_statistique_national_2022.pdf",
-    "https://www.insd.bf/sites/default/files/2023-02/MONOGRAPHIE%20DE%20LA%20COMMUNE%20DE%20BOBO-DIOULASSO.pdf"
+    "https://www.insd.bf/sites/default/files/2026-01/Annuaire%20statistique%20national%202024%20VF26-12-2025.pdf"
   ],
   "regions": [
-    {"name":"Bankui","formerName":"Boucle du Mouhoun","capital":"Dédougou"},
-    {"name":"Tannounyan","formerName":"Cascades","capital":"Banfora"},
-    {"name":"Kadiogo","formerName":"Centre","capital":"Ouagadougou"},
-    {"name":"Nakambé","formerName":"Centre-Est","capital":"Tenkodogo"},
-    {"name":"Kuilsé","formerName":"Centre-Nord","capital":"Kaya"},
-    {"name":"Nando","formerName":"Centre-Ouest","capital":"Koudougou"},
-    {"name":"Nazinon","formerName":"Centre-Sud","capital":"Manga"},
-    {"name":"Goulmou","formerName":"Est","capital":"Fada N’Gourma"},
-    {"name":"Guiriko","formerName":"Hauts-Bassins","capital":"Bobo-Dioulasso"},
-    {"name":"Liptako","formerName":"Sahel","capital":"Dori"},
-    {"name":"Sirba","formerName":"Nouvelle région","capital":"Bogandé"},
-    {"name":"Soum","formerName":"Nouvelle région","capital":"Djibo"},
-    {"name":"Tapoa","formerName":"Nouvelle région","capital":"Diapaga"},
-    {"name":"Sourou","formerName":"Nouvelle région","capital":"Tougan"},
-    {"name":"Yaadga","formerName":"Nord","capital":"Ouahigouya"},
-    {"name":"Oubri","formerName":"Plateau Central","capital":"Ziniaré"},
-    {"name":"Djôrô","formerName":"Sud-Ouest","capital":"Gaoua"}
+    {
+      "name": "Bankui",
+      "capital": "Dédougou",
+      "provinces": [
+        {
+          "name": "Balé",
+          "communes": [
+            "Bagassi",
+            "Bana",
+            "Boromo",
+            "Fara",
+            "Oury",
+            "Pa",
+            "Pompoï",
+            "Poura",
+            "Siby",
+            "Yaho"
+          ]
+        },
+        {
+          "name": "Banwa",
+          "communes": [
+            "Balavé",
+            "Kouka",
+            "Sami",
+            "Sanaba",
+            "Solenzo",
+            "Tansila"
+          ]
+        },
+        {
+          "name": "Mouhoun",
+          "communes": [
+            "Bondokuy",
+            "Dédougou",
+            "Douroula",
+            "Kona",
+            "Ouarkoye",
+            "Safané",
+            "Tchériba"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Djôrô",
+      "capital": "Gaoua",
+      "provinces": [
+        {
+          "name": "Bougouriba",
+          "communes": [
+            "Diébougou",
+            "Dolo",
+            "Gbondjigui",
+            "Nioronioro",
+            "Tiankoura"
+          ]
+        },
+        {
+          "name": "Ioba",
+          "communes": [
+            "Dano",
+            "Dissihn",
+            "Guéguéré",
+            "Koper",
+            "Niégo",
+            "Oronkua",
+            "Ouéssa",
+            "Zambo"
+          ]
+        },
+        {
+          "name": "Noumbiel",
+          "communes": [
+            "Batié",
+            "Boussoukoula",
+            "Kpéré",
+            "Legmoin",
+            "Midebdo"
+          ]
+        },
+        {
+          "name": "Poni",
+          "communes": [
+            "Bouroum-Bouroum",
+            "Bousséra",
+            "Djigoué",
+            "Gaoua",
+            "Gbomblora",
+            "Kampti",
+            "Loropéni",
+            "Malba",
+            "Nako",
+            "Périgban"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Goulmou",
+      "capital": "Fada N'Gourma",
+      "provinces": [
+        {
+          "name": "Gourma",
+          "communes": [
+            "Diabo",
+            "Diapangou",
+            "Fada N'Gourma",
+            "Matiacoali",
+            "Tibga",
+            "Yamba"
+          ]
+        },
+        {
+          "name": "Kompienga",
+          "communes": [
+            "Kompienga",
+            "Madjoari",
+            "Pama"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Guiriko",
+      "capital": "Bobo-Dioulasso",
+      "provinces": [
+        {
+          "name": "Houet",
+          "communes": [
+            "Bobo-Dioulasso",
+            "Bama",
+            "Dandé",
+            "Faramana",
+            "Fô",
+            "Karangasso-Sambla",
+            "Karangasso-Vigué",
+            "Koundougou",
+            "Léna",
+            "Padéma",
+            "Péni",
+            "Satiri",
+            "Toussiana"
+          ]
+        },
+        {
+          "name": "Kénédougou",
+          "communes": [
+            "Banzon",
+            "Djigouèra",
+            "Kangala",
+            "Kayan",
+            "Koloko",
+            "Kourinion",
+            "Kourouma",
+            "Morolaba",
+            "N'Dorola",
+            "Orodara",
+            "Samogôyiri",
+            "Samorogouan",
+            "Sindo"
+          ]
+        },
+        {
+          "name": "Tuy",
+          "communes": [
+            "Békuy",
+            "Béréba",
+            "Boni",
+            "Founzan",
+            "Houndé",
+            "Koti",
+            "Koumbia"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Kadiogo",
+      "capital": "Ouagadougou",
+      "provinces": [
+        {
+          "name": "Kadiogo",
+          "communes": [
+            "Ouagadougou",
+            "Komki-Ipala",
+            "Komsilga",
+            "Koubri",
+            "Pabré",
+            "Saaba",
+            "Tanghin-Dassouri"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Kuilsé",
+      "aliasInInSD": "Koulsé",
+      "capital": "Kaya",
+      "provinces": [
+        {
+          "name": "Bam",
+          "communes": [
+            "Bourzanga",
+            "Guibaré",
+            "Kongoussi",
+            "Nasséré",
+            "Rollo",
+            "Rouko",
+            "Sabcé",
+            "Tikaré",
+            "Zimtenga"
+          ]
+        },
+        {
+          "name": "Namentenga",
+          "communes": [
+            "Boala",
+            "Boulsa",
+            "Bouroum",
+            "Dargo",
+            "Nagbingou",
+            "Tougouri",
+            "Yalgo",
+            "Zéguédéguin"
+          ]
+        },
+        {
+          "name": "Sandbondtenga",
+          "communes": [
+            "Barsalogho",
+            "Boussouma",
+            "Dablo",
+            "Kaya",
+            "Korsimoro",
+            "Mané",
+            "Namissiguima",
+            "Pensa",
+            "Pibaoré",
+            "Pissila",
+            "Ziga"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Liptako",
+      "capital": "Dori",
+      "provinces": [
+        {
+          "name": "Oudalan",
+          "communes": [
+            "Déou",
+            "Gorom-Gorom",
+            "Markoye",
+            "Oursi",
+            "Tinakoff"
+          ]
+        },
+        {
+          "name": "Séno",
+          "communes": [
+            "Bani",
+            "Dori",
+            "Falangountou",
+            "Gorgadji",
+            "Sampelga",
+            "Seytenga"
+          ]
+        },
+        {
+          "name": "Yagha",
+          "communes": [
+            "Boundoré",
+            "Mansila",
+            "Sebba",
+            "Solhan",
+            "Tankougounadié",
+            "Titabé"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Nakambé",
+      "aliasInInSD": "Nakambe",
+      "capital": "Tenkodogo",
+      "provinces": [
+        {
+          "name": "Boulgou",
+          "communes": [
+            "Bagré",
+            "Bané",
+            "Béguédo",
+            "Bissiga",
+            "Bittou",
+            "Boussouma",
+            "Garango",
+            "Komtoèga",
+            "Niaogho",
+            "Tenkodogo",
+            "Zabré",
+            "Zoaga",
+            "Zonsé"
+          ]
+        },
+        {
+          "name": "Koulpelogo",
+          "communes": [
+            "Comin-Yanga",
+            "Dourtenga",
+            "Lalgaye",
+            "Ouargaye",
+            "Sangha",
+            "Soudougui",
+            "Yargatenga",
+            "Yondé"
+          ]
+        },
+        {
+          "name": "Kourittenga",
+          "communes": [
+            "Andemtenga",
+            "Baskouré",
+            "Dialgaye",
+            "Gounghin",
+            "Kando",
+            "Koupéla",
+            "Pouytenga",
+            "Tansobentenga",
+            "Yargo"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Nando",
+      "capital": "Koudougou",
+      "provinces": [
+        {
+          "name": "Boulkiemdé",
+          "communes": [
+            "Bingo",
+            "Imasgo",
+            "Kindi",
+            "Kokologo",
+            "Koudougou",
+            "Nandiala",
+            "Nanoro",
+            "Pella",
+            "Poa",
+            "Ramongo",
+            "Sabou",
+            "Siglé",
+            "Soaw",
+            "Sourgou",
+            "Thiou"
+          ]
+        },
+        {
+          "name": "Sanguié",
+          "communes": [
+            "Dassa",
+            "Didyr",
+            "Godyr",
+            "Kordié",
+            "Kyon",
+            "Pouni",
+            "Réo",
+            "Ténado",
+            "Zamo",
+            "Zawara"
+          ]
+        },
+        {
+          "name": "Sissili",
+          "communes": [
+            "Biéha",
+            "Boura",
+            "Léo",
+            "Nébiélianayou",
+            "Niambouri",
+            "Sily",
+            "Tô"
+          ]
+        },
+        {
+          "name": "Ziro",
+          "communes": [
+            "Bakata",
+            "Bougnounou",
+            "Dalô",
+            "Gaô",
+            "Kassou",
+            "Sapouy"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Nazinon",
+      "capital": "Manga",
+      "provinces": [
+        {
+          "name": "Bazèga",
+          "communes": [
+            "Doulougou",
+            "Gaongo",
+            "Ipelcé",
+            "Kayao",
+            "Kombissiri",
+            "Saponé",
+            "Toécé"
+          ]
+        },
+        {
+          "name": "Nahouri",
+          "communes": [
+            "Guiaro",
+            "Pô",
+            "Tiébélé",
+            "Zecco",
+            "Ziou"
+          ]
+        },
+        {
+          "name": "Zoundwéogo",
+          "communes": [
+            "Béré",
+            "Bindé",
+            "Gogo",
+            "Gomboussougou",
+            "Guiba",
+            "Manga",
+            "Nobéré"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Oubri",
+      "capital": "Ziniaré",
+      "provinces": [
+        {
+          "name": "Bassitenga",
+          "communes": [
+            "Absouya",
+            "Dapélogo",
+            "Loumbila",
+            "Nagréongo",
+            "Ourgou-Manega",
+            "Ziniaré",
+            "Zitenga"
+          ]
+        },
+        {
+          "name": "Ganzourgou",
+          "communes": [
+            "Boudry",
+            "Kogho",
+            "Méguet",
+            "Mogtédo",
+            "Salogo",
+            "Zam",
+            "Zorgho",
+            "Zoungou"
+          ]
+        },
+        {
+          "name": "Kourwéogo",
+          "communes": [
+            "Boussé",
+            "Laye",
+            "Niou",
+            "Sourgoubila",
+            "Toéghin"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Sirba",
+      "capital": "Bogandé",
+      "provinces": [
+        {
+          "name": "Gnagna",
+          "communes": [
+            "Bilanga",
+            "Bogandé",
+            "Coalla",
+            "Liptougou",
+            "Mani",
+            "Pièla",
+            "Thion"
+          ]
+        },
+        {
+          "name": "Komondjari",
+          "communes": [
+            "Bartiébougou",
+            "Foutouri",
+            "Gayéri"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Soum",
+      "capital": "Djibo",
+      "provinces": [
+        {
+          "name": "Djelgodji",
+          "communes": [
+            "Baraboulé",
+            "Diguel",
+            "Djibo",
+            "Kelbo",
+            "Nassoumbou",
+            "Pobé-Mengao",
+            "Tongomayel"
+          ]
+        },
+        {
+          "name": "Karo-Peli",
+          "communes": [
+            "Arbinda",
+            "Koutougou"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Sourou",
+      "capital": "Tougan",
+      "provinces": [
+        {
+          "name": "Koosin",
+          "communes": [
+            "Barani",
+            "Bomborokuy",
+            "Bourasso",
+            "Djibasso",
+            "Dokuy",
+            "Doumbala",
+            "Kombori",
+            "Madouba",
+            "Nouna",
+            "Sono"
+          ]
+        },
+        {
+          "name": "Nayala",
+          "communes": [
+            "Gassan",
+            "Gossina",
+            "Kougny",
+            "Toma",
+            "Yaba",
+            "Yé"
+          ]
+        },
+        {
+          "name": "Sourou",
+          "communes": [
+            "Di",
+            "Gomboro",
+            "Kassoum",
+            "Kiembara",
+            "Lanfièra",
+            "Lankoué",
+            "Toéni",
+            "Tougan"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Tannounyan",
+      "aliasInInSD": "Tannouny",
+      "capital": "Banfora",
+      "provinces": [
+        {
+          "name": "Comoé",
+          "communes": [
+            "Banfora",
+            "Bérégadougou",
+            "Mangodara",
+            "Moussodougou",
+            "Niangoloko",
+            "Ouo",
+            "Sidéradougou",
+            "Soubakaniédougou",
+            "Tiéfora"
+          ]
+        },
+        {
+          "name": "Léraba",
+          "communes": [
+            "Dakôrô",
+            "Douna",
+            "Kankalaba",
+            "Loumana",
+            "Niankôrôdougou",
+            "Ouéléni",
+            "Sindou",
+            "Wolonkoto"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Tapoa",
+      "capital": "Diapaga",
+      "provinces": [
+        {
+          "name": "Dyamongou",
+          "communes": [
+            "Botou",
+            "Kantchari"
+          ]
+        },
+        {
+          "name": "Gobnangou",
+          "communes": [
+            "Diapaga",
+            "Logobou",
+            "Namounou",
+            "Partiaga",
+            "Tambaga",
+            "Tansarga"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Yaadga",
+      "capital": "Ouahigouya",
+      "provinces": [
+        {
+          "name": "Lorum",
+          "communes": [
+            "Banh",
+            "Ouintigui",
+            "Sollé",
+            "Titao"
+          ]
+        },
+        {
+          "name": "Passoré",
+          "communes": [
+            "Arbollé",
+            "Bagaré",
+            "Bokin",
+            "Gompomsom",
+            "Kirsi",
+            "La-Toden",
+            "Pilimpikou",
+            "Samba",
+            "Yako"
+          ]
+        },
+        {
+          "name": "Yatenga",
+          "communes": [
+            "Barga",
+            "Kaïn",
+            "Kalsaka",
+            "Kossouka",
+            "Koumbri",
+            "Namissiguima",
+            "Ouahigouya",
+            "Oula",
+            "Rambo",
+            "Séguénéga",
+            "Tangaye",
+            "Thiou",
+            "Zogoré"
+          ]
+        },
+        {
+          "name": "Zondoma",
+          "communes": [
+            "Bassi",
+            "Boussou",
+            "Gourcy",
+            "Léba",
+            "Tougo"
+          ]
+        }
+      ]
+    }
   ],
-  "regionalCapitals": ["Dédougou","Banfora","Ouagadougou","Tenkodogo","Kaya","Koudougou","Manga","Fada N’Gourma","Bobo-Dioulasso","Dori","Bogandé","Djibo","Diapaga","Tougan","Ouahigouya","Ziniaré","Gaoua"],
-  "citiesAndCommunes": {
-    "coverage": "Regional capitals only in this initial verified selector; expand from the complete post-2025 MATM gazetteer before labelling as a full national commune list.",
-    "allowFreeText": true
-  },
-  "urbanAreas": {
+  "urbanSubdivisions": {
     "Ouagadougou": {
       "region": "Kadiogo",
+      "province": "Kadiogo",
+      "arrondissementCount": 12,
       "arrondissements": [
-        {"number":1,"sectors":[1,2,3,4,5,6]},
-        {"number":2,"sectors":[7,8,9,10,11]},
-        {"number":3,"sectors":[12,13,14,15,16]},
-        {"number":4,"sectors":[17,18,19,20]},
-        {"number":5,"sectors":[21,22,23,24]},
-        {"number":6,"sectors":[25,26,27,28,29]},
-        {"number":7,"sectors":[30,31,32,33]},
-        {"number":8,"sectors":[34,35,36]},
-        {"number":9,"sectors":[37,38,39,40]},
-        {"number":10,"sectors":[41,42,43,44,45]},
-        {"number":11,"sectors":[46,47,48,49,50,51]},
-        {"number":12,"sectors":[52,53,54,55]}
+        {
+          "number": 1,
+          "sectors": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ]
+        },
+        {
+          "number": 2,
+          "sectors": [
+            7,
+            8,
+            9,
+            10,
+            11
+          ]
+        },
+        {
+          "number": 3,
+          "sectors": [
+            12,
+            13,
+            14,
+            15,
+            16
+          ]
+        },
+        {
+          "number": 4,
+          "sectors": [
+            17,
+            18,
+            19,
+            20
+          ]
+        },
+        {
+          "number": 5,
+          "sectors": [
+            21,
+            22,
+            23,
+            24
+          ]
+        },
+        {
+          "number": 6,
+          "sectors": [
+            25,
+            26,
+            27,
+            28,
+            29
+          ]
+        },
+        {
+          "number": 7,
+          "sectors": [
+            30,
+            31,
+            32,
+            33
+          ]
+        },
+        {
+          "number": 8,
+          "sectors": [
+            34,
+            35,
+            36
+          ]
+        },
+        {
+          "number": 9,
+          "sectors": [
+            37,
+            38,
+            39,
+            40
+          ]
+        },
+        {
+          "number": 10,
+          "sectors": [
+            41,
+            42,
+            43,
+            44,
+            45
+          ]
+        },
+        {
+          "number": 11,
+          "sectors": [
+            46,
+            47,
+            48,
+            49,
+            50,
+            51
+          ]
+        },
+        {
+          "number": 12,
+          "sectors": [
+            52,
+            53,
+            54,
+            55
+          ]
+        }
       ],
-      "neighbourhoods": ["Bilbalogho","Saint-Léon","Zangouettin","Tiédpalogo","Koulouba","Kamsonghin","Samandin","Gounghin Sud","Gandin","Kouritenga","Mankougoudou","Paspanga","Ouidi","Larlé","Kologh-Naba","Dapoya II","Nemnin","Niogsin","Hamdalaye","Gounghin Nord","Baoghin","Camp militaire","Naab-Pougo","Kienbaoghin","Zongo","Koumdayonré","Nonsin","Rimkièta","Tampouy","Kilwin","Tanghin","Sambin barrage","Somgandé","Zone industrielle","Nioko II","Bendogo","Toukin","Zogona","Wemtenga","Dagnoën","Ronsin","Kalghondin","Cissin","Pissy","Nagrin","Yaoghin","Sandogo","Kankasin","Boassa","Zagtouli","Zongo-Nabitenga","Sogpèlcé","Bissighin","Bassinko","Dar-es-Salam","Silmiougou","Gantin","Bangpooré","Larlé-Wéogo","Marcoussis","Silmiyiri","Wob-Riguéré","Ouapassi","Kossodo","Wayalghin","Godin","Nioko I","Dassosgho","Taabtenga","Dassasgho","Karpala","Balkuy","Lanoayiri","Dayongo","Ouidtenga","Patte d’Oie","Ouaga 2000"],
-      "source": "INSD Annuaire statistique national 2022; INSD administrative map referenced in January 2026 report."
+      "sourceTable": "INSD ASN 2024, Tableau 1.1.03"
     },
-    "Bobo-Dioulasso": {
+    "BoboDioulasso": {
+      "displayName": "Bobo-Dioulasso",
       "region": "Guiriko",
+      "province": "Houet",
+      "arrondissementCount": 7,
       "arrondissements": [
-        {"number":1,"sectors":[1,2,3,4,8],"villages":[]},
-        {"number":2,"sectors":[10,11,23,30],"villages":["Dafinso","Doufiguisso","Kimidougou","Moukama","Panamasso","Santidougou"]},
-        {"number":3,"sectors":[12,13,14,31],"villages":["Kékélésso","Kouentou","Léguéma","Moussobadougou","Noumousso"]},
-        {"number":4,"sectors":[15,16,24,32,33],"villages":["Baré","Borodougou","Kotédougou","Niamadougou","Sogossagasso","Tondogosso","Yéguérésso"]},
-        {"number":5,"sectors":[5,6,17,25,26,27],"villages":["Dingasso","Dodougou","Dogotélama","Koro","Kouakoulé","Pala"]},
-        {"number":6,"sectors":[7,9,18,19,20,28],"villages":["Darsalamy","Farakoba","Logofourousso","Matourkou","Moamy","Koumi","Samagan"]},
-        {"number":7,"sectors":[21,22,29],"villages":["Bana","Dindéresso","Kokorowé","Nasso","Ouolonkoto"]}
+        {
+          "number": 1,
+          "sectors": [
+            1,
+            2,
+            3,
+            4,
+            8
+          ],
+          "villages": []
+        },
+        {
+          "number": 2,
+          "sectors": [
+            10,
+            11,
+            23,
+            30
+          ],
+          "villages": [
+            "Dafinso",
+            "Doufiguisso",
+            "Kimidougou",
+            "Moukama",
+            "Panamasso",
+            "Santidougou"
+          ]
+        },
+        {
+          "number": 3,
+          "sectors": [
+            12,
+            13,
+            14,
+            31
+          ],
+          "villages": [
+            "Kékélésso",
+            "Kouentou",
+            "Léguéma",
+            "Moussobadougou",
+            "Noumousso"
+          ]
+        },
+        {
+          "number": 4,
+          "sectors": [
+            15,
+            16,
+            24,
+            32,
+            33
+          ],
+          "villages": [
+            "Baré",
+            "Borodougou",
+            "Kotédougou",
+            "Niamadougou",
+            "Sogossagasso",
+            "Tondogosso",
+            "Yéguérésso"
+          ]
+        },
+        {
+          "number": 5,
+          "sectors": [
+            5,
+            6,
+            17,
+            25,
+            26,
+            27
+          ],
+          "villages": [
+            "Dingasso",
+            "Dodougou",
+            "Dogotélama",
+            "Koro",
+            "Kouakoulé",
+            "Pala"
+          ]
+        },
+        {
+          "number": 6,
+          "sectors": [
+            7,
+            9,
+            18,
+            19,
+            20,
+            28
+          ],
+          "villages": [
+            "Darsalamy",
+            "Farakoba",
+            "Logofourousso",
+            "Matourkou",
+            "Moamy",
+            "Koumi",
+            "Samagan"
+          ]
+        },
+        {
+          "number": 7,
+          "sectors": [
+            21,
+            22,
+            29
+          ],
+          "villages": [
+            "Bana",
+            "Dindéresso",
+            "Kokorowé",
+            "Nasso",
+            "Ouolonkoto"
+          ]
+        }
       ],
-      "source": "INSD Monographie de la commune de Bobo-Dioulasso; Annuaire statistique national 2020/2022."
+      "sourceTable": "INSD ASN 2024, Tableau 1.1.04"
     }
   },
-  "fallback": {"allowUnknownCity":true,"allowUnknownNeighbourhood":true,"preserveOriginalText":true}
+  "addressPolicy": {
+    "useOfficialAdministrativeNames": true,
+    "keepNeighbourhoodFreeText": true,
+    "keepStreetAndLandmarkFreeText": true,
+    "retainUserSubmittedLocalityWhenNotInCatalogue": true
+  }
 }
