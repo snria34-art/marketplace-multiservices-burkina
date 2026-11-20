@@ -6,6 +6,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 /// Those operations must be authorized and executed by trusted server code.
 enum MarketplaceCapability {
   browseCatalog,
+  discoverRestaurants,
+  configureRestaurantCatalog,
   manageCart,
   placeOrder,
   trackDelivery,
@@ -23,6 +25,8 @@ class MarketplaceEngine {
   final SupabaseClient? _client;
 
   bool get backendConfigured => _client != null;
+
+  SupabaseClient? get backendClient => _client;
 
   bool get authenticated => _client?.auth.currentUser != null;
 
@@ -45,6 +49,10 @@ class MarketplaceEngine {
     }
 
     if (!backendConfigured) return CapabilityState.backendRequired;
+
+    if (capability == MarketplaceCapability.discoverRestaurants) {
+      return CapabilityState.available;
+    }
 
     if (!authenticated) return CapabilityState.authenticationRequired;
 
