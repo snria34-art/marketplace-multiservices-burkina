@@ -1,14 +1,21 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../../core/engine/marketplace_resilience.dart';
+
 import 'seller_payout_validation.dart';
 
 class SellerRepository {
-  const SellerRepository(this.client);
+  const SellerRepository(this.client, {this.resilience});
 
   final SupabaseClient client;
+  final MarketplaceResilience? resilience;
+  static final _fallbackResilience = MarketplaceResilience();
+  MarketplaceResilience get _retry => resilience ?? _fallbackResilience;
+
+  Future<T> _read<T>(Future<T> Function() operation) => _retry.read(operation);
 
   Future<List<Map<String, dynamic>>> dashboard() async {
-    final raw = await client.rpc('get_seller_dashboard');
+    final raw = await _read(() => client.rpc('get_seller_dashboard'));
 
     if (raw is! List) return const [];
 
@@ -21,11 +28,11 @@ class SellerRepository {
     final user = client.auth.currentUser;
     if (user == null) return null;
 
-    final rows = await client
+    final rows = await _read(() async => await client
         .from('sellers')
         .select('id')
         .eq('user_id', user.id)
-        .limit(1);
+        .limit(1));
 
     if ((rows as List).isEmpty) return null;
     final id = (rows.first as Map)['id']?.toString().trim();
@@ -41,13 +48,13 @@ class SellerRepository {
     num total = 0;
 
     while (true) {
-      final rows = await client
+      final rows = await _read(() async => await client
           .from('seller_ledger')
           .select('id,amount')
           .eq('seller_id', sellerId)
           .gt('id', lastId)
           .order('id', ascending: true)
-          .limit(pageSize);
+          .limit(pageSize));
 
       if (rows.isEmpty) break;
 
@@ -104,14 +111,14 @@ class SellerRepository {
   }
 
   Future<List<Map<String, dynamic>>> payouts(String sellerId) async {
-    final rows = await client
+    final rows = await _read(() async => await client
         .from('seller_payouts')
         .select(
           'id,amount,currency,provider,status,requested_at,paid_at',
         )
         .eq('seller_id', sellerId)
         .order('requested_at', ascending: false)
-        .limit(50);
+        .limit(50));
 
     return (rows as List)
         .map((row) => Map<String, dynamic>.from(row as Map))
