@@ -93,6 +93,48 @@ void main() {
       expect(resilience.consecutiveFailures, 0);
     });
 
+    test('does not let an older successful request close a newly opened circuit', () async {
+      final normalStarted = Completer<void>();
+      final releaseNormal = Completer<void>();
+      final resilience = MarketplaceResilience(
+        failureThreshold: 1,
+        cooldown: const Duration(seconds: 10),
+        wait: (_) async {},
+      );
+
+      final normal = resilience.run(
+        () async {
+          normalStarted.complete();
+          await releaseNormal.future;
+          return 'normal';
+        },
+        retrySafe: true,
+        isRetryable: (_) => true,
+      );
+      await normalStarted.future;
+
+      await expectLater(
+        resilience.run<String>(
+          () async => throw Exception('opens circuit'),
+          retrySafe: false,
+          isRetryable: (_) => true,
+        ),
+        throwsException,
+      );
+
+      releaseNormal.complete();
+      expect(await normal, 'normal');
+      expect(resilience.isOpen, isTrue);
+      await expectLater(
+        resilience.run(
+          () async => 'must remain blocked',
+          retrySafe: true,
+          isRetryable: (_) => true,
+        ),
+        throwsStateError,
+      );
+    });
+
     test('does not let an older normal operation close a half-open circuit', () async {
       var now = DateTime.utc(2026);
       final normalStarted = Completer<void>();
