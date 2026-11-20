@@ -16,6 +16,34 @@ create index if not exists idx_restaurant_profiles_type
 create index if not exists idx_restaurant_profiles_cuisines
   on public.restaurant_profiles using gin(cuisine_types);
 
+-- Sellers can edit discovery metadata only on their own restaurant profiles.
+grant update(restaurant_type, cuisine_types)
+  on public.restaurant_profiles to authenticated;
+
+drop policy if exists restaurant_seller_discovery_profile_update
+  on public.restaurant_profiles;
+create policy restaurant_seller_discovery_profile_update
+  on public.restaurant_profiles
+  for update to authenticated
+  using (
+    exists (
+      select 1
+      from public.shops s
+      join public.sellers se on se.id = s.seller_id
+      where s.id = restaurant_profiles.shop_id
+        and se.user_id = (select auth.uid())
+    )
+  )
+  with check (
+    exists (
+      select 1
+      from public.shops s
+      join public.sellers se on se.id = s.seller_id
+      where s.id = restaurant_profiles.shop_id
+        and se.user_id = (select auth.uid())
+    )
+  );
+
 create or replace function public.restaurant_search_normalize(p_value text)
 returns text
 language sql
