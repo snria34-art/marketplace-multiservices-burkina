@@ -284,6 +284,10 @@ class _HomePageState extends ConsumerState<HomePage> {
                         }
 
                         final product = _products[index];
+                        final rawShop = product['shops'];
+                        final shop = rawShop is Map
+                            ? Map<String, dynamic>.from(rawShop)
+                            : const <String, dynamic>{};
                         final rawImages = product['product_images'];
                         final firstImage = rawImages is List &&
                                 rawImages.isNotEmpty &&
