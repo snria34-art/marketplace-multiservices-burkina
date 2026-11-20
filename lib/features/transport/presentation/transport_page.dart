@@ -29,7 +29,7 @@ class _TransportPageState extends ConsumerState<TransportPage> {
 
   Future<List<Map<String, dynamic>>> _loadTickets() {
     final repo = ref.read(transportRepositoryProvider);
-    if (repo == null || ref.read(supabaseProvider)?.auth.currentUser == null) {
+    if (repo == null || ref.read(marketplaceCustomerClientProvider)?.auth.currentUser == null) {
       return Future.value(const []);
     }
     return repo.myTickets();
