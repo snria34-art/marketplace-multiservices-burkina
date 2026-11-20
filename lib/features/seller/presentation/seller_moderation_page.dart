@@ -25,7 +25,7 @@ class _SellerModerationPageState extends ConsumerState<SellerModerationPage> {
   }
 
   Future<List<Map<String, dynamic>>> _load() async {
-    final client = ref.read(supabaseProvider);
+    final client = ref.read(marketplaceSellerClientProvider);
     if (client == null || client.auth.currentUser == null) {
       throw StateError('Authentification requise.');
     }
@@ -171,7 +171,7 @@ class _SellerModerationPageState extends ConsumerState<SellerModerationPage> {
     String? mediaPath;
     SupabaseClient? uploadClient;
     try {
-      final client = ref.read(supabaseProvider);
+      final client = ref.read(marketplaceSellerClientProvider);
       uploadClient = client;
       final user = client?.auth.currentUser;
       if (client == null || user == null) throw StateError('Session indisponible.');
