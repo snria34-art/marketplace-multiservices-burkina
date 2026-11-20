@@ -30,16 +30,25 @@ create policy restaurant_active_options_read
         and mi.active = true and m.active = true
     )
     and (
-      linked_product_id is null
-      or exists (
-        select 1
-        from public.products p
-        join public.restaurant_menu_item_option_groups g on g.id = option_group_id
-        join public.restaurant_menu_items mi on mi.id = g.menu_item_id
-        join public.restaurant_menus m on m.id = mi.menu_id
-        join public.restaurant_profiles rp on rp.id = m.restaurant_id
-        where p.id = linked_product_id and p.shop_id = rp.shop_id
-          and p.status = 'ACTIVE'
+      (
+        linked_product_id is null
+        and exists (
+          select 1 from public.restaurant_menu_item_option_groups g
+          where g.id = option_group_id and g.component_type = 'CUSTOM'
+        )
+      )
+      or (
+        linked_product_id is not null
+        and exists (
+          select 1
+          from public.products p
+          join public.restaurant_menu_item_option_groups g on g.id = option_group_id
+          join public.restaurant_menu_items mi on mi.id = g.menu_item_id
+          join public.restaurant_menus m on m.id = mi.menu_id
+          join public.restaurant_profiles rp on rp.id = m.restaurant_id
+          where p.id = linked_product_id and p.shop_id = rp.shop_id
+            and p.status = 'ACTIVE'
+        )
       )
     )
   );
