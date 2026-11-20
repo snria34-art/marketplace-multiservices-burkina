@@ -152,13 +152,31 @@ class _CartPageState extends ConsumerState<CartPage> {
                     final quantity =
                         int.tryParse(item['quantity']?.toString() ?? '') ?? 1;
 
+                    final rawCustomizations = item['customizations'];
+                    final customizations = rawCustomizations is List
+                        ? rawCustomizations.whereType<Map>().map((row) {
+                            final selected = Map<String, dynamic>.from(row);
+                            final level = selected['level_name']?.toString() ?? '';
+                            final option = selected['option_name']?.toString() ?? '';
+                            final delta = num.tryParse(
+                                  selected['price_delta']?.toString() ?? '',
+                                ) ??
+                                0;
+                            return '$option : $level (+ ${delta.toStringAsFixed(0)} XOF)';
+                          }).toList()
+                        : <String>[];
+
                     return Card(
                       child: ListTile(
                         title: Text(
                           product['name']?.toString() ?? 'Produit',
                         ),
                         subtitle: Text(
-                          (item['unit_price']?.toString() ?? '0') + ' XOF',
+                          (item['unit_price']?.toString() ?? '0') +
+                              ' XOF' +
+                              (customizations.isEmpty
+                                  ? ''
+                                  : '\n' + customizations.join('\n')),
                         ),
                         trailing: SizedBox(
                           width: 176,
