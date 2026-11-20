@@ -326,6 +326,7 @@ class _MenuItemTileState extends ConsumerState<_MenuItemTile> {
     final item = widget.item;
     final groups = _maps(item['restaurant_menu_item_option_groups']);
     final linked = item['product_id']?.toString().isNotEmpty == true;
+    final product = item['products'] is Map ? Map<String, dynamic>.from(item['products'] as Map) : const <String, dynamic>{};
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -345,7 +346,7 @@ class _MenuItemTileState extends ConsumerState<_MenuItemTile> {
                 ],
               )),
               const SizedBox(width: 12),
-              Text('${item['price']?.toString() ?? '0'} XOF',
+              Text('${product['price']?.toString() ?? item['price']?.toString() ?? '0'} XOF',
                 style: Theme.of(context).textTheme.titleSmall),
             ],
           ),
