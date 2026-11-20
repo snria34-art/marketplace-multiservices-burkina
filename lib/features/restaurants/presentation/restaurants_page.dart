@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/providers/repository_providers.dart';
+import '../../../core/utils/xof_formatter.dart';
 import '../data/restaurant_repository.dart';
 
 final restaurantRepositoryProvider = Provider<RestaurantRepository?>((ref) {
@@ -200,7 +201,7 @@ class _MenuItemTileState extends ConsumerState<_MenuItemTile> {
                         title: Text(option['name']?.toString() ?? 'Option'),
                         subtitle: Text(
                           (num.tryParse(option['price_delta']?.toString() ?? '') ?? 0) == 0
-                              ? 'Inclus' : '+${option['price_delta']} XOF'),
+                              ? 'Inclus' : '+${formatXof(num.tryParse(option['price_delta']?.toString() ?? '') ?? 0)}'),
                         onChanged: (checked) {
                           setDialogState(() {
                             final values = selected[group['id'].toString()]!;
@@ -286,10 +287,10 @@ class _MenuItemTileState extends ConsumerState<_MenuItemTile> {
             children: [
               Text(item['name']?.toString() ?? 'Plat'),
               const SizedBox(height: 12),
-              Text('Prix de base : ${base.toStringAsFixed(0)} XOF'),
-              Text('Suppléments : ${extras.toStringAsFixed(0)} XOF'),
+              Text('Prix de base : ${formatXof(base)}'),
+              Text('Suppléments : ${formatXof(extras)}'),
               const Divider(),
-              Text('Total unitaire : ${total.toStringAsFixed(0)} XOF',
+              Text('Total unitaire : ${formatXof(total)}',
                 style: Theme.of(context).textTheme.titleLarge),
               const SizedBox(height: 8),
               const Text('Le prix est vérifié par le serveur avant l’ajout au panier.'),
@@ -346,7 +347,7 @@ class _MenuItemTileState extends ConsumerState<_MenuItemTile> {
                 ],
               )),
               const SizedBox(width: 12),
-              Text('${product['price']?.toString() ?? item['price']?.toString() ?? '0'} XOF',
+              Text('${formatXof(num.tryParse((product['price'] ?? item['price'] ?? '0').toString()) ?? 0)}',
                 style: Theme.of(context).textTheme.titleSmall),
             ],
           ),
