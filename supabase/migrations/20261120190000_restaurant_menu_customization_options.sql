@@ -311,7 +311,16 @@ begin
   where mi.id = p_menu_item_id and mi.active = true and m.active = true;
   if not found then raise exception 'menu_item_unavailable'; end if;
 
-  v_base := v_item.price;
+  select p.price into v_base
+  from public.products p
+  join public.restaurant_menu_items mi on mi.product_id = p.id
+  join public.restaurant_menus m on m.id = mi.menu_id
+  join public.restaurant_profiles rp on rp.id = m.restaurant_id
+  where mi.id = p_menu_item_id
+    and p.id = v_item.product_id
+    and p.shop_id = rp.shop_id
+    and p.status = 'ACTIVE';
+  if v_base is null then raise exception 'restaurant_item_product_unavailable'; end if;
 
   for v_group in
     select g.id, g.name, g.selection_type, g.min_selections, g.max_selections
