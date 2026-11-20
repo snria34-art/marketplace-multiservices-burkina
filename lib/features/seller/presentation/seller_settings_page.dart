@@ -21,7 +21,7 @@ class _SellerSettingsPageState extends ConsumerState<SellerSettingsPage> {
   }
 
   Future<Map<String, dynamic>> _load() async {
-    final client = ref.read(supabaseProvider);
+    final client = ref.read(marketplaceSellerClientProvider);
     final user = client?.auth.currentUser;
     if (client == null || user == null) {
       throw StateError('Authentification requise.');
@@ -87,7 +87,7 @@ class _SellerSettingsPageState extends ConsumerState<SellerSettingsPage> {
     if (!mounted || values == null) return;
 
     try {
-      final client = ref.read(supabaseProvider);
+      final client = ref.read(marketplaceSellerClientProvider);
       final id = await client?.rpc(
         'update_seller_profile',
         params: {
