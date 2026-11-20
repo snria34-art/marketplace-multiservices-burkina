@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -313,6 +314,152 @@ class _OrderDetailsPageState extends ConsumerState<OrderDetailsPage> {
       );
     }
   }
+  Future<void> _sharePaymentWithFriend(
+    Map<String, dynamic> order,
+    Map<String, dynamic>? payment,
+  ) async {
+    final currentProvider = payment?['provider']?.toString();
+    final selectedProvider =
+        currentProvider == 'WAVE' || currentProvider == 'CINETPAY'
+            ? currentProvider
+            : await showDialog<String>(
+                context: context,
+                builder: (dialogContext) => SimpleDialog(
+                  title: const Text('Choisir le moyen de paiement'),
+                  children: [
+                    SimpleDialogOption(
+                      onPressed: () =>
+                          Navigator.pop(dialogContext, 'CINETPAY'),
+                      child: const Text('Orange Money / Moov Money'),
+                    ),
+                    SimpleDialogOption(
+                      onPressed: () => Navigator.pop(dialogContext, 'WAVE'),
+                      child: const Text('Wave'),
+                    ),
+                  ],
+                ),
+              );
+
+    if (!mounted || selectedProvider == null) return;
+
+    try {
+      final repo = ref.read(checkoutRepositoryProvider);
+      if (repo == null) {
+        throw StateError('Service de paiement indisponible.');
+      }
+
+      // Generate a real provider checkout session for this unpaid order.
+      // The app never changes the order/payment status: the provider webhook
+      // remains the only confirmation source.
+      final session = await repo.createPaymentSession(
+        orderId: widget.orderId,
+        provider: selectedProvider,
+      );
+      if (!mounted) return;
+
+      final rawUrl = session['checkout_url']?.toString().trim();
+      if (rawUrl == null || rawUrl.isEmpty) {
+        throw StateError('Lien de paiement indisponible.');
+      }
+      final paymentUri = Uri.tryParse(rawUrl);
+      if (paymentUri == null ||
+          paymentUri.scheme.toLowerCase() != 'https' ||
+          paymentUri.host.isEmpty ||
+          paymentUri.userInfo.isNotEmpty) {
+        throw StateError(
+          'Le lien reçu n’est pas une adresse HTTPS sécurisée.',
+        );
+      }
+
+      final shortId = widget.orderId.length > 8
+          ? widget.orderId.substring(0, 8).toUpperCase()
+          : widget.orderId.toUpperCase();
+      final amount = order['total']?.toString() ?? 'à confirmer';
+      final currency = order['currency']?.toString() ?? 'XOF';
+      final message = 'Bonjour ! Peux-tu régler cette commande pour moi sur '
+          'Marketplace Multiservices Burkina ?\n'
+          'Référence : $shortId\n'
+          'Montant : $amount $currency\n'
+          'Paiement sécurisé : $rawUrl\n\n'
+          'La commande ne sera considérée comme payée qu’après confirmation '
+          'du prestataire de paiement.';
+
+      final destination = await showModalBottomSheet<String>(
+        context: context,
+        showDragHandle: true,
+        builder: (sheetContext) => SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const ListTile(
+                title: Text('Faire payer par un proche'),
+                subtitle: Text(
+                  'Envoie ce lien uniquement à une personne de confiance.',
+                ),
+              ),
+              ListTile(
+                leading: const Icon(Icons.chat_outlined),
+                title: const Text('WhatsApp'),
+                onTap: () => Navigator.pop(sheetContext, 'whatsapp'),
+              ),
+              ListTile(
+                leading: const Icon(Icons.sms_outlined),
+                title: const Text('SMS'),
+                onTap: () => Navigator.pop(sheetContext, 'sms'),
+              ),
+              ListTile(
+                leading: const Icon(Icons.copy_outlined),
+                title: const Text('Copier le message et le lien'),
+                onTap: () => Navigator.pop(sheetContext, 'copy'),
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        ),
+      );
+
+      if (!mounted || destination == null) return;
+
+      if (destination == 'copy') {
+        await Clipboard.setData(ClipboardData(text: message));
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Message et lien copiés.')),
+        );
+        return;
+      }
+
+      final shareUri = destination == 'whatsapp'
+          ? Uri.parse(
+              'https://wa.me/?text=${Uri.encodeComponent(message)}',
+            )
+          : Uri(scheme: 'sms', queryParameters: {'body': message});
+      final opened = await launchUrl(
+        shareUri,
+        mode: LaunchMode.externalApplication,
+      );
+      if (!opened) {
+        throw StateError(
+          destination == 'whatsapp'
+              ? 'Impossible d’ouvrir WhatsApp.'
+              : 'Impossible d’ouvrir l’application SMS.',
+        );
+      }
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            safeBackendErrorMessage(
+              error,
+              fallback: 'Impossible de préparer le partage du paiement. Réessayez.',
+            ),
+          ),
+        ),
+      );
+    }
+  }
+
   Future<void> _requestRefund(num maxAmount) async {
     final initialAmountText = maxAmount.isFinite &&
             maxAmount == maxAmount.roundToDouble()
@@ -752,6 +899,20 @@ class _OrderDetailsPageState extends ConsumerState<OrderDetailsPage> {
                   onPressed: () => _resumePayment(data.payment),
                   icon: const Icon(Icons.payment_outlined),
                   label: const Text('Reprendre le paiement'),
+                ),
+                const SizedBox(height: 8),
+                OutlinedButton.icon(
+                  onPressed: () =>
+                      _sharePaymentWithFriend(order, data.payment),
+                  icon: const Icon(Icons.volunteer_activism_outlined),
+                  label: const Text('Faire payer par un proche'),
+                ),
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 4),
+                  child: Text(
+                    'Le lien ouvre le guichet sécurisé. La commande sera marquée payée uniquement après confirmation du prestataire.',
+                    style: TextStyle(fontSize: 12),
+                  ),
                 ),
               ],
               if ((order['delivery_address'] as dynamic) != null)
