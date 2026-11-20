@@ -14,6 +14,36 @@ void main() {
       );
     });
 
+    test('restaurant discovery requires backend but not a customer login', () {
+      expect(
+        MarketplaceEngine.capabilityState(
+          MarketplaceCapability.discoverRestaurants,
+          backendConfigured: false,
+          authenticated: false,
+        ),
+        CapabilityState.backendRequired,
+      );
+      expect(
+        MarketplaceEngine.capabilityState(
+          MarketplaceCapability.discoverRestaurants,
+          backendConfigured: true,
+          authenticated: false,
+        ),
+        CapabilityState.available,
+      );
+    });
+
+    test('seller restaurant configuration requires authentication', () {
+      expect(
+        MarketplaceEngine.capabilityState(
+          MarketplaceCapability.configureRestaurantCatalog,
+          backendConfigured: true,
+          authenticated: false,
+        ),
+        CapabilityState.authenticationRequired,
+      );
+    });
+
     test('server-backed actions require backend configuration', () {
       expect(
         MarketplaceEngine.capabilityState(
