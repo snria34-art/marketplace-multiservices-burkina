@@ -8,6 +8,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../core/errors/backend_error_message.dart';
 import '../../../core/location/device_location_service.dart';
 import '../../../core/providers/repository_providers.dart';
+import '../data/vertical_repository.dart';
 
 class VerticalDiscoveryPage extends ConsumerStatefulWidget {
   const VerticalDiscoveryPage({
