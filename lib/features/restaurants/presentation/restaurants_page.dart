@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/providers/repository_providers.dart';
-import '../../../core/engine/marketplace_engine.dart';
 import '../../../core/utils/xof_formatter.dart';
 
 class RestaurantsPage extends ConsumerStatefulWidget {
