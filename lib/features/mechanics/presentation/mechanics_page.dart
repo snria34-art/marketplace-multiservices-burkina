@@ -31,7 +31,7 @@ class _MechanicsPageState extends ConsumerState<MechanicsPage> {
   }
 
   Future<bool> _loadOwnMechanic() async {
-    final client = ref.read(supabaseProvider);
+    final client = ref.read(marketplaceCustomerClientProvider);
     final user = client?.auth.currentUser;
     if (client == null || user == null) return false;
     final rows = await client
@@ -84,7 +84,7 @@ class _MechanicsPageState extends ConsumerState<MechanicsPage> {
     if (!mounted || status == null) return;
 
     try {
-      final client = ref.read(supabaseProvider);
+      final client = ref.read(marketplaceCustomerClientProvider);
       await client?.rpc(
         'set_mechanic_availability',
         params: {
@@ -175,7 +175,7 @@ class _MechanicsPageState extends ConsumerState<MechanicsPage> {
   }
 
   Future<List<Map<String, dynamic>>> _loadQuotes() {
-    final client = ref.read(supabaseProvider);
+    final client = ref.read(marketplaceCustomerClientProvider);
     if (client?.auth.currentUser == null) return Future.value(const []);
     return ref.read(mechanicRepositoryProvider)?.myQuotes() ??
         Future.value(const []);
