@@ -96,6 +96,20 @@ class MarketplaceResilience {
     }
   }
 
+  /// Executes an idempotent read with bounded retries. Mutations must use
+  /// [run] with retrySafe=false or be invoked directly.
+  Future<T> read<T>(
+    Future<T> Function() operation, {
+    int maxAttempts = 3,
+  }) {
+    return run<T>(
+      operation,
+      retrySafe: true,
+      isRetryable: (error) => error is TimeoutException,
+      maxAttempts: maxAttempts,
+    );
+  }
+
   Duration _backoff(int attempt) {
     var milliseconds = baseDelay.inMilliseconds;
     for (var i = 1; i < attempt && milliseconds < maxDelay.inMilliseconds; i++) {
