@@ -4,12 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/location/device_location_service.dart';
 import '../../../core/errors/backend_error_message.dart';
 import '../../../core/providers/repository_providers.dart';
-import '../data/mechanic_repository.dart';
-
-final mechanicRepositoryProvider = Provider<MechanicRepository?>((ref) {
-  final client = ref.watch(supabaseProvider);
-  return client == null ? null : MechanicRepository(client);
-});
 
 class MechanicsPage extends ConsumerStatefulWidget {
   const MechanicsPage({super.key});
