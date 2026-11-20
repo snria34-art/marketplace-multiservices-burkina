@@ -501,6 +501,9 @@ class _SellerProductsPageState
                 final shop = product['shops'] is Map
                     ? Map<String, dynamic>.from(product['shops'] as Map)
                     : const <String, dynamic>{};
+                final rawRestaurantProfiles = shop['restaurant_profiles'];
+                final isRestaurant = rawRestaurantProfiles is Map ||
+                    (rawRestaurantProfiles is List && rawRestaurantProfiles.isNotEmpty);
 
                 return Card(
                   child: ListTile(
@@ -529,13 +532,14 @@ class _SellerProductsPageState
                             icon: const Icon(Icons.add_a_photo_outlined),
                             tooltip: 'Ajouter des photos et soumettre',
                           ),
-                        IconButton(
-                          onPressed: () => context.push(
-                            '/seller/products/${product['id']}/options',
+                        if (isRestaurant)
+                          IconButton(
+                            onPressed: () => context.push(
+                              '/seller/products/${product['id']}/options',
+                            ),
+                            icon: const Icon(Icons.tune_outlined),
+                            tooltip: 'Configurer les ingrédients et suppléments',
                           ),
-                          icon: const Icon(Icons.tune_outlined),
-                          tooltip: 'Configurer les ingrédients et suppléments',
-                        ),
                         IconButton(
                           onPressed: () => _editStock(product),
                           icon: const Icon(Icons.edit_outlined),
