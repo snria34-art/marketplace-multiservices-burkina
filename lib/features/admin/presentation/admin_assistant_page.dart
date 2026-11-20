@@ -27,7 +27,7 @@ class _AdminAssistantPageState extends ConsumerState<AdminAssistantPage> {
   Future<void> _send() async {
     final question = _controller.text.trim();
     if (question.isEmpty || _sending) return;
-    final client = ref.read(supabaseProvider);
+    final client = ref.read(marketplaceAdminClientProvider);
     if (client == null || client.auth.currentUser == null) {
       _showError('Connectez-vous avec un compte administrateur.');
       return;
