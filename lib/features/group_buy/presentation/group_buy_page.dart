@@ -307,6 +307,7 @@ class _GroupBuyPageState extends ConsumerState<GroupBuyPage> {
                           GroupBuyCountdown(
                             startsAt: startsAt,
                             endsAt: endsAt,
+                            compact: true,
                           ),
                         const SizedBox(height: 12),
                         Row(
