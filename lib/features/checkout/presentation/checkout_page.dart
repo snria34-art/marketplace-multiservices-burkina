@@ -669,20 +669,6 @@ class _AddressDialogState extends State<_AddressDialog> {
                 },
         ),
         const SizedBox(height: 8),
-        TextField(
-          controller: _city,
-          decoration: const InputDecoration(
-            labelText: 'Ville / commune',
-            hintText: 'Vous pouvez saisir une localité absente de la liste',
-            helperText: 'La saisie libre reste autorisée partout au Burkina Faso.',
-          ),
-          onChanged: (_) {
-            setState(() {
-              _selectedArrondissement = null;
-              _selectedSectorOrVillage = null;
-            });
-          },
-        ),
         if (arrondissements.isNotEmpty) ...[
           const SizedBox(height: 8),
           DropdownButtonFormField<int>(
@@ -815,6 +801,21 @@ class _AddressDialogState extends State<_AddressDialog> {
                   padding: EdgeInsets.all(12),
                   child: Center(child: CircularProgressIndicator()),
                 );
+              },
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _city,
+              decoration: const InputDecoration(
+                labelText: 'Ville / commune',
+                hintText: 'Saisir si la localité est absente du répertoire',
+                helperText: 'La saisie libre reste autorisée partout au Burkina Faso.',
+              ),
+              onChanged: (_) {
+                setState(() {
+                  _selectedArrondissement = null;
+                  _selectedSectorOrVillage = null;
+                });
               },
             ),
             const SizedBox(height: 8),
