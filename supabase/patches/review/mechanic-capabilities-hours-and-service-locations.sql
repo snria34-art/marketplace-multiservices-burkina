@@ -120,6 +120,7 @@ $function$;
 
 create or replace function public.save_mechanic_service_profile(
   p_vehicle_types text[],
+  p_service_types text[],
   p_open_time time,
   p_close_time time,
   p_service_days smallint[],
@@ -135,6 +136,7 @@ declare
   v_user uuid := (select auth.uid());
   v_mechanic uuid;
   v_vehicle text;
+  v_service text;
   v_type text;
   v_price numeric;
   v_days smallint[] := coalesce(p_service_days,array[]::smallint[]);
@@ -164,12 +166,24 @@ begin
     raise exception 'mechanic_vehicle_capabilities_invalid';
   end if;
 
+  if p_service_types is null or cardinality(p_service_types)=0
+     or cardinality(p_service_types)>30
+     or cardinality(p_service_types) <> (
+       select count(distinct upper(trim(x))) from unnest(p_service_types) x
+     )
+     or exists (
+       select 1 from unnest(p_service_types) x
+       where length(trim(x))<2 or length(trim(x))>80
+     ) then
+    raise exception 'mechanic_service_types_invalid';
+  end if;
+
   if p_open_time is null or p_close_time is null or p_open_time>=p_close_time then
     raise exception 'mechanic_service_hours_invalid';
   end if;
 
   if cardinality(v_days)=0 or cardinality(v_days)>7
-     or v_days <@ array[1,2,3,4,5,6,7]::smallint[] is false then
+     or not (v_days <@ array[1,2,3,4,5,6,7]::smallint[]) then
     raise exception 'mechanic_service_days_invalid';
   end if;
 
@@ -197,13 +211,15 @@ begin
     and vehicle_type <> all(p_vehicle_types);
 
   foreach v_vehicle in array p_vehicle_types loop
-    insert into public.mechanic_capabilities(
-      mechanic_id,vehicle_type,service_type,active
-    ) values (
-      v_mechanic,v_vehicle,'GENERAL_REPAIR',true
-    )
-    on conflict (mechanic_id,vehicle_type,service_type)
-    do update set active=true;
+    foreach v_service in array p_service_types loop
+      insert into public.mechanic_capabilities(
+        mechanic_id,vehicle_type,service_type,active
+      ) values (
+        v_mechanic,v_vehicle,upper(trim(v_service)),true
+      )
+      on conflict (mechanic_id,vehicle_type,service_type)
+      do update set active=true;
+    end loop;
 
     foreach v_type in array array['HOME','OFFICE','ROADSIDE']::text[] loop
       v_price := case v_type
@@ -379,10 +395,10 @@ end;
 $function$;
 
 revoke all on function public.mechanic_is_open(uuid,timestamptz) from public,anon,authenticated;
-revoke all on function public.save_mechanic_service_profile(text[],time without time zone,time without time zone,smallint[],numeric,numeric,numeric,text) from public,anon;
+revoke all on function public.save_mechanic_service_profile(text[],text[],time without time zone,time without time zone,smallint[],numeric,numeric,numeric,text) from public,anon;
 revoke all on function public.get_public_mechanics_v2() from public,anon;
 revoke all on function public.create_mechanic_request_v2(text,text,text,text,text,double precision,double precision) from public,anon;
-grant execute on function public.save_mechanic_service_profile(text[],time without time zone,time without time zone,smallint[],numeric,numeric,numeric,text) to authenticated;
+grant execute on function public.save_mechanic_service_profile(text[],text[],time without time zone,time without time zone,smallint[],numeric,numeric,numeric,text) to authenticated;
 grant execute on function public.get_public_mechanics_v2() to authenticated;
 grant execute on function public.create_mechanic_request_v2(text,text,text,text,text,double precision,double precision) to authenticated;
 
