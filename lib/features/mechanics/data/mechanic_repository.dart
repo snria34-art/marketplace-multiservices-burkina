@@ -60,6 +60,9 @@ class MechanicRepository {
     required num homePrice,
     required num officePrice,
     required num roadsidePrice,
+    required double serviceLatitude,
+    required double serviceLongitude,
+    required num serviceRadiusKm,
     String? adjustmentNote,
   }) async {
     await client.rpc(
@@ -73,20 +76,39 @@ class MechanicRepository {
         'p_home_price': homePrice,
         'p_office_price': officePrice,
         'p_roadside_price': roadsidePrice,
+        'p_latitude': serviceLatitude,
+        'p_longitude': serviceLongitude,
+        'p_service_radius_km': serviceRadiusKm,
         'p_adjustment_note': adjustmentNote,
       },
     );
   }
 
-  Future<List<Map<String, dynamic>>> myQuotes() async {
-    final rows = await client
-        .from('mechanic_quotes')
-        .select(
-          'id,request_id,mechanic_id,amount,currency,diagnosis,status,expires_at,created_at,mechanics(display_name,phone)',
-        )
-        .order('created_at', ascending: false)
-        .limit(50);
+  Future<List<Map<String, dynamic>>> matchingRequests() async {
+    final rows = await client.rpc('get_matching_mechanic_requests');
+    return (rows as List)
+        .map((row) => Map<String, dynamic>.from(row as Map))
+        .toList();
+  }
 
+  Future<String> submitQuote({
+    required String requestId,
+    required num amount,
+    String? diagnosis,
+  }) async {
+    final result = await client.rpc(
+      'submit_mechanic_quote',
+      params: {
+        'p_request_id': requestId,
+        'p_amount': amount,
+        'p_diagnosis': diagnosis,
+      },
+    );
+    return result.toString();
+  }
+
+  Future<List<Map<String, dynamic>>> myQuotes() async {
+    final rows = await client.rpc('get_my_mechanic_quotes');
     return (rows as List)
         .map((row) => Map<String, dynamic>.from(row as Map))
         .toList();
