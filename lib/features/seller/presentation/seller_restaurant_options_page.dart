@@ -44,6 +44,59 @@ class _SellerRestaurantOptionsPageState
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
   }
 
+
+  Future<void> _linkProduct(Map<String, dynamic> item) async {
+    final repository = ref.read(sellerRestaurantRepositoryProvider);
+    if (repository == null) return;
+    try {
+      final products = await repository.sellerProducts();
+      if (!mounted) return;
+      if (products.isEmpty) {
+        _show('Créez d’abord un produit actif dans votre boutique.');
+        return;
+      }
+      String? selectedId;
+      final productId = await showDialog<String>(
+        context: context,
+        builder: (dialogContext) => StatefulBuilder(
+          builder: (context, setDialogState) => AlertDialog(
+            title: const Text('Lier ce plat à un produit'),
+            content: DropdownButtonFormField<String>(
+              value: selectedId,
+              isExpanded: true,
+              decoration: const InputDecoration(labelText: 'Produit de votre boutique'),
+              items: products.map((product) => DropdownMenuItem(
+                value: product['id'].toString(),
+                child: Text('${product['name']} · ${product['price']} XOF',
+                  overflow: TextOverflow.ellipsis),
+              )).toList(),
+              onChanged: (value) => setDialogState(() => selectedId = value),
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(dialogContext),
+                child: const Text('Annuler')),
+              FilledButton(
+                onPressed: selectedId == null
+                    ? null : () => Navigator.pop(dialogContext, selectedId),
+                child: const Text('Lier'),
+              ),
+            ],
+          ),
+        ),
+      );
+      if (!mounted || productId == null) return;
+      await repository.linkMenuItemProduct(
+        menuItemId: item['id'].toString(),
+        productId: productId,
+      );
+      if (!mounted) return;
+      setState(() => _future = _load());
+      _show('Plat lié au produit. Il peut maintenant être ajouté au panier.');
+    } catch (_) {
+      _show('Impossible de lier ce plat. Vérifiez que le produit appartient à la même boutique.');
+    }
+  }
+
   Future<void> _configure(Map<String, dynamic> item,
       {Map<String, dynamic>? existing}) async {
     final name = TextEditingController(text: existing?['name']?.toString() ?? '');
@@ -215,10 +268,21 @@ class _SellerRestaurantOptionsPageState
     return ListTile(
       title: Text(item['name']?.toString() ?? 'Plat'),
       subtitle: Text('${item['price']?.toString() ?? '0'} XOF · ${groups.length} groupe(s)'),
-      trailing: IconButton(
-        tooltip: 'Ajouter une personnalisation',
-        icon: const Icon(Icons.add_circle_outline),
-        onPressed: () => _configure(item),
+      trailing: Wrap(
+        spacing: 4,
+        children: [
+          if (item['product_id'] == null)
+            IconButton(
+              tooltip: 'Lier à un produit',
+              icon: const Icon(Icons.link),
+              onPressed: () => _linkProduct(item),
+            ),
+          IconButton(
+            tooltip: 'Ajouter une personnalisation',
+            icon: const Icon(Icons.add_circle_outline),
+            onPressed: () => _configure(item),
+          ),
+        ],
       ),
       onTap: groups.isEmpty ? null : () => showModalBottomSheet<void>(
         context: context,
