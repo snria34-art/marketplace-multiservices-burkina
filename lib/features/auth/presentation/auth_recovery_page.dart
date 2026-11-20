@@ -28,7 +28,7 @@ class _AuthRecoveryPageState extends ConsumerState<AuthRecoveryPage> {
   }
 
   Future<void> _saveNewPassword() async {
-    final client = ref.read(supabaseProvider);
+    final client = ref.read(marketplaceAuthenticationClientProvider);
     if (client == null) {
       _show('Le service de connexion est indisponible.');
       return;
