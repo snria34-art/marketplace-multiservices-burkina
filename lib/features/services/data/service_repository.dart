@@ -1,17 +1,24 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../../core/engine/marketplace_resilience.dart';
+
 class ServiceRepository {
-  const ServiceRepository(this.client);
+  const ServiceRepository(this.client, {this.resilience});
 
   final SupabaseClient client;
+  final MarketplaceResilience? resilience;
+  static final _fallbackResilience = MarketplaceResilience();
+  MarketplaceResilience get _retry => resilience ?? _fallbackResilience;
+
+  Future<T> _read<T>(Future<T> Function() operation) => _retry.read(operation);
 
   Future<List<Map<String, dynamic>>> categories() async {
-    final rows = await client
+    final rows = await _read(() async => await client
         .from('service_categories')
         .select('id,name,slug,icon_url,sort_order')
         .eq('active', true)
         .order('sort_order')
-        .limit(100);
+        .limit(100));
 
     return _maps(rows);
   }
@@ -37,9 +44,9 @@ class ServiceRepository {
       query = query.eq('category', category);
     }
 
-    final rows = await query
+    final rows = await _read(() async => await query
         .order('created_at', ascending: false)
-        .limit(limit);
+        .limit(limit));
 
     return _maps(rows);
   }
