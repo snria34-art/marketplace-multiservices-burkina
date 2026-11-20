@@ -32,6 +32,7 @@ import '../../features/restaurants/presentation/restaurants_page.dart';
 import '../../features/seller/presentation/seller_dashboard_page.dart';
 import '../../features/seller/presentation/seller_orders_page.dart';
 import '../../features/seller/presentation/seller_products_page.dart';
+import '../../features/seller/presentation/seller_restaurant_options_page.dart';
 import '../../features/seller/presentation/seller_tools_page.dart';
 import '../../features/services/presentation/services_page.dart';
 import '../../features/transport/presentation/transport_page.dart';
@@ -344,6 +345,19 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/seller/products',
         builder: (_, __) => const SellerProductsPage(),
+      ),
+      GoRoute(
+        path: '/seller/products/:productId/options',
+        builder: (_, state) {
+          final productId = state.pathParameters['productId'];
+          if (productId == null || productId.isEmpty) {
+            return const ModulePlaceholderPage(
+              title: 'Produit invalide',
+              icon: Icons.restaurant_menu_outlined,
+            );
+          }
+          return SellerRestaurantOptionsPage(productId: productId);
+        },
       ),
       GoRoute(
         path: '/seller/orders',
