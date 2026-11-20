@@ -20,6 +20,16 @@ class _MechanicServiceProfileDialogState
     'TRUCK': 'Camion',
   };
 
+  static const _serviceTypes = <String, String>{
+    'GENERAL_REPAIR': 'Réparation générale',
+    'ENGINE': 'Moteur',
+    'ELECTRICAL': 'Électricité',
+    'ELECTRONIC_DIAGNOSTICS': 'Diagnostic électronique',
+    'BRAKES': 'Freins',
+    'TIRES': 'Pneus',
+    'BATTERY': 'Batterie',
+  };
+
   static const _days = <int, String>{
     1: 'Lun',
     2: 'Mar',
@@ -31,7 +41,9 @@ class _MechanicServiceProfileDialogState
   };
 
   final Set<String> _selectedVehicles = {};
+  final Set<String> _selectedServices = {'GENERAL_REPAIR'};
   final Set<int> _selectedDays = {1, 2, 3, 4, 5, 6};
+  final _customServiceController = TextEditingController();
   final _homePrice = TextEditingController(text: '1500');
   final _officePrice = TextEditingController(text: '1500');
   final _roadsidePrice = TextEditingController(text: '1500');
@@ -45,6 +57,7 @@ class _MechanicServiceProfileDialogState
     _officePrice.dispose();
     _roadsidePrice.dispose();
     _note.dispose();
+    _customServiceController.dispose();
     super.dispose();
   }
 
@@ -76,6 +89,7 @@ class _MechanicServiceProfileDialogState
     final closes = _closeTime.hour * 60 + _closeTime.minute;
 
     if (_selectedVehicles.isEmpty ||
+        _selectedServices.isEmpty ||
         _selectedDays.isEmpty ||
         home == null ||
         home < 0 ||
@@ -98,6 +112,7 @@ class _MechanicServiceProfileDialogState
       context,
       {
         'vehicle_types': _selectedVehicles.toList(),
+        'service_types': _selectedServices.toList(),
         'open_time': _timeValue(_openTime),
         'close_time': _timeValue(_closeTime),
         'service_days': _selectedDays.toList()..sort(),
@@ -157,6 +172,69 @@ class _MechanicServiceProfileDialogState
                           }
                         });
                       },
+                    ),
+                ],
+              ),
+              const Divider(height: 24),
+              Text(
+                'Types de réparation proposés',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 6,
+                runSpacing: 4,
+                children: [
+                  for (final entry in _serviceTypes.entries)
+                    FilterChip(
+                      label: Text(entry.value),
+                      selected: _selectedServices.contains(entry.key),
+                      onSelected: (selected) {
+                        setState(() {
+                          if (selected) {
+                            _selectedServices.add(entry.key);
+                          } else {
+                            _selectedServices.remove(entry.key);
+                          }
+                        });
+                      },
+                    ),
+                ],
+              ),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _customServiceController,
+                      decoration: const InputDecoration(
+                        labelText: 'Autre compétence',
+                        hintText: 'Ex. Climatisation',
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: 'Ajouter cette compétence',
+                    onPressed: () {
+                      final value = _customServiceController.text.trim();
+                      if (value.length < 2 || value.length > 80) return;
+                      setState(() => _selectedServices.add(value.toUpperCase()));
+                      _customServiceController.clear();
+                    },
+                    icon: const Icon(Icons.add_circle_outline),
+                  ),
+                ],
+              ),
+              Wrap(
+                spacing: 6,
+                children: [
+                  for (final service in _selectedServices.where(
+                    (value) => !_serviceTypes.containsKey(value),
+                  ))
+                    InputChip(
+                      label: Text(service),
+                      onDeleted: () => setState(
+                        () => _selectedServices.remove(service),
+                      ),
                     ),
                 ],
               ),
