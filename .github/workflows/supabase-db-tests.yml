@@ -4,7 +4,7 @@ name: Supabase database tests
 # reset, or test a hosted Supabase project. Validate migrations before merging.
 on:
   push:
-    branches: ['maintenance/audit-01-07-2026-11-15']
+    branches: ['maintenance/audit-01-07-2026-11-15', 'maintenance/hide-supabase-build-vars-2026-11-21']
     paths:
       - 'supabase/migrations/**'
       - 'supabase/tests/**'
@@ -28,7 +28,7 @@ concurrency:
 
 jobs:
   database-tests:
-    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/maintenance/audit-01-07-2026-11-15'
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/maintenance/audit-01-07-2026-11-15' || github.ref == 'refs/heads/maintenance/hide-supabase-build-vars-2026-11-21'
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:
