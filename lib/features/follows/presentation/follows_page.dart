@@ -3,12 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/errors/backend_error_message.dart';
 import '../../../core/providers/repository_providers.dart';
-import '../data/follows_repository.dart';
-
-final followsRepositoryProvider = Provider<FollowsRepository?>((ref) {
-  final client = ref.watch(supabaseProvider);
-  return client == null ? null : FollowsRepository(client);
-});
 
 class FollowsPage extends ConsumerStatefulWidget {
   const FollowsPage({super.key});
