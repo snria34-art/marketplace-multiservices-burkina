@@ -135,6 +135,46 @@ class _GroupBuyCountdownState extends State<GroupBuyCountdown> {
       );
     }
 
+    if (widget.compact &&
+        !_now.isBefore(startsAt) &&
+        _now.isBefore(endsAt)) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                _elapsed(_now.difference(startsAt)),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Icon(
+              Icons.timer_outlined,
+              size: 14,
+              color: colorScheme.primary,
+            ),
+            const SizedBox(width: 4),
+            Flexible(
+              child: Text(
+                'Fin dans ${_duration(endsAt.difference(_now))}',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.end,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: colorScheme.primary,
+                      fontWeight: FontWeight.w700,
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                    ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     if (widget.compact) return content;
 
     return Container(
