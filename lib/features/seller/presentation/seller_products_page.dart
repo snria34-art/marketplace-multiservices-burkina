@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -528,6 +529,13 @@ class _SellerProductsPageState
                             icon: const Icon(Icons.add_a_photo_outlined),
                             tooltip: 'Ajouter des photos et soumettre',
                           ),
+                        IconButton(
+                          onPressed: () => context.push(
+                            '/seller/products/${product['id']}/options',
+                          ),
+                          icon: const Icon(Icons.tune_outlined),
+                          tooltip: 'Configurer les ingrédients et suppléments',
+                        ),
                         IconButton(
                           onPressed: () => _editStock(product),
                           icon: const Icon(Icons.edit_outlined),
