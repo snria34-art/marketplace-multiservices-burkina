@@ -67,7 +67,7 @@ jobs:
 
       - name: Compile Flutter Web through the same redacted build script as Docker
         env:
-          FLUTTER_BUILD_MODE: debug
+          FLUTTER_BUILD_MODE: release
           SUPABASE_URL: https://example.supabase.co
           SUPABASE_PUBLISHABLE_KEY: sb_publishable_ci_placeholder
         run: /bin/sh scripts/build-web.sh
