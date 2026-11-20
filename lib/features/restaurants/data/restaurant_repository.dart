@@ -158,13 +158,53 @@ class RestaurantRepository {
     final rows = await client
         .from('restaurant_profiles')
         .select(
-          'id,shop_id,shops!inner(name,seller_id),restaurant_menus!inner(id,name,restaurant_menu_items!inner(id,product_id,products(price),name,description,price,active,restaurant_menu_item_option_groups(id,name,component_type,selection_type,min_selections,max_selections,sort_order,restaurant_menu_item_options(id,name,price_delta,linked_product_id,sort_order))))',
+          'id,shop_id,restaurant_type,cuisine_types,shops!inner(name,seller_id),restaurant_menus!inner(id,name,restaurant_menu_items!inner(id,product_id,products(price),name,description,price,active,restaurant_menu_item_option_groups(id,name,component_type,selection_type,min_selections,max_selections,sort_order,restaurant_menu_item_options(id,name,price_delta,linked_product_id,sort_order))))',
         )
         .eq('shops.seller_id', sellerId)
         .order('created_at', ascending: false);
 
     return (rows as List)
         .map((row) => Map<String, dynamic>.from(row as Map))
+        .toList();
+  }
+
+
+  Future<void> saveDiscoveryProfile({
+    required String restaurantId,
+    required String restaurantType,
+    required List<String> cuisineTypes,
+  }) async {
+    await client.rpc(
+      'save_restaurant_discovery_profile',
+      params: {
+        'p_restaurant_id': restaurantId,
+        'p_restaurant_type': restaurantType,
+        'p_cuisine_types': cuisineTypes,
+      },
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> searchRestaurantCatalog({
+    String query = '',
+    String? restaurantType,
+    String? cuisineType,
+    int limit = 100,
+  }) async {
+    final response = await client.rpc(
+      'search_restaurant_catalog',
+      params: {
+        'p_query': query.trim().isEmpty ? null : query.trim(),
+        'p_restaurant_type': restaurantType,
+        'p_cuisine_type': cuisineType,
+        'p_limit': limit,
+      },
+    );
+    if (response is! List) {
+      throw StateError('Réponse de recherche restaurant invalide.');
+    }
+    return response
+        .whereType<Map>()
+        .map((row) => Map<String, dynamic>.from(row))
         .toList();
   }
 
