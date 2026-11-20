@@ -23,7 +23,7 @@ class _SellerPromotionsPageState
   }
 
   Future<(String, List<Map<String, dynamic>>)> _loadBase() async {
-    final client = ref.read(supabaseProvider);
+    final client = ref.read(marketplaceSellerClientProvider);
     final user = client?.auth.currentUser;
     if (client == null || user == null) {
       throw StateError('Authentification requise.');
@@ -90,7 +90,7 @@ class _SellerPromotionsPageState
     );
     if (!mounted || form == null) return;
 
-    final client = ref.read(supabaseProvider);
+    final client = ref.read(marketplaceSellerClientProvider);
     if (client == null) return;
 
     try {
@@ -114,7 +114,7 @@ class _SellerPromotionsPageState
   }
 
   Future<void> _toggle(Map<String, dynamic> promotion, bool active) async {
-    final client = ref.read(supabaseProvider);
+    final client = ref.read(marketplaceSellerClientProvider);
     if (client == null) return;
 
     try {
