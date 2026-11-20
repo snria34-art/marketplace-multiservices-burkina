@@ -15,6 +15,7 @@ import '../../features/auth/presentation/forgot_password_page.dart';
 import '../../features/auth/presentation/auth_recovery_page.dart';
 import '../../features/cart/presentation/cart_page.dart';
 import '../../features/catalog/presentation/home_page.dart';
+import '../../features/catalog/presentation/shop_page.dart';
 import '../../features/checkout/presentation/checkout_page.dart';
 import '../../features/checkout/presentation/orders_page.dart';
 import '../../features/checkout/presentation/order_details_page.dart';
@@ -229,6 +230,19 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (_, state) => AccessStatusPage(
           reason: state.uri.queryParameters['reason'],
         ),
+      ),
+      GoRoute(
+        path: '/shops/:shopId',
+        builder: (_, state) {
+          final shopId = state.pathParameters['shopId'];
+          if (shopId == null || shopId.isEmpty) {
+            return const ModulePlaceholderPage(
+              title: 'Boutique invalide',
+              icon: Icons.storefront_outlined,
+            );
+          }
+          return ShopPage(shopId: shopId);
+        },
       ),
       GoRoute(path: '/cart', builder: (_, _) => const CartPage()),
       GoRoute(
