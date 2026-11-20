@@ -54,6 +54,7 @@ class MechanicRepository {
 
   Future<void> saveServiceProfile({
     required List<String> vehicleTypes,
+    required List<String> serviceTypes,
     required String openTime,
     required String closeTime,
     required List<int> serviceDays,
@@ -66,6 +67,7 @@ class MechanicRepository {
       'save_mechanic_service_profile',
       params: {
         'p_vehicle_types': vehicleTypes,
+        'p_service_types': serviceTypes,
         'p_open_time': openTime,
         'p_close_time': closeTime,
         'p_service_days': serviceDays,
