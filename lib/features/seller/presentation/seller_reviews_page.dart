@@ -21,7 +21,7 @@ class _SellerReviewsPageState extends ConsumerState<SellerReviewsPage> {
   }
 
   Future<List<Map<String, dynamic>>> _load() async {
-    final client = ref.read(supabaseProvider);
+    final client = ref.read(marketplaceSellerClientProvider);
     final user = client?.auth.currentUser;
     if (client == null || user == null) {
       throw StateError('Authentification requise.');
