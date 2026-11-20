@@ -300,6 +300,9 @@ class _HomePageState extends ConsumerState<HomePage> {
                               ? Future.value(null)
                               : catalog.productImageUrl(storagePath),
                           onAdd: () => _addToCart(product),
+                          onOpenShop: shop['id'] == null
+                              ? null
+                              : () => context.push('/shops/' + shop['id'].toString()),
                         );
                       },
                       childCount:
@@ -455,11 +458,13 @@ class _ProductCard extends StatelessWidget {
     required this.product,
     required this.imageUrl,
     required this.onAdd,
+    required this.onOpenShop,
   });
 
   final Map<String, dynamic> product;
   final Future<String?> imageUrl;
   final VoidCallback onAdd;
+  final VoidCallback? onOpenShop;
 
   @override
   Widget build(BuildContext context) {
@@ -511,11 +516,24 @@ class _ProductCard extends StatelessWidget {
             child: Row(
               children: [
                 Expanded(
-                  child: Text(
-                    shop['name']?.toString() ?? 'Boutique',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.bodySmall,
+                  child: InkWell(
+                    onTap: onOpenShop,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      child: Text(
+                        shop['name']?.toString() ?? 'Boutique',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: onOpenShop == null
+                                  ? null
+                                  : Theme.of(context).colorScheme.primary,
+                              decoration: onOpenShop == null
+                                  ? null
+                                  : TextDecoration.underline,
+                            ),
+                      ),
+                    ),
                   ),
                 ),
                 IconButton(
