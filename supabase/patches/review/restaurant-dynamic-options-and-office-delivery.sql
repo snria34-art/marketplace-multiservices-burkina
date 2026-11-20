@@ -716,6 +716,37 @@ begin
 end;
 $patch$;
 
+-- Customer can view only the option labels for their own active cart item.
+create or replace function public.get_my_cart_item_customizations(
+  p_cart_item_id uuid
+) returns jsonb
+language plpgsql security definer
+set search_path = pg_catalog, public
+as $function$
+declare
+  v_user uuid := (select auth.uid());
+  v_snapshot jsonb;
+begin
+  if v_user is null then raise exception 'not_authenticated'; end if;
+
+  select public.get_product_customization_snapshot(
+    ci.product_id,ci.selected_option_level_ids
+  )
+  into v_snapshot
+  from public.cart_items ci
+  join public.carts c on c.id=ci.cart_id
+  where ci.id=p_cart_item_id
+    and c.customer_id=v_user
+    and c.status='ACTIVE';
+
+  if not found then raise exception 'cart_item_not_owned_or_inactive'; end if;
+  return coalesce(v_snapshot,'[]'::jsonb);
+end;
+$function$;
+
+revoke all on function public.get_my_cart_item_customizations(uuid) from public,anon;
+grant execute on function public.get_my_cart_item_customizations(uuid) to authenticated;
+
 -- ---------------------------------------------------------------------------
 -- B. Exact office delivery times; the client selects a time, but the server
 -- validates and persists it. Seller order groups receive a safe snapshot.
