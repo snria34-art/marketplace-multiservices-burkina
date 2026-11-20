@@ -20,7 +20,7 @@ class _SellerClientsPageState extends ConsumerState<SellerClientsPage> {
   }
 
   Future<Map<String, dynamic>> _load() async {
-    final client = ref.read(supabaseProvider);
+    final client = ref.read(marketplaceSellerClientProvider);
     final result = await client?.rpc('get_seller_client_stats');
     if (result is! Map) throw StateError('Statistiques clients invalides.');
     return Map<String, dynamic>.from(result);
