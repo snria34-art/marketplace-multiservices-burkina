@@ -71,6 +71,12 @@ final marketplacePublicClientProvider = Provider<SupabaseClient?>((ref) {
   return ref.watch(marketplaceEngineProvider).backendClient;
 });
 
+final marketplaceAuthenticationClientProvider =
+    Provider<SupabaseClient?>((ref) {
+  return ref.watch(marketplaceEngineProvider)
+      .clientFor(MarketplaceCapability.authenticate);
+});
+
 final marketplaceCustomerClientProvider = Provider<SupabaseClient?>((ref) {
   return ref.watch(marketplaceEngineProvider)
       .clientFor(MarketplaceCapability.manageCart);
