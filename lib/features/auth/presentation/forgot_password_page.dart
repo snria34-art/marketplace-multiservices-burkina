@@ -28,7 +28,7 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
   }
 
   Future<void> _sendRecoveryEmail() async {
-    final client = ref.read(supabaseProvider);
+    final client = ref.read(marketplaceAuthenticationClientProvider);
     if (client == null) {
       _show('Le service de connexion est indisponible.');
       return;
