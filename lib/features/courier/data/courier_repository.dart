@@ -3,15 +3,22 @@ import 'package:image_picker/image_picker.dart';
 import '../../../core/media/upload_media_validator.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../../core/engine/marketplace_resilience.dart';
+
 class CourierRepository {
-  const CourierRepository(this.client);
+  const CourierRepository(this.client, {this.resilience});
 
   final SupabaseClient client;
+  final MarketplaceResilience? resilience;
+  static final _fallbackResilience = MarketplaceResilience();
+  MarketplaceResilience get _retry => resilience ?? _fallbackResilience;
+
+  Future<T> _read<T>(Future<T> Function() operation) => _retry.read(operation);
 
   Future<List<Map<String, dynamic>>> assignments() async {
     if (client.auth.currentUser == null) return const [];
 
-    final rows = await client.rpc('get_courier_assignments');
+    final rows = await _read(() => client.rpc('get_courier_assignments'));
     if (rows is! List) return const [];
 
     return rows
