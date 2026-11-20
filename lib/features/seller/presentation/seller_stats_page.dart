@@ -1,13 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../data/seller_repository.dart';
 import '../../../core/providers/repository_providers.dart';
-
-final sellerStatsRepositoryProvider = Provider<SellerRepository?>((ref) {
-  final client = ref.watch(supabaseProvider);
-  return client == null ? null : SellerRepository(client);
-});
 
 class SellerStatsPage extends ConsumerStatefulWidget {
   const SellerStatsPage({super.key});
@@ -26,7 +20,7 @@ class _SellerStatsPageState extends ConsumerState<SellerStatsPage> {
   }
 
   Future<List<Map<String, dynamic>>> _load() async {
-    final repo = ref.read(sellerStatsRepositoryProvider);
+    final repo = ref.read(sellerRepositoryProvider);
     if (repo == null) throw StateError('Authentification requise.');
     return repo.dashboard();
   }
