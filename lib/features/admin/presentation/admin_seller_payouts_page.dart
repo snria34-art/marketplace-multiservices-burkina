@@ -23,7 +23,7 @@ class _AdminSellerPayoutsPageState
   }
 
   Future<List<Map<String, dynamic>>> _load() async {
-    final client = ref.read(supabaseProvider);
+    final client = ref.read(marketplaceAdminClientProvider);
     if (client == null || client.auth.currentUser == null) {
       throw StateError('Authentification requise.');
     }
@@ -108,7 +108,7 @@ class _AdminSellerPayoutsPageState
     reasonController.dispose();
     if (confirmed != true) return;
 
-    final client = ref.read(supabaseProvider);
+    final client = ref.read(marketplaceAdminClientProvider);
     if (client == null) return;
 
     try {
