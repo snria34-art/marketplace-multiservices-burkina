@@ -245,17 +245,27 @@ class _SellerRestaurantOptionsPageState
     return result;
   }
 
-  Future<Map<String, dynamic>?> _askLevel() async {
-    final label = TextEditingController();
-    final price = TextEditingController(text: '0');
-    final quantity = TextEditingController(text: '1');
-    var isDefault = false;
+  Future<Map<String, dynamic>?> _askLevel({
+    Map<String, dynamic>? existing,
+  }) async {
+    final label = TextEditingController(
+      text: existing?['label']?.toString() ?? '',
+    );
+    final price = TextEditingController(
+      text: existing?['price_delta']?.toString() ?? '0',
+    );
+    final quantity = TextEditingController(
+      text: existing?['quantity_value']?.toString() ?? '1',
+    );
+    var isDefault = existing?['is_default'] == true;
 
     final result = await showDialog<Map<String, dynamic>>(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          title: const Text('Ajouter un niveau et son supplément'),
+          title: Text(existing == null
+              ? 'Ajouter un niveau et son supplément'
+              : 'Modifier le niveau et son supplément'),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -377,21 +387,26 @@ class _SellerRestaurantOptionsPageState
     );
   }
 
-  Future<void> _saveLevel(String optionId) async {
-    final result = await _askLevel();
+  Future<void> _saveLevel(
+    String optionId, {
+    Map<String, dynamic>? existing,
+  }) async {
+    final result = await _askLevel(existing: existing);
     if (!mounted || result == null) return;
     await _runSave(
       'save_product_option_level',
       {
         'p_option_id': optionId,
-        'p_level_id': null,
+        'p_level_id': existing?['id'],
         'p_label': result['label'],
         'p_price_delta': result['price_delta'],
         'p_quantity_value': result['quantity_value'],
         'p_is_default': result['is_default'],
         'p_sort_order': 0,
       },
-      'Niveau et supplément enregistrés.',
+      existing == null
+          ? 'Niveau et supplément enregistrés.'
+          : 'Niveau et supplément modifiés.',
     );
   }
 
@@ -519,6 +534,10 @@ class _SellerRestaurantOptionsPageState
                         option: option,
                         levels: _maps(option['product_option_levels']),
                         onAddLevel: () => _saveLevel(option['id'].toString()),
+                        onEditLevel: (level) => _saveLevel(
+                          option['id'].toString(),
+                          existing: level,
+                        ),
                       ),
                     Padding(
                       padding: const EdgeInsets.all(12),
@@ -549,11 +568,13 @@ class _OptionEditor extends StatelessWidget {
     required this.option,
     required this.levels,
     required this.onAddLevel,
+    required this.onEditLevel,
   });
 
   final Map<String, dynamic> option;
   final List<Map<String, dynamic>> levels;
   final VoidCallback onAddLevel;
+  final ValueChanged<Map<String, dynamic>> onEditLevel;
 
   @override
   Widget build(BuildContext context) {
@@ -587,9 +608,20 @@ class _OptionEditor extends StatelessWidget {
                     (level['quantity_value']?.toString() ?? '1') +
                     (level['is_default'] == true ? ' • Par défaut' : ''),
               ),
-              trailing: Text(
-                '+ ' + (level['price_delta']?.toString() ?? '0') + ' XOF',
-                style: const TextStyle(fontWeight: FontWeight.w700),
+              trailing: Wrap(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  Text(
+                    '+ ' + (level['price_delta']?.toString() ?? '0') + ' XOF',
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  IconButton(
+                    tooltip: 'Modifier le niveau',
+                    onPressed: () => onEditLevel(level),
+                    icon: const Icon(Icons.edit_outlined, size: 18),
+                  ),
+                ],
               ),
             ),
           if (levels.isEmpty)
