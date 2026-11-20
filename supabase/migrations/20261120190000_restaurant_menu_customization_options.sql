@@ -235,10 +235,10 @@ begin
   end loop;
 
   if exists (
-    select 1 from jsonb_object_keys(p_selections) k
+    select 1 from jsonb_object_keys(p_selections) as keys(group_id)
     where not exists (
       select 1 from public.restaurant_menu_item_option_groups g
-      where g.id::text = k and g.menu_item_id = p_menu_item_id and g.active = true
+      where g.id::text = keys.group_id and g.menu_item_id = p_menu_item_id and g.active = true
     )
   ) then raise exception 'unknown_option_group'; end if;
 
