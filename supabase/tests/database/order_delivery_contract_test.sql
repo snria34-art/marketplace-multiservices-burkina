@@ -100,8 +100,20 @@ select ok(
   has_function_privilege('service_role', 'public.complete_refund(uuid,text)', 'EXECUTE')
   and not has_function_privilege('authenticated', 'public.complete_refund(uuid,text)', 'EXECUTE')
   and not has_function_privilege('anon', 'public.complete_refund(uuid,text)', 'EXECUTE')
-  and position('if v_refund.status=''COMPLETED'' then' in pg_get_functiondef('public.complete_refund(uuid,text)'::regprocedure)) > 0
-  and position('for update' in pg_get_functiondef('public.complete_refund(uuid,text)'::regprocedure)) > 0,
+  and position(
+    'ifv_refund.status=''completed''thenreturntrue;endif;'
+    in lower(regexp_replace(
+      pg_get_functiondef('public.complete_refund(uuid,text)'::regprocedure),
+      '[[:space:]]+', '', 'g'
+    ))
+  ) > 0
+  and position(
+    'forupdate'
+    in lower(regexp_replace(
+      pg_get_functiondef('public.complete_refund(uuid,text)'::regprocedure),
+      '[[:space:]]+', '', 'g'
+    ))
+  ) > 0,
   'refund completion remains service-role-only, idempotent and row-locked'
 );
 

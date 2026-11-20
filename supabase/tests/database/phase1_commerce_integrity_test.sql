@@ -9,17 +9,35 @@ select ok(position('status not in (''CANCELLED'',''DELIVERED'')' in pg_get_funct
 select ok(position('set status=''DELIVERED''' in pg_get_functiondef('public.sync_after_package_delivery(uuid)'::regprocedure))>0 and position('COMPLETED' in pg_get_functiondef('public.sync_after_package_delivery(uuid)'::regprocedure))=0,'delivery sync writes DELIVERED');
 select ok(to_regclass('private.refund_accounting_reconciliations') is not null and (select relrowsecurity from pg_class where oid='private.refund_accounting_reconciliations'::regclass) and not has_table_privilege('anon','private.refund_accounting_reconciliations','SELECT') and not has_table_privilege('authenticated','private.refund_accounting_reconciliations','SELECT'),'refund hold table private');
 select ok(exists(select 1 from pg_trigger where tgrelid='public.refunds'::regclass and tgname='trg_sync_refund_accounting_hold' and not tgisinternal),'refund hold trigger installed');
-select ok(position('refund_financial_reconciliation_required' in pg_get_functiondef('public.admin_begin_refund(uuid)'::regprocedure))>0 and position('ar.refund_id<>p_refund_id' in pg_get_functiondef('public.admin_begin_refund(uuid)'::regprocedure))>0 and position('prior.status in (''PENDING'',''PROCESSING'',''COMPLETED'',''FAILED'')' in pg_get_functiondef('public.admin_begin_refund(uuid)'::regprocedure))>0,'subsequent provider refund is blocked only after an earlier attempt has started');
 select ok(
-  position('where p.id=v_payment_id' in lower(pg_get_functiondef('public.admin_begin_refund(uuid)'::regprocedure))) > 0
-  and position('for update' in lower(substring(
-    pg_get_functiondef('public.admin_begin_refund(uuid)'::regprocedure)
-    from position('where p.id=v_payment_id' in lower(pg_get_functiondef('public.admin_begin_refund(uuid)'::regprocedure)))
+  position('refund_financial_reconciliation_required' in lower(pg_get_functiondef('public.admin_begin_refund(uuid)'::regprocedure))) > 0
+  and position('ar.refund_id<>p_refund_id' in lower(regexp_replace(
+    pg_get_functiondef('public.admin_begin_refund(uuid)'::regprocedure),
+    '[[:space:]]+', '', 'g'
   ))) > 0
-  and position('refund_financial_reconciliation_required' in lower(pg_get_functiondef('public.admin_begin_refund(uuid)'::regprocedure)))
-      > position('where p.id=v_payment_id' in lower(pg_get_functiondef('public.admin_begin_refund(uuid)'::regprocedure))),
-  'refund attempts lock their payment before reconciliation checks to prevent concurrent double starts'
+  and position('prior.statusin(''pending'',''processing'',''completed'',''failed'')' in lower(regexp_replace(
+    pg_get_functiondef('public.admin_begin_refund(uuid)'::regprocedure),
+    '[[:space:]]+', '', 'g'
+  ))) > 0,
+  'subsequent provider refund is blocked only after an earlier attempt has started'
 );
+with refund_function as (
+  select lower(regexp_replace(
+    pg_get_functiondef('public.admin_begin_refund(uuid)'::regprocedure),
+    '[[:space:]]+', '', 'g'
+  )) as definition
+)
+select ok(
+  position('wherep.id=v_payment_id' in definition) > 0
+  and position(
+    'forupdate'
+    in substring(definition from position('wherep.id=v_payment_id' in definition))
+  ) > 0
+  and position('refund_financial_reconciliation_required' in definition)
+      > position('wherep.id=v_payment_id' in definition),
+  'refund attempts lock their payment before reconciliation checks to prevent concurrent double starts'
+)
+from refund_function;
 select ok(position('seller_payout_blocked_by_refund_reconciliation' in pg_get_functiondef('public.request_seller_payout_secure(uuid,numeric,text)'::regprocedure))>0,'seller payout blocked while allocation pending');
 select ok(position('public.seller_ledger' in pg_get_functiondef('public.complete_refund(uuid,text)'::regprocedure))=0 and position('update public.payments' in pg_get_functiondef('public.complete_refund(uuid,text)'::regprocedure))>0,'refund finalizer does not invent seller ledger debits');
 select ok(position('accounting_status' in pg_get_functiondef('public.get_admin_refunds()'::regprocedure))>0 and position('accounting_note' in pg_get_functiondef('public.get_admin_refunds()'::regprocedure))>0,'admin refund list exposes hold information');
@@ -45,7 +63,10 @@ select ok(
 );
 
 select ok(
-  position('r.amount=trunc(r.amount)' in pg_get_functiondef('public.admin_begin_refund(uuid)'::regprocedure)) > 0,
+  position('r.amount=trunc(r.amount)' in lower(regexp_replace(
+    pg_get_functiondef('public.admin_begin_refund(uuid)'::regprocedure),
+    '[[:space:]]+', '', 'g'
+  ))) > 0,
   'provider refund claim rejects fractional XOF before moving the refund to processing'
 );
 

@@ -223,12 +223,21 @@ select ok(
   'seller group transition remains restricted to its trusted server-side caller'
 );
 
+with refund_function as (
+  select lower(regexp_replace(
+    pg_get_functiondef('public.admin_begin_refund(uuid)'::regprocedure),
+    '[[:space:]]+', '', 'g'
+  )) as definition
+)
 select ok(
-  position('r.status in (''REQUESTED'',''APPROVED'')' in pg_get_functiondef('public.admin_begin_refund(uuid)'::regprocedure)) > 0
-  and position('prior.status in (''PENDING'',''PROCESSING'',''COMPLETED'',''FAILED'')' in pg_get_functiondef('public.admin_begin_refund(uuid)'::regprocedure)) > 0
-  and position('private.is_admin()' in pg_get_functiondef('public.admin_begin_refund(uuid)'::regprocedure)) > 0,
-  'refund processing is atomically claimed once; failed/in-flight attempts and earlier provider refunds require reconciliation'
-);
+  position('r.status=''approved''' in definition) > 0
+  and position('refund_allocations_required_or_unbalanced' in definition) > 0
+  and position('ar.refund_id<>p_refund_id' in definition) > 0
+  and position('prior.statusin(''pending'',''processing'',''completed'',''failed'')' in definition) > 0
+  and position('private.is_admin()' in definition) > 0,
+  'only approved refunds with balanced allocations are atomically claimed; prior financial holds require reconciliation'
+)
+from refund_function;
 
 select ok(
   position('if v_order.status = ''CANCELLED'' then' in pg_get_functiondef('public.process_payment_event(uuid,text,public.payment_status,text,numeric,text,jsonb)'::regprocedure)) > 0
@@ -239,13 +248,20 @@ select ok(
   'late successful payment after cancellation queues one outstanding refund and stays server-only'
 );
 
+with refund_function as (
+  select lower(regexp_replace(
+    pg_get_functiondef('public.admin_begin_refund(uuid)'::regprocedure),
+    '[[:space:]]+', '', 'g'
+  )) as definition
+)
 select ok(
-  position('refund_provider_data_invalid' in pg_get_functiondef('public.admin_begin_refund(uuid)'::regprocedure)) > 0
-  and position('nullif(trim(p.provider_reference),'''') is not null' in pg_get_functiondef('public.admin_begin_refund(uuid)'::regprocedure)) > 0
-  and position('p.provider in (''WAVE'',''CINETPAY'',''ORANGE_MONEY'',''MOOV_MONEY'')' in pg_get_functiondef('public.admin_begin_refund(uuid)'::regprocedure)) > 0
-  and position('r.status in (''REQUESTED'',''APPROVED'')' in pg_get_functiondef('public.admin_begin_refund(uuid)'::regprocedure)) > 0,
-  'provider data is validated before a refund is claimed for processing'
-);
+  position('refund_provider_data_invalid_or_not_approved' in definition) > 0
+  and position('nullif(trim(p.provider_reference),'''')isnotnull' in definition) > 0
+  and position('p.providerin(''wave'',''cinetpay'',''orange_money'',''moov_money'')' in definition) > 0
+  and position('r.status=''approved''' in definition) > 0,
+  'provider data is validated before an approved refund is claimed for processing'
+)
+from refund_function;
 
 select ok(
   to_regclass('private.idx_platform_repair_backups_restored_by_fk') is not null
@@ -554,12 +570,20 @@ select ok(
 );
 
 
+with refund_function as (
+  select lower(regexp_replace(
+    pg_get_functiondef('public.admin_begin_refund(uuid)'::regprocedure),
+    '[[:space:]]+', '', 'g'
+  )) as definition
+)
 select ok(
-  position('r.status in (''REQUESTED'',''APPROVED'')' in pg_get_functiondef('public.admin_begin_refund(uuid)'::regprocedure)) > 0
-  and position('r.status in (''REQUESTED'',''APPROVED'',''FAILED'',''PROCESSING'')' in pg_get_functiondef('public.admin_begin_refund(uuid)'::regprocedure)) = 0
+  position('r.status=''approved''' in definition) > 0
+  and position('refund_allocations_required_or_unbalanced' in definition) > 0
+  and position('r.statusin(''requested'',''approved'',''failed'',''processing'')' in definition) = 0
   and not has_function_privilege('anon','public.admin_begin_refund(uuid)','EXECUTE'),
-  'refund execution can be claimed only once from REQUESTED or APPROVED; in-flight and failed refunds cannot be blindly retried'
-);
+  'refund execution requires approval and balanced allocation; in-flight and failed refunds cannot be blindly retried'
+)
+from refund_function;
 
 select * from finish();
 rollback;
