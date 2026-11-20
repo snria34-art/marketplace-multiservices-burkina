@@ -12,9 +12,6 @@ class MechanicRepository {
       final item = Map<String, dynamic>.from(row as Map);
       final services = item['services'];
       item['mechanic_services'] = services is List ? services : const <dynamic>[];
-      item['service_open_time'] = item['service_open_time'];
-      item['service_close_time'] = item['service_close_time'];
-      item['service_days'] = item['service_days'];
       item['mechanic_availability'] = [
         <String, dynamic>{
           'status': item['availability_status'],
