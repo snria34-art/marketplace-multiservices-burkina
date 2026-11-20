@@ -180,7 +180,7 @@ begin
      or (v_type = 'SINGLE' and p_max_selections <> 1) then
     raise exception 'invalid_selection_limits';
   end if;
-  if jsonb_typeof(p_options) <> 'array'
+  if p_options is null or jsonb_typeof(p_options) is distinct from 'array'
      or jsonb_array_length(p_options) < 1
      or jsonb_array_length(p_options) > 30 then
     raise exception 'invalid_options';
@@ -338,7 +338,7 @@ grant execute on function public.quote_restaurant_menu_item(uuid,jsonb) to anon,
 -- Keep customization selections in the cart and immutable price/name snapshots on orders.
 alter table public.cart_items
   add column if not exists restaurant_menu_item_id uuid
-    references public.restaurant_menu_items(id) on delete set null,
+    references public.restaurant_menu_items(id) on delete restrict,
   add column if not exists restaurant_selections jsonb not null default '{}'::jsonb;
 
 alter table public.order_items
@@ -359,7 +359,6 @@ declare
   v_user_id uuid := auth.uid();
   v_product_id uuid;
   v_item_id uuid;
-  v_cart_id uuid;
   v_existing_menu_item_id uuid;
   v_existing_selections jsonb;
 begin
@@ -382,34 +381,27 @@ begin
 
   perform public.quote_restaurant_menu_item(p_menu_item_id, p_selections);
 
-  v_item_id := public.add_to_cart(v_product_id, p_quantity, null);
-
-  select c.id into v_cart_id
+  select ci.id, ci.restaurant_menu_item_id, ci.restaurant_selections
+    into v_item_id, v_existing_menu_item_id, v_existing_selections
   from public.carts c
+  join public.cart_items ci on ci.cart_id = c.id
   where c.customer_id = v_user_id and c.status = 'ACTIVE'
-  for update;
-  if v_cart_id is null then raise exception 'active_cart_not_found'; end if;
+    and ci.product_id = v_product_id and ci.variant_id is null
+  for update of c, ci;
 
-  select ci.restaurant_menu_item_id, ci.restaurant_selections
-    into v_existing_menu_item_id, v_existing_selections
-  from public.cart_items ci
-  where ci.id = v_item_id and ci.cart_id = v_cart_id
-  for update;
-
-  if v_existing_menu_item_id is not null
-     and (v_existing_menu_item_id <> p_menu_item_id
-          or v_existing_selections is distinct from p_selections) then
+  if v_item_id is not null and (
+    v_existing_menu_item_id is distinct from p_menu_item_id
+    or v_existing_selections is distinct from p_selections
+  ) then
     raise exception 'cart_item_customization_conflict';
   end if;
 
-  if v_existing_menu_item_id is null and v_existing_selections <> '{}'::jsonb then
-    raise exception 'cart_item_customization_conflict';
-  end if;
+  v_item_id := public.add_to_cart(v_product_id, p_quantity, null);
 
   update public.cart_items
   set restaurant_menu_item_id = p_menu_item_id,
       restaurant_selections = p_selections
-  where id = v_item_id and cart_id = v_cart_id;
+  where id = v_item_id;
 
   return v_item_id;
 end;
