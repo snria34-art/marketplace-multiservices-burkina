@@ -25,7 +25,7 @@ class _AdminDashboardPageState
   }
 
   Future<_AdminSnapshot> _load() async {
-    final client = ref.read(supabaseProvider);
+    final client = ref.read(marketplaceAdminClientProvider);
 
     if (client == null || client.auth.currentUser == null) {
       throw StateError('Authentification requise.');
@@ -56,7 +56,7 @@ class _AdminDashboardPageState
     Map<String, dynamic> module,
     bool enabled,
   ) async {
-    final client = ref.read(supabaseProvider);
+    final client = ref.read(marketplaceAdminClientProvider);
 
     if (client == null) return;
 
@@ -85,7 +85,7 @@ class _AdminDashboardPageState
   }
 
   Future<void> _sendPushTest() async {
-    final client = ref.read(supabaseProvider);
+    final client = ref.read(marketplaceAdminClientProvider);
     if (client == null) return;
 
     try {
@@ -109,7 +109,7 @@ class _AdminDashboardPageState
   }
 
   Future<void> _addAssociate() async {
-    final client = ref.read(supabaseProvider);
+    final client = ref.read(marketplaceAdminClientProvider);
     if (client == null) return;
 
     final results = await Future.wait([
