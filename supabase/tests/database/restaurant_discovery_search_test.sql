@@ -1,5 +1,5 @@
 begin;
-select plan(11);
+select plan(12);
 
 select ok(
   exists (
@@ -89,6 +89,19 @@ select ok(
     'public.search_restaurant_catalog(text,text,text,integer)'::regprocedure
   )) > 0,
   'search results include available dish customizations'
+);
+
+select ok(
+  position('traditionnelle' in pg_get_functiondef(
+    'public.search_restaurant_catalog(text,text,text,integer)'::regprocedure
+  )) > 0
+  and position('ivoirienne' in pg_get_functiondef(
+    'public.search_restaurant_catalog(text,text,text,integer)'::regprocedure
+  )) > 0
+  and position('togolaise' in pg_get_functiondef(
+    'public.search_restaurant_catalog(text,text,text,integer)'::regprocedure
+  )) > 0,
+  'natural-language aliases map cuisine and restaurant category names'
 );
 
 select ok(
