@@ -3,12 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/errors/backend_error_message.dart';
 import '../../../core/providers/repository_providers.dart';
-import '../data/transport_repository.dart';
-
-final transportRepositoryProvider = Provider<TransportRepository?>((ref) {
-  final client = ref.watch(supabaseProvider);
-  return client == null ? null : TransportRepository(client);
-});
 
 class TransportPage extends ConsumerStatefulWidget {
   const TransportPage({super.key});
