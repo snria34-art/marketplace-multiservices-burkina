@@ -1,14 +1,21 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../../core/engine/marketplace_resilience.dart';
+
 class GroupBuyRepository {
-  const GroupBuyRepository(this.client);
+  const GroupBuyRepository(this.client, {this.resilience});
 
   final SupabaseClient client;
+  final MarketplaceResilience? resilience;
+  static final _fallbackResilience = MarketplaceResilience();
+  MarketplaceResilience get _retry => resilience ?? _fallbackResilience;
+
+  Future<T> _read<T>(Future<T> Function() operation) => _retry.read(operation);
 
   Future<List<Map<String, dynamic>>> active() async {
     final now = DateTime.now().toUtc().toIso8601String();
 
-    final rows = await client
+    final rows = await _read(() async => await client
         .from('group_buys')
         .select(
           'id,product_id,seller_id,title,target_quantity,current_quantity,'
@@ -18,7 +25,7 @@ class GroupBuyRepository {
         .lte('starts_at', now)
         .gt('ends_at', now)
         .order('ends_at')
-        .limit(100);
+        .limit(100));
 
     return (rows as List)
         .map((row) => Map<String, dynamic>.from(row as Map))
