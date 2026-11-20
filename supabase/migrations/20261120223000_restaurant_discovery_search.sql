@@ -235,7 +235,7 @@ as $$
       or exists (
         select 1 from unnest(rp.cuisine_types) as cuisine(code)
         where public.restaurant_search_normalize(cuisine.code) like '%' || public.restaurant_search_normalize(p_query) || '%'
-          or case cuisine.code
+          or public.restaurant_search_normalize(case cuisine.code
             when 'BURKINABE' then 'burkinabe'
             when 'IVORIAN' then 'ivoirienne'
             when 'TOGOLESE' then 'togolaise'
@@ -252,7 +252,7 @@ as $$
             when 'INDIAN' then 'indienne'
             when 'MOROCCAN' then 'marocaine'
             else lower(cuisine.code)
-          end like '%' || public.restaurant_search_normalize(
+          end) like '%' || public.restaurant_search_normalize(
             regexp_replace(trim(p_query), '^(nourriture|cuisine|restaurant)[[:space:]]+', '', 'i')
           ) || '%'
       )
