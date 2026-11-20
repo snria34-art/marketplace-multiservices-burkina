@@ -43,6 +43,7 @@ alter table public.mechanic_requests
   ));
 
 alter table public.mechanic_requests
+  add column if not exists requested_service_type text not null default 'GENERAL_REPAIR',
   add column if not exists service_location_type text not null default 'ROADSIDE',
   add column if not exists vehicle_subtype text,
   add column if not exists location_note text,
@@ -318,6 +319,7 @@ $function$;
 create or replace function public.create_mechanic_request_v2(
   p_vehicle_type text,
   p_service_location_type text,
+  p_service_type text,
   p_problem_type text,
   p_description text default null,
   p_location_note text default null,
@@ -331,6 +333,7 @@ declare
   v_user uuid := (select auth.uid());
   v_vehicle text := upper(trim(coalesce(p_vehicle_type,'')));
   v_location text := upper(trim(coalesce(p_service_location_type,'')));
+  v_service text := upper(trim(coalesce(p_service_type,'')));
   v_id uuid;
 begin
   perform private.require_active_account();
@@ -345,6 +348,10 @@ begin
 
   if v_location not in ('HOME','OFFICE','ROADSIDE') then
     raise exception 'invalid_service_location_type';
+  end if;
+
+  if length(v_service)<2 or length(v_service)>80 then
+    raise exception 'mechanic_service_type_invalid';
   end if;
 
   if nullif(trim(coalesce(p_problem_type,'')),'') is null
@@ -367,7 +374,8 @@ begin
     select 1
     from public.mechanics m
     join public.mechanic_capabilities c
-      on c.mechanic_id=m.id and c.vehicle_type=v_vehicle and c.active=true
+      on c.mechanic_id=m.id and c.vehicle_type=v_vehicle
+        and c.service_type=v_service and c.active=true
     join public.mechanic_service_rates r
       on r.mechanic_id=m.id and r.vehicle_type=v_vehicle
       and r.service_location_type=v_location and r.active=true
@@ -386,12 +394,12 @@ begin
 
   insert into public.mechanic_requests(
     customer_id,vehicle_type,problem_type,description,
-    latitude,longitude,status,service_location_type,
+    latitude,longitude,status,requested_service_type,service_location_type,
     vehicle_subtype,location_note
   ) values (
     v_user,v_vehicle,trim(p_problem_type),
     nullif(trim(coalesce(p_description,'')),''),
-    p_latitude,p_longitude,'OPEN',v_location,
+    p_latitude,p_longitude,'OPEN',v_service,v_location,
     v_vehicle,nullif(trim(coalesce(p_location_note,'')),'')
   ) returning id into v_id;
 
@@ -402,9 +410,9 @@ $function$;
 revoke all on function public.mechanic_is_open(uuid,timestamptz) from public,anon,authenticated;
 revoke all on function public.save_mechanic_service_profile(text[],text[],time without time zone,time without time zone,smallint[],numeric,numeric,numeric,text) from public,anon;
 revoke all on function public.get_public_mechanics_v2() from public,anon;
-revoke all on function public.create_mechanic_request_v2(text,text,text,text,text,double precision,double precision) from public,anon;
+revoke all on function public.create_mechanic_request_v2(text,text,text,text,text,text,double precision,double precision) from public,anon;
 grant execute on function public.save_mechanic_service_profile(text[],text[],time without time zone,time without time zone,smallint[],numeric,numeric,numeric,text) to authenticated;
 grant execute on function public.get_public_mechanics_v2() to authenticated;
-grant execute on function public.create_mechanic_request_v2(text,text,text,text,text,double precision,double precision) to authenticated;
+grant execute on function public.create_mechanic_request_v2(text,text,text,text,text,text,double precision,double precision) to authenticated;
 
 commit;
