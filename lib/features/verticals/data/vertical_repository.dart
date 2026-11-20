@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/media/upload_media_validator.dart';
+import '../../../core/engine/marketplace_resilience.dart';
 
 enum VerticalModule {
   rides,
@@ -42,9 +43,14 @@ class VerticalConfig {
 }
 
 class VerticalRepository {
-  const VerticalRepository(this.client);
+  const VerticalRepository(this.client, {this.resilience});
 
   final SupabaseClient client;
+  final MarketplaceResilience? resilience;
+  static final _fallbackResilience = MarketplaceResilience();
+  MarketplaceResilience get _retry => resilience ?? _fallbackResilience;
+
+  Future<T> _read<T>(Future<T> Function() operation) => _retry.read(operation);
 
   static const configs = <VerticalModule, VerticalConfig>{
     VerticalModule.rides: VerticalConfig(
@@ -152,29 +158,29 @@ class VerticalRepository {
   Future<List<Map<String, dynamic>>> list(VerticalModule module) async {
     final config = configs[module]!;
     if (module == VerticalModule.health) {
-      final rows = await client.rpc('get_public_health_products');
+      final rows = await _read(() => client.rpc('get_public_health_products'));
       return _maps(rows);
     }
     if (module == VerticalModule.agriculture) {
-      final rows = await client.rpc('get_public_agriculture_listings');
+      final rows = await _read(() => client.rpc('get_public_agriculture_listings'));
       return _maps(rows);
     }
     if (config.ownOnly) {
       final user = client.auth.currentUser;
       if (user == null) return const [];
-      final rows = await client
+      final rows = await _read(() async => await client
           .from(config.table)
           .select(config.select)
           .eq(config.ownUserColumn, user.id)
           .order('created_at', ascending: false)
-          .limit(100);
+          .limit(100));
       return _maps(rows);
     }
 
-    final rows = await client
+    final rows = await _read(() async => await client
         .from(config.table)
         .select(config.select)
-        .limit(100);
+        .limit(100));
     return _maps(rows);
   }
 
@@ -296,19 +302,19 @@ class VerticalRepository {
     final user = client.auth.currentUser;
     if (user == null) return const [];
 
-    final rows = await client
+    final rows = await _read(() async => await client
         .from('creative_bookings')
         .select(
           'id,service_id,scheduled_at,status,agreed_amount,creative_services(name,category)',
         )
         .eq('customer_id', user.id)
-        .limit(100);
+        .limit(100));
 
     return _maps(rows);
   }
 
   Future<List<Map<String, dynamic>>> providerCreativeBookings() async {
-    final rows = await client.rpc('get_provider_creative_bookings');
+    final rows = await _read(() => client.rpc('get_provider_creative_bookings'));
     return _maps(rows);
   }
 
@@ -351,12 +357,12 @@ class VerticalRepository {
   }
 
   Future<List<Map<String, dynamic>>> myRealEstateVisitRequests() async {
-    final rows = await client.rpc('get_my_real_estate_visit_requests');
+    final rows = await _read(() => client.rpc('get_my_real_estate_visit_requests'));
     return _maps(rows);
   }
 
   Future<List<Map<String, dynamic>>> providerRealEstateVisitRequests() async {
-    final rows = await client.rpc('get_provider_real_estate_visit_requests');
+    final rows = await _read(() => client.rpc('get_provider_real_estate_visit_requests'));
     return _maps(rows);
   }
 
@@ -396,12 +402,12 @@ class VerticalRepository {
   }
 
   Future<List<Map<String, dynamic>>> myProfessionalServiceRequests() async {
-    final rows = await client.rpc('get_my_professional_service_requests');
+    final rows = await _read(() => client.rpc('get_my_professional_service_requests'));
     return _maps(rows);
   }
 
   Future<List<Map<String, dynamic>>> providerProfessionalServiceRequests() async {
-    final rows = await client.rpc('get_provider_professional_service_requests');
+    final rows = await _read(() => client.rpc('get_provider_professional_service_requests'));
     return _maps(rows);
   }
 
@@ -480,7 +486,7 @@ class VerticalRepository {
   }
 
   Future<List<Map<String, dynamic>>> myAgricultureListings() async {
-    final rows = await client.rpc('get_my_agriculture_listings');
+    final rows = await _read(() => client.rpc('get_my_agriculture_listings'));
     return _maps(rows);
   }
 
@@ -505,12 +511,12 @@ class VerticalRepository {
   }
 
   Future<List<Map<String, dynamic>>> myAgricultureOrderRequests() async {
-    final rows = await client.rpc('get_my_agriculture_order_requests');
+    final rows = await _read(() => client.rpc('get_my_agriculture_order_requests'));
     return _maps(rows);
   }
 
   Future<List<Map<String, dynamic>>> sellerAgricultureOrderRequests() async {
-    final rows = await client.rpc('get_seller_agriculture_order_requests');
+    final rows = await _read(() => client.rpc('get_seller_agriculture_order_requests'));
     return _maps(rows);
   }
 
@@ -577,7 +583,7 @@ class VerticalRepository {
   }
 
   Future<List<Map<String, dynamic>>> myHealthProducts() async {
-    final rows = await client.rpc('get_my_health_products');
+    final rows = await _read(() => client.rpc('get_my_health_products'));
     return _maps(rows);
   }
 
@@ -660,12 +666,12 @@ class VerticalRepository {
   }
 
   Future<List<Map<String, dynamic>>> myHealthOrderRequests() async {
-    final rows = await client.rpc('get_my_health_order_requests');
+    final rows = await _read(() => client.rpc('get_my_health_order_requests'));
     return _maps(rows);
   }
 
   Future<List<Map<String, dynamic>>> pharmacyHealthOrderRequests() async {
-    final rows = await client.rpc('get_pharmacy_health_order_requests');
+    final rows = await _read(() => client.rpc('get_pharmacy_health_order_requests'));
     return _maps(rows);
   }
 
@@ -694,9 +700,9 @@ class VerticalRepository {
   }
 
   Future<String> createHealthPrescriptionSignedUrl(String path) async {
-    return client.storage
+    return _read(() => client.storage
         .from('health-prescriptions')
-        .createSignedUrl(path, 300);
+        .createSignedUrl(path, 300));
   }
 
   Future<String> applyToJob(String jobId) async =>
