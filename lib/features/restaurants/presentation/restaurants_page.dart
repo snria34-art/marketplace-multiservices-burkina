@@ -123,7 +123,15 @@ class _MenuSection extends ConsumerWidget {
           ListTile(
             title: Text(item['name']?.toString() ?? 'Plat'),
             subtitle: Text(item['description']?.toString() ?? ''),
-            trailing: Text((item['price']?.toString() ?? '0') + ' XOF'),
+            trailing: Text(
+              ((item['products'] is Map
+                          ? (item['products'] as Map)['price']
+                          : null)
+                      ?.toString() ??
+                  item['price']?.toString() ??
+                  '0') +
+                  ' XOF',
+            ),
             onTap: () async {
               final product = item['products'] is Map
                   ? Map<String, dynamic>.from(item['products'] as Map)
