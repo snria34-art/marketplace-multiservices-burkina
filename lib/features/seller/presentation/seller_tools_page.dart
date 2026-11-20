@@ -35,6 +35,13 @@ class SellerToolsPage extends StatelessWidget {
             onTap: () => context.push('/seller/shop'),
           ),
           ListTile(
+            leading: const Icon(Icons.restaurant_menu_outlined),
+            title: const Text('Personnalisation des plats'),
+            subtitle: const Text('Accompagnements, goûts et suppléments'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push('/seller/restaurant-options'),
+          ),
+          ListTile(
             leading: const Icon(Icons.payments_outlined),
             title: const Text('Finance'),
             trailing: const Icon(Icons.chevron_right),
