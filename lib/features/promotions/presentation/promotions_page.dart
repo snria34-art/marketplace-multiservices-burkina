@@ -20,17 +20,18 @@ class _PromotionsPageState extends ConsumerState<PromotionsPage> {
   }
 
   Future<List<Map<String, dynamic>>> _load() async {
-    final client = ref.read(marketplacePublicClientProvider);
+    final engine = ref.read(marketplaceEngineProvider);
+    final client = engine.clientFor(MarketplaceCapability.discoverPromotions);
     if (client == null) return const [];
 
-    final rows = await client
+    final rows = await engine.read(() async => await client
         .from('promotions')
         .select('id,shop_id,name,promotion_type,value,starts_at,ends_at')
         .eq('active', true)
         .lte('starts_at', DateTime.now().toUtc().toIso8601String())
         .gte('ends_at', DateTime.now().toUtc().toIso8601String())
         .order('ends_at')
-        .limit(100);
+        .limit(100));
 
     return (rows as List)
         .map((row) => Map<String, dynamic>.from(row as Map))

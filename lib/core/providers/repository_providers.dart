@@ -67,9 +67,14 @@ final marketplaceEngineProvider = Provider<MarketplaceEngine>((ref) {
 /// Capability-scoped clients for screens that still need direct realtime,
 /// storage, or feature-specific calls. These are convenience gates only;
 /// database RLS and guarded RPCs remain authoritative.
-final marketplacePublicClientProvider = Provider<SupabaseClient?>((ref) {
+final marketplacePromotionsClientProvider = Provider<SupabaseClient?>((ref) {
   return ref.watch(marketplaceEngineProvider)
       .clientFor(MarketplaceCapability.discoverPromotions);
+});
+
+final marketplaceModulesClientProvider = Provider<SupabaseClient?>((ref) {
+  return ref.watch(marketplaceEngineProvider)
+      .clientFor(MarketplaceCapability.discoverModules);
 });
 
 final marketplaceAuthenticationClientProvider =

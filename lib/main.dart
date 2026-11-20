@@ -36,7 +36,8 @@ Future<void> _initializeBackend(ProviderContainer container) async {
 
     // Push setup is non-critical and must not block backend availability.
     try {
-      await PushNotificationService.instance.initialize(client);
+      final engine = container.read(marketplaceEngineProvider);
+    await PushNotificationService.instance.initialize(engine);
     } catch (error, stackTrace) {
       if (kDebugMode) {
         debugPrint('Initialisation push indisponible: $error');

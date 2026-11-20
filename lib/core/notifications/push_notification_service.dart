@@ -9,6 +9,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../navigation/app_navigation.dart';
+import '../engine/marketplace_engine.dart';
 
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
@@ -27,6 +28,7 @@ class PushNotificationService {
       FlutterLocalNotificationsPlugin();
 
   SupabaseClient? _client;
+  MarketplaceEngine? _engine;
   StreamSubscription<RemoteMessage>? _messageSubscription;
   StreamSubscription<RemoteMessage>? _openedSubscription;
   StreamSubscription<String>? _tokenSubscription;
@@ -34,7 +36,12 @@ class PushNotificationService {
   String? _currentToken;
   bool _initialized = false;
 
-  Future<void> initialize(SupabaseClient client) async {
+  Future<void> initialize(MarketplaceEngine engine) async {
+    final client = engine.backendClient;
+    if (client == null) {
+      throw StateError('Le moteur marketplace n’a pas de backend configuré.');
+    }
+    _engine = engine;
     _client = client;
 
     if (_initialized) {
@@ -178,17 +185,19 @@ class PushNotificationService {
   /// All app-initiated logout actions must use this method instead of
   /// calling [SupabaseClient.auth.signOut] directly.
   Future<void> signOutAndDeactivateCurrentDevice({
-    SupabaseClient? client,
+    MarketplaceEngine? engine,
   }) async {
-    final activeClient = client ?? _client;
+    final activeEngine = engine ?? _engine;
+    final activeClient = activeEngine?.backendClient ?? _client;
     if (activeClient == null) {
       throw StateError('Supabase n’est pas initialisé.');
     }
+    _engine = activeEngine;
     _client = activeClient;
 
     if (activeClient.auth.currentUser == null) {
       _currentToken = null;
-      await activeClient.auth.signOut();
+      await _mutate(() => activeClient.auth.signOut());
       return;
     }
 
@@ -200,10 +209,10 @@ class PushNotificationService {
     }
 
     if (token != null && token.isNotEmpty) {
-      final deactivated = await activeClient.rpc(
+      final deactivated = await _mutate(() => activeClient.rpc(
         'deactivate_notification_device',
         params: {'p_push_token': token},
-      );
+      ));
       if (deactivated != true) {
         throw StateError('La désactivation du token n’a pas été confirmée.');
       }
@@ -212,7 +221,7 @@ class PushNotificationService {
     // Do not clear the cached token or sign out until the server confirms
     // that no active registration for this user's token remains.
     _currentToken = null;
-    await activeClient.auth.signOut();
+    await _mutate(() => activeClient.auth.signOut());
   }
 
 
@@ -314,6 +323,11 @@ class PushNotificationService {
     }
   }
 
+  Future<T> _mutate<T>(Future<T> Function() operation) {
+    final engine = _engine;
+    return engine == null ? operation() : engine.mutate(operation);
+  }
+
   Future<void> _registerToken(String token) async {
     final client = _client;
     final user = client?.auth.currentUser;
@@ -323,13 +337,13 @@ class PushNotificationService {
         ? 'IOS'
         : 'ANDROID';
 
-    await client.rpc(
+    await _mutate(() => client.rpc(
       'register_notification_device',
       params: {
         'p_platform': platform,
         'p_push_token': token,
       },
-    );
+    ));
 
     _currentToken = token;
   }

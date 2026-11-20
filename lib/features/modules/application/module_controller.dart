@@ -5,15 +5,16 @@ import '../domain/marketplace_module.dart';
 
 final enabledModulesProvider =
     FutureProvider<List<MarketplaceModule>>((ref) async {
-  final client = ref.watch(supabaseProvider);
+  final engine = ref.watch(marketplaceEngineProvider);
+  final client = engine.clientFor(MarketplaceCapability.discoverModules);
   if (client == null) return const [];
 
-  final rows = await client
+  final rows = await engine.read(() async => await client
       .from('marketplace_modules')
       .select('key,label,route,icon_name,enabled,sort_order,config')
       .eq('enabled', true)
       .order('sort_order')
-      .limit(100);
+      .limit(100));
 
   return (rows as List)
       .map(

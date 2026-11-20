@@ -15,6 +15,7 @@ enum MarketplaceCapability {
   discoverTransport,
   discoverVerticals,
   discoverPromotions,
+  discoverModules,
   authenticate,
   configureRestaurantCatalog,
   manageCart,
@@ -110,6 +111,7 @@ class MarketplaceEngine {
       MarketplaceCapability.discoverTransport,
       MarketplaceCapability.discoverVerticals,
       MarketplaceCapability.discoverPromotions,
+      MarketplaceCapability.discoverModules,
       MarketplaceCapability.authenticate,
     };
     if (publicCapabilities.contains(capability)) {
