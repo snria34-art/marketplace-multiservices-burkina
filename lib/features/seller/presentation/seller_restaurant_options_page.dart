@@ -98,6 +98,90 @@ class _SellerRestaurantOptionsPageState
     }
   }
 
+  Future<void> _configureFormula(
+    Map<String, dynamic> item, {
+    required String componentType,
+    Map<String, dynamic>? existing,
+  }) async {
+    final repository = ref.read(sellerRestaurantRepositoryProvider);
+    if (repository == null) return;
+    try {
+      final products = await repository.sellerProducts();
+      if (!mounted) return;
+      if (products.isEmpty) {
+        _show('Créez d’abord des produits actifs dans votre boutique.');
+        return;
+      }
+      final selected = <String>{
+        for (final option in _maps(existing?['restaurant_menu_item_options']))
+          if (option['linked_product_id'] != null) option['linked_product_id'].toString(),
+      };
+      final initialName = existing?['name']?.toString() ?? switch (componentType) {
+        'MAIN' => 'Plat de la formule',
+        'DRINK' => 'Boisson de la formule',
+        'DESSERT' => 'Dessert de la formule',
+        _ => 'Accompagnement de la formule',
+      };
+      final chosen = await showDialog<List<String>>(
+        context: context,
+        builder: (dialogContext) => StatefulBuilder(
+          builder: (context, setDialogState) => AlertDialog(
+            title: Text('Composer : $initialName'),
+            content: SizedBox(
+              width: 460,
+              child: SingleChildScrollView(
+                child: Column(mainAxisSize: MainAxisSize.min, children: [
+                  Text('Choisissez les produits réels qui seront proposés dans cette partie de la formule. Un seul choix sera demandé au client.'),
+                  const SizedBox(height: 8),
+                  for (final product in products)
+                    CheckboxListTile(
+                      dense: true,
+                      value: selected.contains(product['id'].toString()),
+                      title: Text(product['name']?.toString() ?? 'Produit'),
+                      subtitle: Text(formatXof(num.tryParse(product['price']?.toString() ?? '0') ?? 0)),
+                      onChanged: (value) => setDialogState(() {
+                        final id = product['id'].toString();
+                        if (value == true) { selected.add(id); } else { selected.remove(id); }
+                      }),
+                    ),
+                ]),
+              ),
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Annuler')),
+              FilledButton(
+                onPressed: selected.isEmpty ? null : () => Navigator.pop(dialogContext, selected.toList()),
+                child: const Text('Enregistrer les choix'),
+              ),
+            ],
+          ),
+        ),
+      );
+      if (!mounted || chosen == null) return;
+      final byId = {for (final product in products) product['id'].toString(): product};
+      final payload = chosen.map((id) {
+        final product = byId[id]!;
+        return <String, dynamic>{
+          'product_id': id,
+          'name': product['name']?.toString() ?? 'Produit',
+          'price_delta': 0,
+        };
+      }).toList();
+      await repository.saveFormulaComponent(
+        groupId: existing?['id']?.toString(),
+        menuItemId: item['id'].toString(),
+        name: initialName,
+        componentType: componentType,
+        products: payload,
+      );
+      if (!mounted) return;
+      setState(() => _future = _load());
+      _show('Partie de formule enregistrée avec des produits de votre boutique.');
+    } catch (_) {
+      _show('Impossible d’enregistrer cette partie de formule. Vérifiez les produits actifs et les droits vendeur.');
+    }
+  }
+
   Future<void> _configure(Map<String, dynamic> item,
       {Map<String, dynamic>? existing, bool portionPreset = false}) async {
     final name = TextEditingController(
@@ -298,6 +382,20 @@ class _SellerRestaurantOptionsPageState
             tooltip: 'Ajouter une personnalisation',
             icon: const Icon(Icons.add_circle_outline),
             onPressed: () => _configure(item),
+          ),
+          PopupMenuButton<String>(
+            tooltip: 'Composer une formule avec des produits',
+            icon: const Icon(Icons.restaurant_menu),
+            onSelected: (type) {
+              final existing = groups.where((group) => group['component_type'] == type).firstOrNull;
+              _configureFormula(item, componentType: type, existing: existing);
+            },
+            itemBuilder: (context) => const [
+              PopupMenuItem(value: 'MAIN', child: Text('Plat de la formule')),
+              PopupMenuItem(value: 'DRINK', child: Text('Boisson de la formule')),
+              PopupMenuItem(value: 'DESSERT', child: Text('Dessert de la formule')),
+              PopupMenuItem(value: 'SIDE', child: Text('Accompagnement de la formule')),
+            ],
           ),
         ],
       ),
