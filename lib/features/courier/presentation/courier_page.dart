@@ -10,13 +10,7 @@ import '../../../core/location/device_location_service.dart';
 import '../../../core/errors/backend_error_message.dart';
 import '../../../core/providers/repository_providers.dart';
 import '../../../core/widgets/account_session_action_button.dart';
-import '../data/courier_repository.dart';
 import '../domain/courier_route_plan.dart';
-
-final courierRepositoryProvider = Provider<CourierRepository?>((ref) {
-  final client = ref.watch(supabaseProvider);
-  return client == null ? null : CourierRepository(client);
-});
 
 class CourierPage extends ConsumerStatefulWidget {
   const CourierPage({super.key});
