@@ -21,7 +21,7 @@ class _SellerCouponsPageState extends ConsumerState<SellerCouponsPage> {
   }
 
   Future<List<Map<String, dynamic>>> _load() async {
-    final client = ref.read(supabaseProvider);
+    final client = ref.read(marketplaceSellerClientProvider);
     final user = client?.auth.currentUser;
     if (client == null || user == null) {
       throw StateError('Authentification requise.');
@@ -58,7 +58,7 @@ class _SellerCouponsPageState extends ConsumerState<SellerCouponsPage> {
     );
     if (!mounted || form == null) return;
 
-    final client = ref.read(supabaseProvider);
+    final client = ref.read(marketplaceSellerClientProvider);
     if (client == null) return;
 
     try {
@@ -89,7 +89,7 @@ class _SellerCouponsPageState extends ConsumerState<SellerCouponsPage> {
   }
 
   Future<void> _toggle(Map<String, dynamic> coupon, bool active) async {
-    final client = ref.read(supabaseProvider);
+    final client = ref.read(marketplaceSellerClientProvider);
     if (client == null) return;
 
     try {
