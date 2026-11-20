@@ -2,13 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/providers/repository_providers.dart';
-import '../data/seller_repository.dart';
 import 'seller_finance_helpers.dart';
-
-final sellerFinanceRepositoryProvider = Provider<SellerRepository?>((ref) {
-  final client = ref.watch(supabaseProvider);
-  return client == null ? null : SellerRepository(client);
-});
 
 class SellerFinancePage extends ConsumerStatefulWidget {
   const SellerFinancePage({super.key});
@@ -27,7 +21,7 @@ class _SellerFinancePageState extends ConsumerState<SellerFinancePage> {
   }
 
   Future<void> _requestPayout() async {
-    final repo = ref.read(sellerFinanceRepositoryProvider);
+    final repo = ref.read(sellerRepositoryProvider);
     if (repo == null) return;
 
     final amountController = TextEditingController();
@@ -166,7 +160,7 @@ class _SellerFinancePageState extends ConsumerState<SellerFinancePage> {
       sellerPayoutErrorMessage(error);
 
   Future<_FinanceSnapshot> _load() async {
-    final repo = ref.read(sellerFinanceRepositoryProvider);
+    final repo = ref.read(sellerRepositoryProvider);
     if (repo == null) {
       throw StateError('Authentification requise.');
     }
