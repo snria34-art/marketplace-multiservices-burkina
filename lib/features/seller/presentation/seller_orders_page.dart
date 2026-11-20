@@ -50,7 +50,7 @@ class _SellerOrdersPageState extends ConsumerState<SellerOrdersPage> {
     final groups = await client
         .from('order_groups')
         .select(
-          'id,order_id,shop_id,status,subtotal,created_at,shops(name),order_items(product_name,quantity,unit_price,total_price)',
+          'id,order_id,shop_id,status,subtotal,created_at,delivery_place_type,scheduled_delivery_at,delivery_instructions,shops(name),order_items(product_name,quantity,unit_price,total_price)',
         )
         .inFilter('shop_id', shopIds)
         .order('created_at', ascending: false)
@@ -141,6 +141,16 @@ class _SellerOrdersPageState extends ConsumerState<SellerOrdersPage> {
                 final rawItems = group['order_items'];
                 final items = rawItems is List ? rawItems : const [];
 
+                final requestedAt = DateTime.tryParse(
+                  group['scheduled_delivery_at']?.toString() ?? '',
+                );
+                final placeType = group['delivery_place_type']?.toString();
+                final placeLabel = placeType == 'OFFICE'
+                    ? 'Bureau'
+                    : placeType == 'HOME'
+                        ? 'Domicile'
+                        : null;
+
                 return Card(
                   child: ExpansionTile(
                     title: Text(
@@ -153,9 +163,29 @@ class _SellerOrdersPageState extends ConsumerState<SellerOrdersPage> {
                           (group['status']?.toString() ?? '-') +
                           ' • Sous-total : ' +
                           (group['subtotal']?.toString() ?? '0') +
-                          ' XOF',
+                          ' XOF' +
+                          (requestedAt == null
+                              ? ''
+                              : '\nLivraison demandée : ' +
+                                  (placeLabel ?? 'Adresse choisie') +
+                                  ' le ' +
+                                  requestedAt.toLocal().day.toString().padLeft(2, '0') +
+                                  '/' +
+                                  requestedAt.toLocal().month.toString().padLeft(2, '0') +
+                                  ' à ' +
+                                  requestedAt.toLocal().hour.toString().padLeft(2, '0') +
+                                  ':' +
+                                  requestedAt.toLocal().minute.toString().padLeft(2, '0') +
+                                  ' pile'),
                     ),
                     children: [
+                      if ((group['delivery_instructions']?.toString() ?? '').trim().isNotEmpty)
+                        ListTile(
+                          dense: true,
+                          leading: const Icon(Icons.location_on_outlined),
+                          title: const Text('Repère de livraison'),
+                          subtitle: Text(group['delivery_instructions'].toString()),
+                        ),
                       for (final rawItem in items)
                         Builder(
                           builder: (context) {
