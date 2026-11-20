@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/errors/backend_error_message.dart';
+import '../../../core/engine/marketplace_engine.dart';
 import '../../../core/providers/repository_providers.dart';
 import '../../../core/widgets/account_session_action_button.dart';
 
@@ -25,18 +26,24 @@ class _AdminDashboardPageState
   }
 
   Future<_AdminSnapshot> _load() async {
-    final client = ref.read(marketplaceAdminClientProvider);
+    final engine = ref.read(marketplaceEngineProvider);
+    final client = engine.clientFor(MarketplaceCapability.administerPlatform);
 
     if (client == null || client.auth.currentUser == null) {
       throw StateError('Authentification requise.');
     }
 
-    final dashboard = await client.rpc('get_admin_dashboard');
-    final moduleRows = await client
-        .from('marketplace_modules')
-        .select('key,label,route,enabled,sort_order')
-        .order('sort_order')
-        .limit(100);
+    final result = await engine.read(() async {
+      final dashboard = await client.rpc('get_admin_dashboard');
+      final moduleRows = await client
+          .from('marketplace_modules')
+          .select('key,label,route,enabled,sort_order')
+          .order('sort_order')
+          .limit(100);
+      return (dashboard: dashboard, moduleRows: moduleRows);
+    });
+    final dashboard = result.dashboard;
+    final moduleRows = result.moduleRows;
 
     final map = dashboard is Map
         ? Map<String, dynamic>.from(dashboard)
@@ -56,18 +63,19 @@ class _AdminDashboardPageState
     Map<String, dynamic> module,
     bool enabled,
   ) async {
-    final client = ref.read(marketplaceAdminClientProvider);
+    final engine = ref.read(marketplaceEngineProvider);
+    final client = engine.clientFor(MarketplaceCapability.administerPlatform);
 
     if (client == null) return;
 
     try {
-      await client.rpc(
+      await engine.mutate(() => client.rpc(
         'admin_set_marketplace_module_enabled',
         params: {
           'p_key': module['key'],
           'p_enabled': enabled,
         },
-      );
+      ));
 
       if (!mounted) return;
       setState(() => _future = _load());
@@ -85,17 +93,18 @@ class _AdminDashboardPageState
   }
 
   Future<void> _sendPushTest() async {
-    final client = ref.read(marketplaceAdminClientProvider);
+    final engine = ref.read(marketplaceEngineProvider);
+    final client = engine.clientFor(MarketplaceCapability.administerPlatform);
     if (client == null) return;
 
     try {
-      final id = await client.rpc(
+      final id = await engine.mutate(() => client.rpc(
         'admin_send_test_notification',
         params: {
           'p_title': 'Test Marketplace Burkina',
           'p_body': 'Notification push de test envoyée depuis l’administration.',
         },
-      );
+      ));
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Notification de test créée : ' + id.toString())),
@@ -109,14 +118,15 @@ class _AdminDashboardPageState
   }
 
   Future<void> _addAssociate() async {
-    final client = ref.read(marketplaceAdminClientProvider);
+    final engine = ref.read(marketplaceEngineProvider);
+    final client = engine.clientFor(MarketplaceCapability.administerPlatform);
     if (client == null) return;
 
-    final results = await Future.wait([
+    final results = await engine.read(() => Future.wait([
       client.from('company').select('id,legal_name').order('legal_name').limit(100),
       client.from('share_classes').select('id,company_id,name,nominal_value').order('name').limit(200),
       client.from('profiles').select('id,display_name,status').order('display_name').limit(500),
-    ]);
+    ]));
 
     final companies = (results[0] as List)
         .map((row) => Map<String, dynamic>.from(row as Map))
@@ -273,7 +283,7 @@ class _AdminDashboardPageState
     }
 
     try {
-      final holdingId = await client.rpc(
+      final holdingId = await engine.mutate(() => client.rpc(
         'admin_add_associate_after_payment',
         params: {
           'p_company_id': companyId,
@@ -283,7 +293,7 @@ class _AdminDashboardPageState
           'p_paid_amount': parsedAmount,
           'p_payment_reference': paymentReference,
         },
-      );
+      ));
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

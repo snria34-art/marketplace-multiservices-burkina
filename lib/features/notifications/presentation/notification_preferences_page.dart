@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/errors/backend_error_message.dart';
+import '../../../core/engine/marketplace_engine.dart';
 import '../../../core/providers/repository_providers.dart';
 import '../../../core/notifications/push_notification_service.dart';
 
@@ -30,7 +31,8 @@ class _NotificationPreferencesPageState
   }
 
   Future<void> _load() async {
-    final client = ref.read(marketplaceNotificationClientProvider);
+    final engine = ref.read(marketplaceEngineProvider);
+    final client = engine.clientFor(MarketplaceCapability.readNotifications);
     final user = client?.auth.currentUser;
     if (client == null || user == null) {
       if (mounted) setState(() => _loading = false);
@@ -38,11 +40,11 @@ class _NotificationPreferencesPageState
     }
 
     try {
-      final row = await client
+      final row = await engine.read(() => client
           .from('notification_preferences')
           .select('orders,promotions,messages,delivery,services')
           .eq('user_id', user.id)
-          .maybeSingle();
+          .maybeSingle());
 
       if (!mounted) return;
       setState(() {
@@ -66,7 +68,7 @@ class _NotificationPreferencesPageState
     setState(() => _saving = true);
 
     try {
-      await client.from('notification_preferences').upsert(
+      await engine.mutate(() => client.from('notification_preferences').upsert(
         {
           'user_id': user.id,
           'orders': _orders,
@@ -77,7 +79,7 @@ class _NotificationPreferencesPageState
           'updated_at': DateTime.now().toUtc().toIso8601String(),
         },
         onConflict: 'user_id',
-      );
+      ));
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

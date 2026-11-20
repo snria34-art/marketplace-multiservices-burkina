@@ -6,6 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/media/video_preview_controller_factory.dart';
 import '../../../core/media/upload_media_validator.dart';
 import '../../../core/errors/backend_error_message.dart';
+import '../../../core/engine/marketplace_engine.dart';
 import '../../../core/providers/repository_providers.dart';
 
 class SellerModerationPage extends ConsumerStatefulWidget {
@@ -25,11 +26,12 @@ class _SellerModerationPageState extends ConsumerState<SellerModerationPage> {
   }
 
   Future<List<Map<String, dynamic>>> _load() async {
-    final client = ref.read(marketplaceSellerClientProvider);
+    final engine = ref.read(marketplaceEngineProvider);
+    final client = engine.clientFor(MarketplaceCapability.manageSellerCatalog);
     if (client == null || client.auth.currentUser == null) {
       throw StateError('Authentification requise.');
     }
-    final raw = await client.rpc('get_seller_catalog_findings');
+    final raw = await engine.read(() => client.rpc('get_seller_catalog_findings'));
     return (raw is List ? raw : const [])
         .map((row) => Map<String, dynamic>.from(row as Map))
         .toList();
@@ -170,8 +172,9 @@ class _SellerModerationPageState extends ConsumerState<SellerModerationPage> {
 
     String? mediaPath;
     SupabaseClient? uploadClient;
+    final engine = ref.read(marketplaceEngineProvider);
     try {
-      final client = ref.read(marketplaceSellerClientProvider);
+      final client = engine.clientFor(MarketplaceCapability.manageSellerCatalog);
       uploadClient = client;
       final user = client?.auth.currentUser;
       if (client == null || user == null) throw StateError('Session indisponible.');
@@ -225,19 +228,19 @@ class _SellerModerationPageState extends ConsumerState<SellerModerationPage> {
         UploadMediaValidator.requireMimeType(bytes, mime);
         final extension = extensionByMime[mime]!;
         mediaPath = '${user.id}/moderation/${finding['finding_id']}_${DateTime.now().microsecondsSinceEpoch}.$extension';
-        await client.storage.from('order-feedback-media').uploadBinary(
-          mediaPath,
+        await engine.mutate(() => client.storage.from('order-feedback-media').uploadBinary(
+          mediaPath!,
           bytes,
           fileOptions: FileOptions(contentType: mime, upsert: false),
-        );
+        ));
       }
-      await client.rpc('seller_respond_to_catalog_finding', params: {
+      await engine.mutate(() => client.rpc('seller_respond_to_catalog_finding', params: {
         'p_finding_id': finding['finding_id'],
         'p_response_text': message,
         'p_media_storage_path': mediaPath,
         'p_media_type': mediaType,
         'p_duration_seconds': durationSeconds,
-      });
+      }));
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Réponse envoyée à l’administration.')),
@@ -246,9 +249,10 @@ class _SellerModerationPageState extends ConsumerState<SellerModerationPage> {
     } catch (error) {
       if (mediaPath != null && uploadClient != null) {
         try {
-          await uploadClient.storage
+          final cleanupClient = uploadClient;
+          await engine.mutate(() => cleanupClient.storage
               .from('order-feedback-media')
-              .remove([mediaPath]);
+              .remove([mediaPath]));
         } catch (_) {
           // Best-effort cleanup; preserve the original submission error.
         }
