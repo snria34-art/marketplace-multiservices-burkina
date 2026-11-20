@@ -168,6 +168,18 @@
     {
       "source": "/parcels",
       "destination": "/index.html"
+    },
+    {
+      "source": "/wallet",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/whatsapp",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/businesses-mobility",
+      "destination": "/index.html"
     }
   ],
   "headers": [
