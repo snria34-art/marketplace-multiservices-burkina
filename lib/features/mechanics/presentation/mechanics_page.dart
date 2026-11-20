@@ -222,12 +222,14 @@ class _MechanicsPageState extends ConsumerState<MechanicsPage> {
       );
     } catch (error) {
       if (!mounted) return;
+      final errorText = error.toString();
+      final message = errorText.contains('no_compatible_mechanics_available')
+          ? 'Aucun mécanicien compatible n’est ouvert et disponible pour ce véhicule et ce lieu. Essayez un autre lieu ou revenez pendant ses heures de service.'
+          : errorText.contains('service_location_details_required')
+              ? 'Précisez l’adresse du domicile ou le nom du bureau.'
+              : 'Impossible d’envoyer la demande. Vérifiez la position et réessayez.';
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Impossible d’envoyer la demande : ' + error.toString(),
-          ),
-        ),
+        SnackBar(content: Text(message)),
       );
     }
   }
@@ -287,6 +289,49 @@ class _MechanicsPageState extends ConsumerState<MechanicsPage> {
         SnackBar(content: Text('Enregistrement refusé : $error')),
       );
     }
+  }
+
+  String _serviceLocationLabel(String? value) {
+    switch (value) {
+      case 'HOME':
+        return 'maison';
+      case 'OFFICE':
+        return 'bureau';
+      case 'ROADSIDE':
+        return 'dépannage sur route';
+      default:
+        return 'intervention';
+    }
+  }
+
+  String _serviceSummary(dynamic rawServices) {
+    if (rawServices is! List || rawServices.isEmpty) {
+      return 'Compétences non renseignées';
+    }
+
+    return rawServices.whereType<Map>().map((raw) {
+      final service = Map<String, dynamic>.from(raw);
+      final rates = service['rates'] is List
+          ? (service['rates'] as List).whereType<Map>()
+          : const <Map>[];
+      final rateText = rates.map((rawRate) {
+        final rate = Map<String, dynamic>.from(rawRate);
+        return _serviceLocationLabel(
+              rate['service_location_type']?.toString(),
+            ) +
+            ' : ' +
+            (rate['base_price']?.toString() ?? '0') +
+            ' XOF';
+      }).join(', ');
+      final serviceType = service['service_type']?.toString() ?? 'GENERAL_REPAIR';
+      final label = serviceType
+          .toLowerCase()
+          .replaceAll('_', ' ');
+      return _vehicleLabel(service['vehicle_type']?.toString()) +
+          ' — ' +
+          label +
+          (rateText.isEmpty ? '' : ' ($rateText)');
+    }).join('\n');
   }
 
   String _vehicleLabel(String? value) {
@@ -406,16 +451,8 @@ class _MechanicsPageState extends ConsumerState<MechanicsPage> {
                             (mechanic['service_open_time']?.toString() ?? '08:00') +
                             '–' +
                             (mechanic['service_close_time']?.toString() ?? '20:00') +
-                            '\nVéhicules : ' +
-                            ((mechanic['mechanic_services'] is List)
-                                ? (mechanic['mechanic_services'] as List)
-                                    .whereType<Map>()
-                                    .map((service) => _vehicleLabel(
-                                          service['vehicle_type']?.toString(),
-                                        ))
-                                    .toSet()
-                                    .join(', ')
-                                : 'Compétences non renseignées') +
+                            '\n' +
+                            _serviceSummary(mechanic['mechanic_services']) +
                             '\nRayon : ' +
                             (mechanic['service_radius_km']?.toString() ?? '-') +
                             ' km',
