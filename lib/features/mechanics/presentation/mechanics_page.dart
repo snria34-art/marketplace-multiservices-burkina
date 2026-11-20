@@ -253,13 +253,15 @@ class _MechanicsPageState extends ConsumerState<MechanicsPage> {
 
     try {
       final rawVehicles = result['vehicle_types'];
+      final rawServices = result['service_types'];
       final rawDays = result['service_days'];
-      if (rawVehicles is! List || rawDays is! List) {
+      if (rawVehicles is! List || rawServices is! List || rawDays is! List) {
         throw StateError('Configuration du profil invalide.');
       }
 
       await repo.saveServiceProfile(
         vehicleTypes: rawVehicles.map((value) => value.toString()).toList(),
+        serviceTypes: rawServices.map((value) => value.toString()).toList(),
         openTime: result['open_time'].toString(),
         closeTime: result['close_time'].toString(),
         serviceDays: rawDays
