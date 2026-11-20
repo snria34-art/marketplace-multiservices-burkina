@@ -1,9 +1,16 @@
 name: Supabase database tests
 
 # Every database command is explicitly local. This workflow must never link to,
-# reset, or test a hosted Supabase project. Run it on every database change.
+# reset, or test a hosted Supabase project. Validate migrations before merging.
 on:
   push:
+    branches: ['maintenance/audit-01-07-2026-11-15']
+    paths:
+      - 'supabase/migrations/**'
+      - 'supabase/tests/**'
+      - 'supabase/seed.test.sql'
+      - '.github/workflows/supabase-db-tests.yml'
+  pull_request:
     branches: ['maintenance/audit-01-07-2026-11-15']
     paths:
       - 'supabase/migrations/**'
@@ -16,12 +23,12 @@ permissions:
   contents: read
 
 concurrency:
-  group: supabase-db-tests-${{ github.ref }}
+  group: supabase-db-tests-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: false
 
 jobs:
   database-tests:
-    if: github.ref == 'refs/heads/maintenance/audit-01-07-2026-11-15'
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/maintenance/audit-01-07-2026-11-15'
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:
