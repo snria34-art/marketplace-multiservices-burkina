@@ -1,5 +1,5 @@
 begin;
-select plan(10);
+select plan(11);
 
 select ok(
   exists (
@@ -26,6 +26,22 @@ select ok(
       and indexdef ilike '%USING gin%'
   ),
   'cuisine filters have a GIN index'
+);
+
+select ok(
+  exists (
+    select 1 from pg_indexes
+    where schemaname='public'
+      and indexname in (
+        'idx_restaurant_menu_items_search_name_trgm',
+        'idx_restaurant_menu_items_search_description_trgm',
+        'idx_shops_search_name_trgm',
+        'idx_product_tags_search_trgm'
+      )
+    group by schemaname
+    having count(*) = 4
+  ),
+  'partial dish, restaurant and tag searches have trigram indexes'
 );
 
 select ok(
