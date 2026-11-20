@@ -76,7 +76,7 @@ class _FollowsPageState extends ConsumerState<FollowsPage> {
 
   @override
   Widget build(BuildContext context) {
-    final signedIn = ref.watch(supabaseProvider)?.auth.currentUser != null;
+    final signedIn = ref.watch(marketplaceCustomerClientProvider)?.auth.currentUser != null;
 
     if (!signedIn) {
       return const Scaffold(
