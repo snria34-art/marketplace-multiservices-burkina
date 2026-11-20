@@ -193,7 +193,7 @@ begin
   join public.shops s on s.id = rp.shop_id
   join public.sellers se on se.id = s.seller_id
   where mi.id = p_menu_item_id and se.user_id = v_user_id
-  for update of mi;
+  ;
   if not found then raise exception 'menu_item_not_owned'; end if;
 
   if p_group_id is not null then
