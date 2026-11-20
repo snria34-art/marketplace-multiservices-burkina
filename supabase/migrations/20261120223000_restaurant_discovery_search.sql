@@ -95,7 +95,8 @@ create or replace function public.search_restaurant_catalog(
   dish_name text,
   dish_description text,
   price numeric,
-  product_id uuid
+  product_id uuid,
+  option_groups jsonb
 )
 language sql
 stable
@@ -117,7 +118,31 @@ as $$
     mi.name::text,
     mi.description::text,
     p.price,
-    p.id
+    p.id,
+    coalesce((
+      select jsonb_agg(
+        jsonb_build_object(
+          'id', g.id,
+          'name', g.name,
+          'selection_type', g.selection_type,
+          'min_selections', g.min_selections,
+          'max_selections', g.max_selections,
+          'sort_order', g.sort_order,
+          'restaurant_menu_item_options', coalesce((
+            select jsonb_agg(jsonb_build_object(
+              'id', o.id,
+              'name', o.name,
+              'price_delta', o.price_delta,
+              'sort_order', o.sort_order
+            ) order by o.sort_order, o.id)
+            from public.restaurant_menu_item_options o
+            where o.option_group_id = g.id and o.active = true
+          ), '[]'::jsonb)
+        ) order by g.sort_order, g.id
+      )
+      from public.restaurant_menu_item_option_groups g
+      where g.menu_item_id = mi.id and g.active = true
+    ), '[]'::jsonb)
   from public.restaurant_profiles rp
   join public.shops s on s.id = rp.shop_id
   join public.restaurant_menus m on m.restaurant_id = rp.id and m.active = true
