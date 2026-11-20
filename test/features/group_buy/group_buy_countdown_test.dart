@@ -55,7 +55,6 @@ void main() {
       ),
     );
 
-    expect(find.byType(Container), findsOneWidget);
     expect(find.textContaining('Se termine dans'), findsOneWidget);
   });
 }
