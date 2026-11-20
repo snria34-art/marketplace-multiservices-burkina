@@ -1,12 +1,19 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../../core/engine/marketplace_resilience.dart';
+
 class MechanicRepository {
-  const MechanicRepository(this.client);
+  const MechanicRepository(this.client, {this.resilience});
 
   final SupabaseClient client;
+  final MarketplaceResilience? resilience;
+  static final _fallbackResilience = MarketplaceResilience();
+  MarketplaceResilience get _retry => resilience ?? _fallbackResilience;
+
+  Future<T> _read<T>(Future<T> Function() operation) => _retry.read(operation);
 
   Future<List<Map<String, dynamic>>> mechanics() async {
-    final rows = await client.rpc('get_public_mechanics');
+    final rows = await _read(() => client.rpc('get_public_mechanics'));
 
     return (rows as List).map((row) {
       final item = Map<String, dynamic>.from(row as Map);
@@ -45,13 +52,13 @@ class MechanicRepository {
   }
 
   Future<List<Map<String, dynamic>>> myQuotes() async {
-    final rows = await client
+    final rows = await _read(() async => await client
         .from('mechanic_quotes')
         .select(
           'id,request_id,mechanic_id,amount,currency,diagnosis,status,expires_at,created_at,mechanics(display_name,phone)',
         )
         .order('created_at', ascending: false)
-        .limit(50);
+        .limit(50));
 
     return (rows as List)
         .map((row) => Map<String, dynamic>.from(row as Map))
