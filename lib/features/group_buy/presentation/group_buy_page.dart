@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/providers/repository_providers.dart';
 import '../data/group_buy_repository.dart';
@@ -20,11 +23,22 @@ class GroupBuyPage extends ConsumerStatefulWidget {
 class _GroupBuyPageState extends ConsumerState<GroupBuyPage> {
   late Future<List<Map<String, dynamic>>> future;
   bool _joining = false;
+  RealtimeChannel? _channel;
+  Timer? _fallbackRefresh;
+  bool _refreshInFlight = false;
 
   @override
   void initState() {
     super.initState();
     future = _load();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _subscribeToChanges();
+      _fallbackRefresh = Timer.periodic(
+        const Duration(seconds: 45),
+        (_) => unawaited(_refreshQuietly()),
+      );
+    });
   }
 
   Future<List<Map<String, dynamic>>> _load() async {
@@ -34,6 +48,64 @@ class _GroupBuyPageState extends ConsumerState<GroupBuyPage> {
   Future<void> _refresh() async {
     setState(() => future = _load());
     await future;
+  }
+
+  Future<void> _refreshQuietly() async {
+    if (!mounted || _refreshInFlight) return;
+    _refreshInFlight = true;
+    try {
+      final refreshed = _load();
+      if (mounted) setState(() => future = refreshed);
+      await refreshed;
+    } catch (_) {
+      // Keep the last successfully loaded campaigns visible during outages.
+    } finally {
+      _refreshInFlight = false;
+    }
+  }
+
+  Future<void> _subscribeToChanges() async {
+    final client = ref.read(supabaseProvider);
+    if (client == null) return;
+
+    try {
+      final channel = client
+          .channel('marketplace:group-buys')
+          .onPostgresChanges(
+            event: PostgresChangeEvent.all,
+            schema: 'public',
+            table: 'group_buys',
+            callback: (_) => unawaited(_refreshQuietly()),
+          );
+      await channel.subscribe();
+
+      if (!mounted) {
+        await client.removeChannel(channel);
+        return;
+      }
+      _channel = channel;
+    } catch (_) {
+      // The periodic refresh remains available if Realtime cannot connect.
+    }
+  }
+
+  @override
+  void dispose() {
+    _fallbackRefresh?.cancel();
+    final channel = _channel;
+    _channel = null;
+    if (channel != null) {
+      unawaited(_removeChannelSafely(channel));
+    }
+    super.dispose();
+  }
+
+  Future<void> _removeChannelSafely(RealtimeChannel channel) async {
+    try {
+      await ref.read(supabaseProvider)?.removeChannel(channel);
+    } catch (_) {
+      // Subscription cleanup is best-effort during page disposal.
+    }
   }
 
   Future<void> _join(Map<String, dynamic> group) async {
