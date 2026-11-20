@@ -270,6 +270,8 @@ class _SellerRestaurantOptionsPageState
 
   Widget _itemTile(Map<String, dynamic> item) {
     final groups = _maps(item['restaurant_menu_item_option_groups']);
+    final portionGroups = groups.where((group) =>
+        group['name']?.toString().trim().toLowerCase() == 'taille / portion').toList();
     final product = item['products'] is Map ? Map<String, dynamic>.from(item['products'] as Map) : const <String, dynamic>{};
     return ListTile(
       title: Text(item['name']?.toString() ?? 'Plat'),
@@ -286,7 +288,11 @@ class _SellerRestaurantOptionsPageState
           IconButton(
             tooltip: 'Configurer les portions petit, moyen et grand',
             icon: const Icon(Icons.straighten),
-            onPressed: () => _configure(item, portionPreset: true),
+            onPressed: () => _configure(
+              item,
+              portionPreset: true,
+              existing: portionGroups.isEmpty ? null : portionGroups.first,
+            ),
           ),
           IconButton(
             tooltip: 'Ajouter une personnalisation',
