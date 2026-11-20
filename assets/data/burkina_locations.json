@@ -1,0 +1,71 @@
+{
+  "country": "Burkina Faso",
+  "countryCode": "BF",
+  "administrativeReform": "2025-07-02",
+  "coverageNote": "17 regions and their regional capitals are listed. Complete neighbourhood coverage for every locality is not asserted: keep free-text entry for missing local names. Urban sector lists are populated for Ouagadougou and Bobo-Dioulasso from INSD/official sources.",
+  "sources": [
+    "https://www.presidencedufaso.bf/conseil-des-ministres-du-2-juillet-2025/",
+    "https://www.matd.gov.bf/accueil/actualites/details?cHash=268871d043c3b736e5d3721ee1c06cb7&tx_news_pi1%5Baction%5D=detail&tx_news_pi1%5Bcontroller%5D=News&tx_news_pi1%5Bnews%5D=1079",
+    "https://www.insd.bf/sites/default/files/2023-12/Annuaire_statistique_national_2022.pdf",
+    "https://www.insd.bf/sites/default/files/2023-02/MONOGRAPHIE%20DE%20LA%20COMMUNE%20DE%20BOBO-DIOULASSO.pdf"
+  ],
+  "regions": [
+    {"name":"Bankui","formerName":"Boucle du Mouhoun","capital":"Dédougou"},
+    {"name":"Tannounyan","formerName":"Cascades","capital":"Banfora"},
+    {"name":"Kadiogo","formerName":"Centre","capital":"Ouagadougou"},
+    {"name":"Nakambé","formerName":"Centre-Est","capital":"Tenkodogo"},
+    {"name":"Kuilsé","formerName":"Centre-Nord","capital":"Kaya"},
+    {"name":"Nando","formerName":"Centre-Ouest","capital":"Koudougou"},
+    {"name":"Nazinon","formerName":"Centre-Sud","capital":"Manga"},
+    {"name":"Goulmou","formerName":"Est","capital":"Fada N’Gourma"},
+    {"name":"Guiriko","formerName":"Hauts-Bassins","capital":"Bobo-Dioulasso"},
+    {"name":"Liptako","formerName":"Sahel","capital":"Dori"},
+    {"name":"Sirba","formerName":"Nouvelle région","capital":"Bogandé"},
+    {"name":"Soum","formerName":"Nouvelle région","capital":"Djibo"},
+    {"name":"Tapoa","formerName":"Nouvelle région","capital":"Diapaga"},
+    {"name":"Sourou","formerName":"Nouvelle région","capital":"Tougan"},
+    {"name":"Yaadga","formerName":"Nord","capital":"Ouahigouya"},
+    {"name":"Oubri","formerName":"Plateau Central","capital":"Ziniaré"},
+    {"name":"Djôrô","formerName":"Sud-Ouest","capital":"Gaoua"}
+  ],
+  "regionalCapitals": ["Dédougou","Banfora","Ouagadougou","Tenkodogo","Kaya","Koudougou","Manga","Fada N’Gourma","Bobo-Dioulasso","Dori","Bogandé","Djibo","Diapaga","Tougan","Ouahigouya","Ziniaré","Gaoua"],
+  "citiesAndCommunes": {
+    "coverage": "Regional capitals only in this initial verified selector; expand from the complete post-2025 MATM gazetteer before labelling as a full national commune list.",
+    "allowFreeText": true
+  },
+  "urbanAreas": {
+    "Ouagadougou": {
+      "region": "Kadiogo",
+      "arrondissements": [
+        {"number":1,"sectors":[1,2,3,4,5,6]},
+        {"number":2,"sectors":[7,8,9,10,11]},
+        {"number":3,"sectors":[12,13,14,15,16]},
+        {"number":4,"sectors":[17,18,19,20]},
+        {"number":5,"sectors":[21,22,23,24]},
+        {"number":6,"sectors":[25,26,27,28,29]},
+        {"number":7,"sectors":[30,31,32,33]},
+        {"number":8,"sectors":[34,35,36]},
+        {"number":9,"sectors":[37,38,39,40]},
+        {"number":10,"sectors":[41,42,43,44,45]},
+        {"number":11,"sectors":[46,47,48,49,50,51]},
+        {"number":12,"sectors":[52,53,54,55]}
+      ],
+      "neighbourhoods": ["Bilbalogho","Saint-Léon","Zangouettin","Tiédpalogo","Koulouba","Kamsonghin","Samandin","Gounghin Sud","Gandin","Kouritenga","Mankougoudou","Paspanga","Ouidi","Larlé","Kologh-Naba","Dapoya II","Nemnin","Niogsin","Hamdalaye","Gounghin Nord","Baoghin","Camp militaire","Naab-Pougo","Kienbaoghin","Zongo","Koumdayonré","Nonsin","Rimkièta","Tampouy","Kilwin","Tanghin","Sambin barrage","Somgandé","Zone industrielle","Nioko II","Bendogo","Toukin","Zogona","Wemtenga","Dagnoën","Ronsin","Kalghondin","Cissin","Pissy","Nagrin","Yaoghin","Sandogo","Kankasin","Boassa","Zagtouli","Zongo-Nabitenga","Sogpèlcé","Bissighin","Bassinko","Dar-es-Salam","Silmiougou","Gantin","Bangpooré","Larlé-Wéogo","Marcoussis","Silmiyiri","Wob-Riguéré","Ouapassi","Kossodo","Wayalghin","Godin","Nioko I","Dassosgho","Taabtenga","Dassasgho","Karpala","Balkuy","Lanoayiri","Dayongo","Ouidtenga","Patte d’Oie","Ouaga 2000"],
+      "source": "INSD Annuaire statistique national 2022; INSD administrative map referenced in January 2026 report."
+    },
+    "Bobo-Dioulasso": {
+      "region": "Guiriko",
+      "arrondissements": [
+        {"number":1,"sectors":[1,2,3,4,8],"villages":[]},
+        {"number":2,"sectors":[10,11,23,30],"villages":["Dafinso","Doufiguisso","Kimidougou","Moukama","Panamasso","Santidougou"]},
+        {"number":3,"sectors":[12,13,14,31],"villages":["Kékélésso","Kouentou","Léguéma","Moussobadougou","Noumousso"]},
+        {"number":4,"sectors":[15,16,24,32,33],"villages":["Baré","Borodougou","Kotédougou","Niamadougou","Sogossagasso","Tondogosso","Yéguérésso"]},
+        {"number":5,"sectors":[5,6,17,25,26,27],"villages":["Dingasso","Dodougou","Dogotélama","Koro","Kouakoulé","Pala"]},
+        {"number":6,"sectors":[7,9,18,19,20,28],"villages":["Darsalamy","Farakoba","Logofourousso","Matourkou","Moamy","Koumi","Samagan"]},
+        {"number":7,"sectors":[21,22,29],"villages":["Bana","Dindéresso","Kokorowé","Nasso","Ouolonkoto"]}
+      ],
+      "source": "INSD Monographie de la commune de Bobo-Dioulasso; Annuaire statistique national 2020/2022."
+    }
+  },
+  "fallback": {"allowUnknownCity":true,"allowUnknownNeighbourhood":true,"preserveOriginalText":true}
+}
