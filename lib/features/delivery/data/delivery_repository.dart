@@ -1,10 +1,17 @@
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../../core/engine/marketplace_resilience.dart';
+
 class DeliveryRepository {
-  const DeliveryRepository(this.client);
+  const DeliveryRepository(this.client, {this.resilience});
 
   final SupabaseClient client;
+  final MarketplaceResilience? resilience;
+  static final _fallbackResilience = MarketplaceResilience();
+  MarketplaceResilience get _retry => resilience ?? _fallbackResilience;
+
+  Future<T> _read<T>(Future<T> Function() operation) => _retry.read(operation);
 
   static const _activeAssignmentStatuses = {
     'ASSIGNED',
@@ -16,13 +23,13 @@ class DeliveryRepository {
   Future<List<Map<String, dynamic>>> packagesForOrder(
     String orderId,
   ) async {
-    final groups = await client
+    final groups = await _read(() async => await client
         .from('order_groups')
         .select(
           'id,shop_id,shops(name),order_packages(id,status,picked_up_at,delivered_at,updated_at,delivery_assignments(id,courier_id,status,accepted_at,completed_at))',
         )
         .eq('order_id', orderId)
-        .order('created_at');
+        .order('created_at'));
 
     final result = <Map<String, dynamic>>[];
     final courierIds = <String>{};
@@ -94,12 +101,12 @@ class DeliveryRepository {
     String orderId,
     VoidCallback onChange,
   ) async {
-    final groups = await client
+    final groups = await _read(() async => await client
         .from('order_groups')
         .select(
           'order_packages(id,delivery_assignments(courier_id,status))',
         )
-        .eq('order_id', orderId);
+        .eq('order_id', orderId));
 
     final packageIds = <String>{};
     final courierIds = <String>{};
