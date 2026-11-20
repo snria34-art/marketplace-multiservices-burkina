@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'marketplace_resilience.dart';
@@ -16,6 +14,8 @@ enum MarketplaceCapability {
   discoverServices,
   discoverTransport,
   discoverVerticals,
+  discoverPromotions,
+  authenticate,
   configureRestaurantCatalog,
   manageCart,
   placeOrder,
@@ -84,13 +84,7 @@ class MarketplaceEngine {
   ///
   /// Mutations, checkout, payment, refund and payout calls must not use this
   /// method: their outcome may be unknown and may not be safe to repeat.
-  Future<T> read<T>(Future<T> Function() operation) {
-    return resilience.run<T>(
-      operation,
-      retrySafe: true,
-      isRetryable: (error) => error is TimeoutException,
-    );
-  }
+  Future<T> read<T>(Future<T> Function() operation) => resilience.read(operation);
 
   /// Mutations are deliberately single-shot. Use an explicit server idempotency
   /// key inside the RPC when retrying a mutation is a product requirement.
@@ -115,6 +109,8 @@ class MarketplaceEngine {
       MarketplaceCapability.discoverServices,
       MarketplaceCapability.discoverTransport,
       MarketplaceCapability.discoverVerticals,
+      MarketplaceCapability.discoverPromotions,
+      MarketplaceCapability.authenticate,
     };
     if (publicCapabilities.contains(capability)) {
       return CapabilityState.available;
