@@ -166,6 +166,7 @@ begin
   if not exists (
     select 1
     from public.products p
+    join public.restaurant_profiles rp on rp.shop_id=p.shop_id
     join public.shops sh on sh.id = p.shop_id
     join public.sellers s on s.id = sh.seller_id
     where p.id = p_product_id and s.user_id = v_user
@@ -401,6 +402,19 @@ begin
     join public.product_option_levels l on l.id=x
     join public.product_options o on o.id=l.option_id
     join public.product_option_groups g on g.id=o.group_id
+    where g.product_id=p_product_id
+    group by o.id
+    having count(*) > 1
+  ) then
+    raise exception 'product_option_level_duplicate';
+  end if;
+
+  if exists (
+    select 1
+    from unnest(v_selected) x
+    join public.product_option_levels l on l.id=x
+    join public.product_options o on o.id=l.option_id
+    join public.product_option_groups g on g.id=o.group_id
     where g.product_id=p_product_id and g.selection_mode='SINGLE'
     group by g.id
     having count(*) > 1
@@ -581,83 +595,123 @@ begin
 end;
 $patch$;
 
--- Checkout now validates option IDs again, recalculates the unit price from
--- the server catalog, and snapshots the selected ingredients into order_items.
+-- Checkout validates every selected level again, computes the current seller
+-- price from the server catalogue, and preserves a snapshot for the seller.
 do $patch$
 declare
   v_def text;
   v_old text;
   v_new text;
 begin
-  v_def := pg_get_functiondef('public.checkout_cart(uuid,jsonb,numeric,text,text)'::regprocedure);
-
-  v_old := '      ci.quantity,' || chr(10) ||
-           '      p.name,' || chr(10) ||
-           '      p.price,' || chr(10) ||
-           '      p.shop_id,';
-  v_new := '      ci.quantity,' || chr(10) ||
-           '      p.name,' || chr(10) ||
-           '      p.price,' || chr(10) ||
-           '      public.get_product_configured_unit_price(ci.product_id,ci.variant_id,ci.selected_option_level_ids) as final_unit_price,' || chr(10) ||
-           '      public.get_product_customization_snapshot(ci.product_id,ci.selected_option_level_ids) as customization_snapshot,' || chr(10) ||
-           '      p.shop_id,';
-  if position(v_old in v_def)=0 then raise exception 'checkout_price_select_patch_not_found'; end if;
-  v_def := replace(v_def,v_old,v_new);
-
-  v_def := replace(v_def,
-    'v_subtotal := v_subtotal' || chr(10) ||
-    '      + coalesce(v_item.variant_price, v_item.price) * v_item.quantity;',
-    'v_subtotal := v_subtotal + v_item.final_unit_price * v_item.quantity;'
-  );
-
-  v_def := replace(v_def,
-    'v_coupon_base := v_coupon_base' || chr(10) ||
-    '        + coalesce(v_item.variant_price, v_item.price) * v_item.quantity;',
-    'v_coupon_base := v_coupon_base + v_item.final_unit_price * v_item.quantity;'
+  v_def := pg_get_functiondef(
+    'public.checkout_cart(uuid,jsonb,numeric,text,text)'::regprocedure
   );
 
   v_old := '      ci.quantity,' || chr(10) ||
            '      p.name,' || chr(10) ||
-           '      p.shop_id,';
+           '      p.price,' || chr(10) ||
+           '      p.shop_id,' || chr(10) ||
+           '      p.status,';
   v_new := '      ci.quantity,' || chr(10) ||
+           '      ci.selected_option_level_ids,' || chr(10) ||
            '      p.name,' || chr(10) ||
-           '      public.get_product_configured_unit_price(ci.product_id,ci.variant_id,ci.selected_option_level_ids) as final_unit_price,' || chr(10) ||
-           '      public.get_product_customization_snapshot(ci.product_id,ci.selected_option_level_ids) as customization_snapshot,' || chr(10) ||
-           '      p.shop_id,';
-  if position(v_old in v_def)=0 then raise exception 'checkout_order_item_select_patch_not_found'; end if;
+           '      p.price,' || chr(10) ||
+           '      p.shop_id,' || chr(10) ||
+           '      p.status,';
+  if position(v_old in v_def)=0 then
+    raise exception 'checkout_selected_levels_select_not_found';
+  end if;
   v_def := replace(v_def,v_old,v_new);
 
-  v_old := '      total_price' || chr(10) ||
+  v_old := '      pv.price as variant_price,' || chr(10) ||
+           '      pv.product_id as variant_product_id';
+  v_new := '      pv.price as variant_price,' || chr(10) ||
+           '      pv.product_id as variant_product_id,' || chr(10) ||
+           '      public.get_product_configured_unit_price(ci.product_id,ci.variant_id,ci.selected_option_level_ids) as final_unit_price,' || chr(10) ||
+           '      public.get_product_customization_snapshot(ci.product_id,ci.selected_option_level_ids) as customization_snapshot';
+  if position(v_old in v_def)=0 then
+    raise exception 'checkout_option_price_snapshot_select_not_found';
+  end if;
+  v_def := replace(v_def,v_old,v_new);
+
+  v_old := '      ci.quantity,' || chr(10) ||
+           '      p.name,' || chr(10) ||
+           '      p.shop_id,' || chr(10) ||
+           '      p.price,';
+  v_new := '      ci.quantity,' || chr(10) ||
+           '      p.name,' || chr(10) ||
+           '      p.shop_id,' || chr(10) ||
+           '      p.price,';
+  if position(v_old in v_def)>0 then
+    v_def := replace(v_def,v_old,v_new);
+  end if;
+
+  v_old := '      pv.price as variant_price' || chr(10) ||
+           '    from public.cart_items ci';
+  v_new := '      pv.price as variant_price,' || chr(10) ||
+           '      public.get_product_configured_unit_price(ci.product_id,ci.variant_id,ci.selected_option_level_ids) as final_unit_price,' || chr(10) ||
+           '      public.get_product_customization_snapshot(ci.product_id,ci.selected_option_level_ids) as customization_snapshot' || chr(10) ||
+           '    from public.cart_items ci';
+  if position(v_old in v_def)=0 then
+    raise exception 'checkout_order_item_snapshot_select_not_found';
+  end if;
+  v_def := replace(v_def,v_old,v_new);
+
+  v_def := replace(
+    v_def,
+    'coalesce(v_item.variant_price, v_item.price)',
+    'v_item.final_unit_price'
+  );
+
+  v_old := '    insert into public.order_items(' || chr(10) ||
+           '      order_group_id,' || chr(10) ||
+           '      product_id,' || chr(10) ||
+           '      variant_id,' || chr(10) ||
+           '      product_name,' || chr(10) ||
+           '      quantity,' || chr(10) ||
+           '      unit_price,' || chr(10) ||
+           '      total_price' || chr(10) ||
            '    )' || chr(10) ||
            '    values(' || chr(10) ||
-           '      v_group_id,';
-  v_new := '      total_price,' || chr(10) ||
+           '      v_group_id,' || chr(10) ||
+           '      v_item.product_id,' || chr(10) ||
+           '      v_item.variant_id,' || chr(10) ||
+           '      v_item.name,' || chr(10) ||
+           '      v_item.quantity,' || chr(10) ||
+           '      v_item.final_unit_price,' || chr(10) ||
+           '      v_item.final_unit_price * v_item.quantity' || chr(10) ||
+           '    );';
+  v_new := '    insert into public.order_items(' || chr(10) ||
+           '      order_group_id,' || chr(10) ||
+           '      product_id,' || chr(10) ||
+           '      variant_id,' || chr(10) ||
+           '      product_name,' || chr(10) ||
+           '      quantity,' || chr(10) ||
+           '      unit_price,' || chr(10) ||
+           '      total_price,' || chr(10) ||
            '      customizations' || chr(10) ||
            '    )' || chr(10) ||
            '    values(' || chr(10) ||
-           '      v_group_id,';
-  if position(v_old in v_def)=0 then raise exception 'checkout_order_item_insert_patch_not_found'; end if;
+           '      v_group_id,' || chr(10) ||
+           '      v_item.product_id,' || chr(10) ||
+           '      v_item.variant_id,' || chr(10) ||
+           '      v_item.name,' || chr(10) ||
+           '      v_item.quantity,' || chr(10) ||
+           '      v_item.final_unit_price,' || chr(10) ||
+           '      v_item.final_unit_price * v_item.quantity,' || chr(10) ||
+           '      v_item.customization_snapshot' || chr(10) ||
+           '    );';
+  if position(v_old in v_def)=0 then
+    raise exception 'checkout_order_items_insert_not_found';
+  end if;
   v_def := replace(v_def,v_old,v_new);
 
-  v_def := replace(v_def,
-    '      coalesce(v_item.variant_price, v_item.price),' || chr(10) ||
-    '      coalesce(v_item.variant_price, v_item.price) * v_item.quantity',
-    '      v_item.final_unit_price,' || chr(10) ||
-    '      v_item.final_unit_price * v_item.quantity'
-  );
-
-  v_def := replace(v_def,
-    '      v_item.final_unit_price * v_item.quantity' || chr(10) ||
-    '    );',
-    '      v_item.final_unit_price * v_item.quantity,' || chr(10) ||
-    '      v_item.customization_snapshot' || chr(10) ||
-    '    );'
-  );
-
   if v_def not like '%get_product_configured_unit_price%' or
-     v_def not like '%customizations%' then
+     v_def not like '%customizations%' or
+     v_def not like '%selected_option_level_ids%' then
     raise exception 'checkout_customization_patch_failed';
   end if;
+
   execute v_def;
 end;
 $patch$;
