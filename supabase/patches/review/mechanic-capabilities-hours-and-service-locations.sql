@@ -8,6 +8,7 @@ begin;
 -- accept a call. All hours are Burkina local time, not a device-supplied clock.
 
 alter table public.mechanics
+  add column if not exists service_location geography(Point,4326),
   add column if not exists service_open_time time not null default time '08:00',
   add column if not exists service_close_time time not null default time '20:00',
   add column if not exists service_days smallint[] not null default array[1,2,3,4,5,6]::smallint[],
@@ -128,6 +129,9 @@ create or replace function public.save_mechanic_service_profile(
   p_home_price numeric,
   p_office_price numeric,
   p_roadside_price numeric,
+  p_latitude double precision,
+  p_longitude double precision,
+  p_service_radius_km numeric,
   p_adjustment_note text default null
 ) returns boolean
 language plpgsql security definer
@@ -194,11 +198,23 @@ begin
     raise exception 'mechanic_service_price_invalid';
   end if;
 
+  if p_latitude is null or p_longitude is null
+     or p_latitude not between -90 and 90
+     or p_longitude not between -180 and 180 then
+    raise exception 'mechanic_service_location_invalid';
+  end if;
+  if p_service_radius_km is null or p_service_radius_km < 1
+     or p_service_radius_km > 200 then
+    raise exception 'mechanic_service_radius_invalid';
+  end if;
+
   update public.mechanics
   set service_open_time=p_open_time,
       service_close_time=p_close_time,
       service_days=v_days,
-      service_timezone='Africa/Ouagadougou'
+      service_timezone='Africa/Ouagadougou',
+      service_location=st_setsrid(st_makepoint(p_longitude,p_latitude),4326)::geography,
+      service_radius_km=p_service_radius_km
   where id=v_mechanic;
 
   update public.mechanic_capabilities
@@ -380,6 +396,12 @@ begin
       on r.mechanic_id=m.id and r.vehicle_type=v_vehicle
       and r.service_location_type=v_location and r.active=true
     where m.active=true and m.verification_status='VERIFIED'
+      and m.service_location is not null
+      and st_dwithin(
+        m.service_location,
+        st_setsrid(st_makepoint(p_longitude,p_latitude),4326)::geography,
+        coalesce(m.service_radius_km,10)*1000
+      )
       and public.mechanic_is_open(m.id,now())
       and exists (
         select 1 from public.mechanic_availability ma
@@ -403,16 +425,365 @@ begin
     v_vehicle,nullif(trim(coalesce(p_location_note,'')),'')
   ) returning id into v_id;
 
+  -- Notify only verified mechanics who cover this vehicle, exact repair,
+  -- location type, service radius, schedule and current availability.
+  insert into public.notifications(user_id,type,title,body,data)
+  select
+    m.user_id,
+    'mechanic_job_available',
+    'Nouvelle demande de dépannage',
+    'Une demande compatible est disponible dans votre zone.',
+    jsonb_build_object(
+      'mechanic_request_id',v_id,
+      'vehicle_type',v_vehicle,
+      'service_type',v_service,
+      'service_location_type',v_location,
+      'route','/mechanics'
+    )
+  from public.mechanics m
+  join public.mechanic_capabilities cap
+    on cap.mechanic_id=m.id
+    and cap.vehicle_type=v_vehicle
+    and cap.service_type=v_service
+    and cap.active=true
+  join public.mechanic_service_rates rate
+    on rate.mechanic_id=m.id
+    and rate.vehicle_type=v_vehicle
+    and rate.service_location_type=v_location
+    and rate.active=true
+  where m.active=true
+    and m.verification_status='VERIFIED'
+    and m.service_location is not null
+    and st_dwithin(
+      m.service_location,
+      st_setsrid(st_makepoint(p_longitude,p_latitude),4326)::geography,
+      coalesce(m.service_radius_km,10)*1000
+    )
+    and public.mechanic_is_open(m.id,now())
+    and exists (
+      select 1
+      from public.mechanic_availability ma
+      where ma.mechanic_id=m.id
+        and ma.starts_at<=now()
+        and (ma.ends_at is null or ma.ends_at>now())
+        and ma.status in ('AVAILABLE','IN_10_MIN','IN_20_MIN','IN_30_MIN')
+    );
+
   return v_id;
 end;
 $function$;
 
 revoke all on function public.mechanic_is_open(uuid,timestamptz) from public,anon,authenticated;
-revoke all on function public.save_mechanic_service_profile(text[],text[],time without time zone,time without time zone,smallint[],numeric,numeric,numeric,text) from public,anon;
+revoke all on function public.save_mechanic_service_profile(text[],text[],time without time zone,time without time zone,smallint[],numeric,numeric,numeric,double precision,double precision,numeric,text) from public,anon;
 revoke all on function public.get_public_mechanics_v2() from public,anon;
 revoke all on function public.create_mechanic_request_v2(text,text,text,text,text,text,double precision,double precision) from public,anon;
-grant execute on function public.save_mechanic_service_profile(text[],text[],time without time zone,time without time zone,smallint[],numeric,numeric,numeric,text) to authenticated;
+grant execute on function public.save_mechanic_service_profile(text[],text[],time without time zone,time without time zone,smallint[],numeric,numeric,numeric,double precision,double precision,numeric,text) to authenticated;
 grant execute on function public.get_public_mechanics_v2() to authenticated;
 grant execute on function public.create_mechanic_request_v2(text,text,text,text,text,text,double precision,double precision) to authenticated;
+
+-- Provider request inbox and quote workflow.
+create index if not exists uq_mechanic_quotes_pending_provider_request
+  on public.mechanic_quotes(request_id,mechanic_id)
+  where status='PENDING';
+
+create or replace function public.get_matching_mechanic_requests()
+returns table (
+  request_id uuid,
+  vehicle_type text,
+  service_type text,
+  service_location_type text,
+  problem_type text,
+  description text,
+  location_note text,
+  latitude double precision,
+  longitude double precision,
+  created_at timestamptz,
+  suggested_base_price numeric
+)
+language plpgsql security definer
+set search_path = pg_catalog, public
+as $function$
+declare
+  v_user uuid := (select auth.uid());
+  v_mechanic uuid;
+begin
+  if v_user is null then raise exception 'not_authenticated'; end if;
+  perform private.require_active_account();
+
+  select m.id into v_mechanic
+  from public.mechanics m
+  where m.user_id=v_user and m.active=true
+    and m.verification_status='VERIFIED'
+  limit 1;
+
+  if v_mechanic is null then raise exception 'verified_mechanic_profile_required'; end if;
+  if not public.mechanic_is_open(v_mechanic,now()) then
+    return;
+  end if;
+  if not exists (
+    select 1 from public.mechanic_availability ma
+    where ma.mechanic_id=v_mechanic
+      and ma.starts_at<=now()
+      and (ma.ends_at is null or ma.ends_at>now())
+      and ma.status in ('AVAILABLE','IN_10_MIN','IN_20_MIN','IN_30_MIN')
+  ) then
+    return;
+  end if;
+
+  return query
+  select
+    r.id,
+    r.vehicle_type,
+    r.requested_service_type,
+    r.service_location_type,
+    r.problem_type,
+    r.description,
+    r.location_note,
+    r.latitude,
+    r.longitude,
+    r.created_at,
+    rate.base_price
+  from public.mechanic_requests r
+  join public.mechanics m on m.id=v_mechanic
+  join public.mechanic_capabilities cap
+    on cap.mechanic_id=m.id
+    and cap.vehicle_type=r.vehicle_type
+    and cap.service_type=r.requested_service_type
+    and cap.active=true
+  join public.mechanic_service_rates rate
+    on rate.mechanic_id=m.id
+    and rate.vehicle_type=r.vehicle_type
+    and rate.service_location_type=r.service_location_type
+    and rate.active=true
+  where r.status in ('OPEN','REQUESTED','QUOTED')
+    and r.created_at >= now()-interval '72 hours'
+    and m.service_location is not null
+    and st_dwithin(
+      m.service_location,
+      st_setsrid(st_makepoint(r.longitude,r.latitude),4326)::geography,
+      coalesce(m.service_radius_km,10)*1000
+    )
+    and not exists (
+      select 1 from public.mechanic_quotes q
+      where q.request_id=r.id
+        and q.mechanic_id=m.id
+        and q.status in ('PENDING','ACCEPTED')
+    )
+  order by r.created_at desc
+  limit 100;
+end;
+$function$;
+
+create or replace function public.submit_mechanic_quote(
+  p_request_id uuid,
+  p_amount numeric,
+  p_diagnosis text,
+  p_expires_at timestamptz default now()+interval '2 hours'
+) returns uuid
+language plpgsql security definer
+set search_path = pg_catalog, public
+as $function$
+declare
+  v_user uuid := (select auth.uid());
+  v_mechanic uuid;
+  v_request public.mechanic_requests%rowtype;
+  v_quote uuid;
+begin
+  if v_user is null then raise exception 'not_authenticated'; end if;
+  perform private.require_active_account();
+
+  if p_request_id is null or p_amount is null or p_amount<0
+     or p_amount>100000000
+     or length(trim(coalesce(p_diagnosis,'')))>500 then
+    raise exception 'mechanic_quote_invalid';
+  end if;
+  if p_expires_at is null or p_expires_at<=now()
+     or p_expires_at>now()+interval '24 hours' then
+    raise exception 'mechanic_quote_expiry_invalid';
+  end if;
+
+  select m.id into v_mechanic
+  from public.mechanics m
+  where m.user_id=v_user and m.active=true
+    and m.verification_status='VERIFIED'
+  for update;
+
+  if v_mechanic is null then raise exception 'verified_mechanic_profile_required'; end if;
+  if not public.mechanic_is_open(v_mechanic,now()) then
+    raise exception 'mechanic_outside_service_hours';
+  end if;
+
+  select r.* into v_request
+  from public.mechanic_requests r
+  where r.id=p_request_id
+    and r.status in ('OPEN','REQUESTED','QUOTED')
+  for update;
+
+  if not found then raise exception 'mechanic_request_unavailable'; end if;
+
+  if not exists (
+    select 1
+    from public.mechanics m
+    join public.mechanic_capabilities cap
+      on cap.mechanic_id=m.id
+      and cap.vehicle_type=v_request.vehicle_type
+      and cap.service_type=v_request.requested_service_type
+      and cap.active=true
+    join public.mechanic_service_rates rate
+      on rate.mechanic_id=m.id
+      and rate.vehicle_type=v_request.vehicle_type
+      and rate.service_location_type=v_request.service_location_type
+      and rate.active=true
+    where m.id=v_mechanic
+      and m.service_location is not null
+      and st_dwithin(
+        m.service_location,
+        st_setsrid(st_makepoint(v_request.longitude,v_request.latitude),4326)::geography,
+        coalesce(m.service_radius_km,10)*1000
+      )
+      and exists (
+        select 1 from public.mechanic_availability ma
+        where ma.mechanic_id=m.id
+          and ma.starts_at<=now()
+          and (ma.ends_at is null or ma.ends_at>now())
+          and ma.status in ('AVAILABLE','IN_10_MIN','IN_20_MIN','IN_30_MIN')
+      )
+  ) then
+    raise exception 'mechanic_request_no_longer_compatible';
+  end if;
+
+  if exists (
+    select 1 from public.mechanic_quotes q
+    where q.request_id=p_request_id
+      and q.mechanic_id=v_mechanic
+      and q.status in ('PENDING','ACCEPTED')
+  ) then
+    raise exception 'mechanic_quote_already_submitted';
+  end if;
+
+  insert into public.mechanic_quotes(
+    request_id,mechanic_id,amount,currency,diagnosis,status,expires_at
+  ) values (
+    p_request_id,v_mechanic,p_amount,'XOF',
+    nullif(trim(coalesce(p_diagnosis,'')),''),'PENDING',p_expires_at
+  ) returning id into v_quote;
+
+  update public.mechanic_requests
+  set status='QUOTED'
+  where id=p_request_id and status='OPEN';
+
+  insert into public.notifications(user_id,type,title,body,data)
+  values(
+    v_request.customer_id,
+    'mechanic_quote',
+    'Nouveau devis de mécanicien',
+    'Un mécanicien compatible vous a envoyé un devis.',
+    jsonb_build_object(
+      'mechanic_request_id',p_request_id,
+      'mechanic_quote_id',v_quote,
+      'route','/mechanics'
+    )
+  );
+
+  return v_quote;
+end;
+$function$;
+
+create or replace function public.get_my_mechanic_quotes()
+returns table (
+  id uuid,
+  request_id uuid,
+  mechanic_id uuid,
+  amount numeric,
+  currency text,
+  diagnosis text,
+  status text,
+  expires_at timestamptz,
+  created_at timestamptz,
+  mechanic_name text,
+  mechanic_phone text
+)
+language sql stable security definer
+set search_path = pg_catalog, public
+as $function$
+  select
+    q.id,q.request_id,q.mechanic_id,q.amount,q.currency,q.diagnosis,
+    q.status,q.expires_at,q.created_at,
+    m.display_name,m.phone
+  from public.mechanic_quotes q
+  join public.mechanic_requests r on r.id=q.request_id
+  join public.mechanics m on m.id=q.mechanic_id
+  where r.customer_id=(select auth.uid())
+     or m.user_id=(select auth.uid())
+  order by q.created_at desc
+  limit 100;
+$function$;
+
+create or replace function public.accept_mechanic_quote(p_quote_id uuid)
+returns uuid
+language plpgsql security definer
+set search_path = pg_catalog, public
+as $function$
+declare
+  v_user uuid := (select auth.uid());
+  v_quote public.mechanic_quotes%rowtype;
+  v_customer uuid;
+  v_intervention uuid;
+begin
+  if v_user is null then raise exception 'not_authenticated'; end if;
+  perform private.require_active_account();
+
+  select q.* into v_quote
+  from public.mechanic_quotes q
+  join public.mechanic_requests r on r.id=q.request_id
+  where q.id=p_quote_id and r.customer_id=v_user
+  for update of q,r;
+
+  if not found then raise exception 'quote_not_found'; end if;
+  if v_quote.status<>'PENDING'
+     or (v_quote.expires_at is not null and v_quote.expires_at<=now()) then
+    raise exception 'quote_unavailable';
+  end if;
+
+  select customer_id into v_customer
+  from public.mechanic_requests
+  where id=v_quote.request_id
+    and status in ('OPEN','REQUESTED','QUOTED')
+  for update;
+
+  if not found then raise exception 'mechanic_request_unavailable'; end if;
+
+  update public.mechanic_quotes
+  set status='ACCEPTED'
+  where id=p_quote_id;
+
+  update public.mechanic_quotes
+  set status='REJECTED'
+  where request_id=v_quote.request_id
+    and id<>p_quote_id
+    and status='PENDING';
+
+  insert into public.mechanic_interventions(
+    request_id,mechanic_id,quote_id,status,final_amount
+  ) values (
+    v_quote.request_id,v_quote.mechanic_id,v_quote.id,'ACCEPTED',v_quote.amount
+  ) returning id into v_intervention;
+
+  update public.mechanic_requests
+  set status='ACCEPTED'
+  where id=v_quote.request_id;
+
+  return v_intervention;
+end;
+$function$;
+
+revoke all on function public.get_matching_mechanic_requests() from public,anon;
+revoke all on function public.submit_mechanic_quote(uuid,numeric,text,timestamptz) from public,anon;
+revoke all on function public.get_my_mechanic_quotes() from public,anon;
+revoke all on function public.accept_mechanic_quote(uuid) from public,anon;
+grant execute on function public.get_matching_mechanic_requests() to authenticated;
+grant execute on function public.submit_mechanic_quote(uuid,numeric,text,timestamptz) to authenticated;
+grant execute on function public.get_my_mechanic_quotes() to authenticated;
+grant execute on function public.accept_mechanic_quote(uuid) to authenticated;
 
 commit;
