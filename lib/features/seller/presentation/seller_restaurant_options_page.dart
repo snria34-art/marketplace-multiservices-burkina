@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/providers/repository_providers.dart';
 import '../../../core/utils/xof_formatter.dart';
+import '../data/restaurant_formula_price_validation.dart';
 
 class SellerRestaurantOptionsPage extends ConsumerStatefulWidget {
   const SellerRestaurantOptionsPage({super.key});
@@ -220,9 +221,17 @@ class _SellerRestaurantOptionsPageState
         _show('Créez d’abord des produits actifs dans votre boutique.');
         return;
       }
+      final existingOptions = _maps(existing?['restaurant_menu_item_options']);
       final selected = <String>{
-        for (final option in _maps(existing?['restaurant_menu_item_options']))
-          if (option['linked_product_id'] != null) option['linked_product_id'].toString(),
+        for (final option in existingOptions)
+          if (option['linked_product_id'] != null)
+            option['linked_product_id'].toString(),
+      };
+      final priceDeltas = <String, String>{
+        for (final option in existingOptions)
+          if (option['linked_product_id'] != null)
+            option['linked_product_id'].toString():
+                option['price_delta']?.toString() ?? '0',
       };
       final defaultName = componentType == 'MAIN'
           ? 'Plat de la formule'
@@ -241,26 +250,61 @@ class _SellerRestaurantOptionsPageState
               width: 460,
               child: SingleChildScrollView(
                 child: Column(mainAxisSize: MainAxisSize.min, children: [
-                  Text('Choisissez les produits réels qui seront proposés dans cette partie de la formule. Un seul choix sera demandé au client.'),
+                  const Text(
+                    'Choisissez les produits proposés dans cette partie de la formule. '
+                    'Vous fixez le supplément en XOF pour chaque choix ; 0 signifie inclus.',
+                  ),
                   const SizedBox(height: 8),
-                  for (final product in products)
+                  for (final product in products) ...[
                     CheckboxListTile(
                       dense: true,
                       value: selected.contains(product['id'].toString()),
                       title: Text(product['name']?.toString() ?? 'Produit'),
-                      subtitle: Text(formatXof(num.tryParse(product['price']?.toString() ?? '0') ?? 0)),
+                      subtitle: Text(
+                        'Prix catalogue : ${formatXof(num.tryParse(product['price']?.toString() ?? '0') ?? 0)}',
+                      ),
                       onChanged: (value) => setDialogState(() {
                         final id = product['id'].toString();
-                        if (value == true) { selected.add(id); } else { selected.remove(id); }
+                        if (value == true) {
+                          selected.add(id);
+                          priceDeltas.putIfAbsent(id, () => '0');
+                        } else {
+                          selected.remove(id);
+                        }
                       }),
                     ),
+                    if (selected.contains(product['id'].toString()))
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                        child: TextFormField(
+                          key: ValueKey('formula-price-${product['id']}'),
+                          initialValue:
+                              priceDeltas[product['id'].toString()] ?? '0',
+                          keyboardType:
+                              const TextInputType.numberWithOptions(decimal: true),
+                          decoration: const InputDecoration(
+                            labelText: 'Supplément facturé (XOF)',
+                            helperText: '0 = inclus dans le prix de la formule',
+                            border: OutlineInputBorder(),
+                          ),
+                          onChanged: (value) {
+                            priceDeltas[product['id'].toString()] = value;
+                          },
+                        ),
+                      ),
+                  ],
                 ]),
               ),
             ),
             actions: [
-              TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Annuler')),
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: const Text('Annuler'),
+              ),
               FilledButton(
-                onPressed: selected.isEmpty ? null : () => Navigator.pop(dialogContext, selected.toList()),
+                onPressed: selected.isEmpty
+                    ? null
+                    : () => Navigator.pop(dialogContext, selected.toList()),
                 child: const Text('Enregistrer les choix'),
               ),
             ],
@@ -268,15 +312,32 @@ class _SellerRestaurantOptionsPageState
         ),
       );
       if (!mounted || chosen == null) return;
-      final byId = {for (final product in products) product['id'].toString(): product};
-      final payload = chosen.map((id) {
-        final product = byId[id]!;
-        return <String, dynamic>{
+      final byId = {
+        for (final product in products) product['id'].toString(): product,
+      };
+      final payload = <Map<String, dynamic>>[];
+      for (final id in chosen) {
+        final product = byId[id];
+        if (product == null) {
+          _show('Un produit sélectionné n’est plus disponible. Actualisez la liste.');
+          return;
+        }
+        final priceDelta = parseRestaurantFormulaPriceDelta(
+          priceDeltas[id] ?? '0',
+        );
+        if (priceDelta == null) {
+          _show(
+            'Supplément invalide pour ${product['name'] ?? 'ce produit'}. '
+            'Saisissez un montant positif ou nul, inférieur ou égal à 100 000 000 XOF.',
+          );
+          return;
+        }
+        payload.add({
           'product_id': id,
           'name': product['name']?.toString() ?? 'Produit',
-          'price_delta': 0,
-        };
-      }).toList();
+          'price_delta': priceDelta,
+        });
+      }
       await repository.saveFormulaComponent(
         groupId: existing?['id']?.toString(),
         menuItemId: item['id'].toString(),
