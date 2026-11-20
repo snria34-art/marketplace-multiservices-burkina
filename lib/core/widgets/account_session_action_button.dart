@@ -45,7 +45,7 @@ class _AccountSessionActionButtonState
   }
 
   Future<void> _handlePressed() async {
-    final client = ref.read(supabaseProvider);
+    final client = ref.read(marketplaceAuthenticationClientProvider);
 
     if (client == null) {
       _showMessage('Le service de connexion est indisponible.');
@@ -86,7 +86,7 @@ class _AccountSessionActionButtonState
 
   @override
   Widget build(BuildContext context) {
-    final client = ref.watch(supabaseProvider);
+    final client = ref.watch(marketplaceAuthenticationClientProvider);
     final isSignedIn = client?.auth.currentUser != null;
 
     return IconButton(
