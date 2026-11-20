@@ -11,7 +11,8 @@
       "INSD ASN 2024, tableau 1.1.01",
       "INSD ASN 2024, tableau 1.1.03",
       "INSD ASN 2024, tableau 1.1.04"
-    ]
+    ],
+    "administrativeDetail": "Le tableau INSD 1.1.01 désigne explicitement les 12 arrondissements de Ouagadougou et les 7 arrondissements de Bobo-Dioulasso comme unités communales dans les provinces de Kadiogo et Houet. L'interface peut proposer les villes parentes Ouagadougou et Bobo-Dioulasso pour permettre ensuite la sélection de l'arrondissement."
   },
   "sources": [
     "https://www.presidencedufaso.bf/conseil-des-ministres-du-2-juillet-2025/",
@@ -148,7 +149,13 @@
         {
           "name": "Houet",
           "communes": [
-            "Bobo-Dioulasso",
+            "Arrondissement n°1",
+            "Arrondissement n°2",
+            "Arrondissement n°3",
+            "Arrondissement n°4",
+            "Arrondissement n°5",
+            "Arrondissement n°6",
+            "Arrondissement n°7",
             "Bama",
             "Dandé",
             "Faramana",
@@ -202,7 +209,18 @@
         {
           "name": "Kadiogo",
           "communes": [
-            "Ouagadougou",
+            "Arrondissement n°1",
+            "Arrondissement n°10",
+            "Arrondissement n°11",
+            "Arrondissement n°12",
+            "Arrondissement n°2",
+            "Arrondissement n°3",
+            "Arrondissement n°4",
+            "Arrondissement n°5",
+            "Arrondissement n°6",
+            "Arrondissement n°7",
+            "Arrondissement n°8",
+            "Arrondissement n°9",
             "Komki-Ipala",
             "Komsilga",
             "Koubri",
@@ -214,7 +232,7 @@
       ]
     },
     {
-      "name": "Kuilsé",
+      "name": "Koulsé",
       "aliasInInSD": "Koulsé",
       "capital": "Kaya",
       "provinces": [
@@ -303,7 +321,7 @@
     },
     {
       "name": "Nakambé",
-      "aliasInInSD": "Nakambe",
+      "aliasInInSD": "Nakambé",
       "capital": "Tenkodogo",
       "provinces": [
         {
@@ -595,7 +613,7 @@
       ]
     },
     {
-      "name": "Tannounyan",
+      "name": "Tannouny",
       "aliasInInSD": "Tannouny",
       "capital": "Banfora",
       "provinces": [
@@ -832,7 +850,8 @@
           ]
         }
       ],
-      "sourceTable": "INSD ASN 2024, Tableau 1.1.03"
+      "sourceTable": "INSD ASN 2024, Tableau 1.1.03",
+      "displayName": "Ouagadougou"
     },
     "BoboDioulasso": {
       "displayName": "Bobo-Dioulasso",
