@@ -54,6 +54,34 @@ class RestaurantRepository {
     return Map<String, dynamic>.from(response);
   }
 
+
+  Future<List<Map<String, dynamic>>> sellerMenuItems() async {
+    final user = client.auth.currentUser;
+    if (user == null) throw StateError('Authentification requise.');
+
+    final seller = await client
+        .from('sellers')
+        .select('id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+    final sellerId = seller?['id']?.toString();
+    if (sellerId == null || sellerId.isEmpty) {
+      throw StateError('Profil vendeur introuvable.');
+    }
+
+    final rows = await client
+        .from('restaurant_profiles')
+        .select(
+          'id,shop_id,shops!inner(name,seller_id),restaurant_menus!inner(id,name,restaurant_menu_items!inner(id,name,description,price,active,restaurant_menu_item_option_groups(id,name,selection_type,min_selections,max_selections,sort_order,restaurant_menu_item_options(id,name,price_delta,sort_order))))',
+        )
+        .eq('shops.seller_id', sellerId)
+        .order('created_at', ascending: false);
+
+    return (rows as List)
+        .map((row) => Map<String, dynamic>.from(row as Map))
+        .toList();
+  }
+
   Future<List<Map<String, dynamic>>> restaurants() async {
     final rows = await client
         .from('restaurant_profiles')
