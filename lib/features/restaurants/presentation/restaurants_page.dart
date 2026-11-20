@@ -228,7 +228,7 @@ class _RestaurantsPageState extends ConsumerState<RestaurantsPage> {
                     final result = results[index];
                     final cuisines = result['cuisine_types'];
                     final cuisineLabels = cuisines is List
-                        ? cuisines.map((value) => value.toString()).join(' · ')
+                        ? cuisines.map((value) => _cuisineLabel(value.toString())).join(' · ')
                         : '';
                     final item = <String, dynamic>{
                       'id': result['menu_item_id'],
@@ -281,6 +281,13 @@ class _RestaurantsPageState extends ConsumerState<RestaurantsPage> {
         ],
       ),
     );
+  }
+
+  String _cuisineLabel(String value) {
+    for (final cuisine in _cuisines) {
+      if (cuisine.$1 == value) return cuisine.$2;
+    }
+    return value;
   }
 
   String _restaurantTypeLabel(String? value) {
