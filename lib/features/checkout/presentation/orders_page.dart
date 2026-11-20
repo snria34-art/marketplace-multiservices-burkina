@@ -28,7 +28,7 @@ class _OrdersPageState extends ConsumerState<OrdersPage> {
 
   @override
   Widget build(BuildContext context) {
-    final client = ref.watch(supabaseProvider);
+    final client = ref.watch(marketplaceCustomerClientProvider);
 
     if (client?.auth.currentUser == null) {
       return const Scaffold(
