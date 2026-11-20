@@ -36,7 +36,7 @@ class _OrderDetailsPageState extends ConsumerState<OrderDetailsPage> {
   }
 
   Future<void> _startRealtime() async {
-    final client = ref.read(supabaseProvider);
+    final client = ref.read(marketplaceCustomerClientProvider);
     if (client == null || client.auth.currentUser == null) return;
 
     // Packages are linked to an order through order_groups. Resolve the group
@@ -151,7 +151,7 @@ class _OrderDetailsPageState extends ConsumerState<OrderDetailsPage> {
 
   @override
   void dispose() {
-    final client = ref.read(supabaseProvider);
+    final client = ref.read(marketplaceCustomerClientProvider);
     final channel = _orderChannel;
     _orderChannel = null;
     if (client != null && channel != null) {
@@ -161,7 +161,7 @@ class _OrderDetailsPageState extends ConsumerState<OrderDetailsPage> {
   }
 
   Future<_OrderDetails> _load() async {
-    final client = ref.read(supabaseProvider);
+    final client = ref.read(marketplaceCustomerClientProvider);
     final user = client?.auth.currentUser;
     if (client == null || user == null) {
       throw StateError('Authentification requise.');
@@ -376,7 +376,7 @@ class _OrderDetailsPageState extends ConsumerState<OrderDetailsPage> {
     }
 
     try {
-      final client = ref.read(supabaseProvider);
+      final client = ref.read(marketplaceCustomerClientProvider);
       if (client == null) throw StateError('Service indisponible.');
       await client.rpc('request_refund', params: {
         'p_order_id': widget.orderId,
@@ -430,7 +430,7 @@ class _OrderDetailsPageState extends ConsumerState<OrderDetailsPage> {
     if (!mounted || reason == null) return;
 
     try {
-      final client = ref.read(supabaseProvider);
+      final client = ref.read(marketplaceCustomerClientProvider);
       if (client == null) throw StateError('Service indisponible.');
       final id = await client.rpc(
         'open_dispute',
@@ -486,7 +486,7 @@ class _OrderDetailsPageState extends ConsumerState<OrderDetailsPage> {
     if (!mounted || reason == null) return;
 
     try {
-      final client = ref.read(supabaseProvider);
+      final client = ref.read(marketplaceCustomerClientProvider);
       if (client == null) throw StateError('Service indisponible.');
       final id = await client.rpc(
         'open_return',
@@ -515,7 +515,7 @@ class _OrderDetailsPageState extends ConsumerState<OrderDetailsPage> {
     );
     if (!mounted || form == null) return;
 
-    final client = ref.read(supabaseProvider);
+    final client = ref.read(marketplaceCustomerClientProvider);
     final user = client?.auth.currentUser;
     if (client == null || user == null) {
       _showReviewMessage('Session indisponible. Votre avis n’a pas été envoyé.');
