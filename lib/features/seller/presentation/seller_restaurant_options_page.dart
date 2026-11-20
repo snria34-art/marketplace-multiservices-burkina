@@ -2,12 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/providers/repository_providers.dart';
+import '../../../core/engine/marketplace_engine.dart';
 import '../../../core/utils/xof_formatter.dart';
 import '../../restaurants/data/restaurant_repository.dart';
 
 final sellerRestaurantRepositoryProvider =
     Provider<RestaurantRepository?>((ref) {
-  final client = ref.watch(supabaseProvider);
+  final engine = ref.watch(marketplaceEngineProvider);
+  if (engine.stateFor(MarketplaceCapability.configureRestaurantCatalog) !=
+      CapabilityState.available) {
+    return null;
+  }
+  final client = engine.backendClient;
   return client == null ? null : RestaurantRepository(client);
 });
 
