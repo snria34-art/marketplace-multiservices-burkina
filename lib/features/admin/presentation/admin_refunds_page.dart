@@ -24,7 +24,7 @@ class _AdminRefundsPageState extends ConsumerState<AdminRefundsPage> {
   }
 
   Future<List<Map<String, dynamic>>> _load() async {
-    final client = ref.read(supabaseProvider);
+    final client = ref.read(marketplaceAdminClientProvider);
     if (client == null || client.auth.currentUser == null) {
       throw StateError('Authentification requise.');
     }
@@ -44,7 +44,7 @@ class _AdminRefundsPageState extends ConsumerState<AdminRefundsPage> {
   Future<void> _approve(String refundId) async {
     await _runAction(
       () async {
-        final client = ref.read(supabaseProvider);
+        final client = ref.read(marketplaceAdminClientProvider);
         if (client == null) throw StateError('Connexion Supabase indisponible.');
         return await client.rpc(
           'admin_approve_refund',
@@ -83,7 +83,7 @@ class _AdminRefundsPageState extends ConsumerState<AdminRefundsPage> {
 
     await _runAction(
       () async {
-        final client = ref.read(supabaseProvider);
+        final client = ref.read(marketplaceAdminClientProvider);
         if (client == null) throw StateError('Connexion Supabase indisponible.');
         return await client.rpc(
           'admin_reject_refund',
@@ -98,7 +98,7 @@ class _AdminRefundsPageState extends ConsumerState<AdminRefundsPage> {
   }
 
   Future<void> _ensureAllocation(String refundId) async {
-    final client = ref.read(supabaseProvider);
+    final client = ref.read(marketplaceAdminClientProvider);
     if (client == null) throw StateError('Connexion Supabase indisponible.');
 
     final existing = await client.rpc(
@@ -228,7 +228,7 @@ class _AdminRefundsPageState extends ConsumerState<AdminRefundsPage> {
 
     await _runAction(
       () async {
-        final client = ref.read(supabaseProvider);
+        final client = ref.read(marketplaceAdminClientProvider);
         if (client == null) throw StateError('Connexion Supabase indisponible.');
         await _ensureAllocation(refundId);
         return await client.rpc(
@@ -245,7 +245,7 @@ class _AdminRefundsPageState extends ConsumerState<AdminRefundsPage> {
   Future<void> _reconcile(String refundId) async {
     await _runAction(
       () async {
-        final client = ref.read(supabaseProvider);
+        final client = ref.read(marketplaceAdminClientProvider);
         if (client == null) throw StateError('Connexion Supabase indisponible.');
         return await client.rpc(
           'reconcile_refund_accounting',
@@ -285,7 +285,7 @@ class _AdminRefundsPageState extends ConsumerState<AdminRefundsPage> {
 
     await _runAction(
       () async {
-        final client = ref.read(supabaseProvider);
+        final client = ref.read(marketplaceAdminClientProvider);
         if (client == null) throw StateError('Connexion Supabase indisponible.');
         await _ensureAllocation(refundId);
         await client.rpc(
@@ -305,7 +305,7 @@ class _AdminRefundsPageState extends ConsumerState<AdminRefundsPage> {
   }
 
   Future<void> _execute(String refundId) async {
-    final client = ref.read(supabaseProvider);
+    final client = ref.read(marketplaceAdminClientProvider);
     if (client == null) return;
 
     await _runAction(() async {
