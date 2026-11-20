@@ -3,13 +3,6 @@ import 'package:image_picker/image_picker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/providers/repository_providers.dart';
-import '../data/seller_products_repository.dart';
-
-final sellerProductsRepositoryProvider =
-    Provider<SellerProductsRepository?>((ref) {
-  final client = ref.watch(supabaseProvider);
-  return client == null ? null : SellerProductsRepository(client);
-});
 
 class SellerProductsPage extends ConsumerStatefulWidget {
   const SellerProductsPage({super.key});
