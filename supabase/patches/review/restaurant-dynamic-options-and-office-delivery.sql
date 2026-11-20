@@ -261,6 +261,7 @@ declare
   v_user uuid := (select auth.uid());
   v_id uuid;
   v_option_group uuid;
+  v_option_kind text;
 begin
   perform private.require_active_account();
   if v_user is null then raise exception 'not_authenticated'; end if;
@@ -272,7 +273,7 @@ begin
     raise exception 'product_option_level_invalid';
   end if;
 
-  select g.id into v_option_group
+  select g.id,o.option_kind into v_option_group,v_option_kind
   from public.product_options o
   join public.product_option_groups g on g.id=o.group_id
   join public.products p on p.id=g.product_id
@@ -281,6 +282,9 @@ begin
   where o.id=p_option_id and s.user_id=v_user;
 
   if v_option_group is null then raise exception 'product_option_not_owned'; end if;
+  if v_option_kind='REMOVE' and p_price_delta<>0 then
+    raise exception 'removal_option_cannot_cost_extra';
+  end if;
 
   if p_level_id is null then
     insert into public.product_option_levels(
