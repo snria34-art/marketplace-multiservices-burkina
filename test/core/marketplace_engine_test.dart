@@ -14,6 +14,28 @@ void main() {
       );
     });
 
+    test('public discovery capabilities work for guests when backend is configured', () {
+      const capabilities = [
+        MarketplaceCapability.discoverRestaurants,
+        MarketplaceCapability.discoverGroupBuys,
+        MarketplaceCapability.discoverMechanics,
+        MarketplaceCapability.discoverServices,
+        MarketplaceCapability.discoverTransport,
+        MarketplaceCapability.discoverVerticals,
+      ];
+      for (final capability in capabilities) {
+        expect(
+          MarketplaceEngine.capabilityState(
+            capability,
+            backendConfigured: true,
+            authenticated: false,
+          ),
+          CapabilityState.available,
+          reason: '$capability should be public discovery',
+        );
+      }
+    });
+
     test('restaurant discovery requires backend but not a customer login', () {
       expect(
         MarketplaceEngine.capabilityState(
@@ -67,8 +89,26 @@ void main() {
     });
 
     test('authenticated server-backed actions become available', () {
-      for (final capability in MarketplaceCapability.values) {
-        if (capability == MarketplaceCapability.browseCatalog) continue;
+      const protectedCapabilities = [
+        MarketplaceCapability.configureRestaurantCatalog,
+        MarketplaceCapability.manageCart,
+        MarketplaceCapability.placeOrder,
+        MarketplaceCapability.trackDelivery,
+        MarketplaceCapability.courierOperations,
+        MarketplaceCapability.manageFollows,
+        MarketplaceCapability.useMessaging,
+        MarketplaceCapability.readNotifications,
+        MarketplaceCapability.reserveTransport,
+        MarketplaceCapability.requestMechanicService,
+        MarketplaceCapability.requestProfessionalService,
+        MarketplaceCapability.manageVerticalWorkflows,
+        MarketplaceCapability.manageSellerCatalog,
+        MarketplaceCapability.readSellerFinance,
+        MarketplaceCapability.readWallet,
+        MarketplaceCapability.requestPayout,
+        MarketplaceCapability.administerPlatform,
+      ];
+      for (final capability in protectedCapabilities) {
         expect(
           MarketplaceEngine.capabilityState(
             capability,
