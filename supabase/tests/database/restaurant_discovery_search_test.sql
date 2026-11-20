@@ -1,5 +1,5 @@
 begin;
-select plan(9);
+select plan(10);
 
 select ok(
   exists (
@@ -37,6 +37,16 @@ select ok(
   has_function_privilege('anon','public.search_restaurant_catalog(text,text,text,integer)','EXECUTE')
   and has_function_privilege('authenticated','public.search_restaurant_catalog(text,text,text,integer)','EXECUTE'),
   'restaurant search is available to guests and signed-in customers'
+);
+
+select ok(
+  exists (
+    select 1 from pg_policies
+    where schemaname='public' and tablename='restaurant_profiles'
+      and policyname='restaurant_seller_discovery_profile_update'
+      and cmd='UPDATE' and 'authenticated' = any(roles::text[])
+  ),
+  'restaurant sellers have an owner-scoped update policy'
 );
 
 select ok(
