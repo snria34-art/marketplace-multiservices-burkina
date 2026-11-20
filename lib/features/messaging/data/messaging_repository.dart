@@ -1,9 +1,16 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../../core/engine/marketplace_resilience.dart';
+
 class MessagingRepository {
-  const MessagingRepository(this.client);
+  const MessagingRepository(this.client, {this.resilience});
 
   final SupabaseClient client;
+  final MarketplaceResilience? resilience;
+  static final _fallbackResilience = MarketplaceResilience();
+  MarketplaceResilience get _retry => resilience ?? _fallbackResilience;
+
+  Future<T> _read<T>(Future<T> Function() operation) => _retry.read(operation);
 
   Future<String> createSupportConversation() async {
     final raw = await client.rpc('create_support_conversation');
@@ -14,10 +21,10 @@ class MessagingRepository {
     final user = client.auth.currentUser;
     if (user == null) return const [];
 
-    final members = await client
+    final members = await _read(() async => await client
         .from('conversation_members')
         .select('conversation_id')
-        .eq('user_id', user.id);
+        .eq('user_id', user.id));
 
     final ids = (members as List)
         .map((row) => (row as Map)['conversation_id']?.toString())
@@ -26,11 +33,11 @@ class MessagingRepository {
 
     if (ids.isEmpty) return const [];
 
-    final rows = await client
+    final rows = await _read(() async => await client
         .from('conversations')
         .select('id,order_id,type,created_at')
         .inFilter('id', ids)
-        .order('created_at', ascending: false);
+        .order('created_at', ascending: false));
 
     return (rows as List)
         .map((row) => Map<String, dynamic>.from(row as Map))
@@ -40,12 +47,12 @@ class MessagingRepository {
   Future<List<Map<String, dynamic>>> messages(
     String conversationId,
   ) async {
-    final rows = await client
+    final rows = await _read(() async => await client
         .from('messages')
         .select('id,conversation_id,sender_id,body,status,created_at')
         .eq('conversation_id', conversationId)
         .order('created_at', ascending: false)
-        .limit(200);
+        .limit(200));
 
     final result = (rows as List)
         .map((row) => Map<String, dynamic>.from(row as Map))
