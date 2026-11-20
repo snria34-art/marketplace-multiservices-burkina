@@ -29,7 +29,7 @@ class _NotificationsPageState
   }
 
   void _startRealtime() {
-    final client = ref.read(supabaseProvider);
+    final client = ref.read(marketplaceNotificationClientProvider);
     final user = client?.auth.currentUser;
     if (client == null || user == null) return;
 
@@ -71,7 +71,7 @@ class _NotificationsPageState
 
   @override
   void dispose() {
-    final client = ref.read(supabaseProvider);
+    final client = ref.read(marketplaceNotificationClientProvider);
     final channel = _notificationsChannel;
     _notificationsChannel = null;
     if (client != null && channel != null) {
@@ -113,7 +113,7 @@ class _NotificationsPageState
 
   @override
   Widget build(BuildContext context) {
-    if (ref.watch(supabaseProvider)?.auth.currentUser == null) {
+    if (ref.watch(marketplaceNotificationClientProvider)?.auth.currentUser == null) {
       return const Scaffold(
         body: Center(
           child: Text('Connectez-vous pour voir vos notifications.'),
