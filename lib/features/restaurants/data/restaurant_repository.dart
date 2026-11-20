@@ -139,11 +139,12 @@ class RestaurantRepository {
     required String menuItemId,
     required String productId,
   }) async {
-    final row = await client.from('restaurant_menu_items')
+    final row = await client
+        .from('restaurant_menu_items')
         .update({'product_id': productId})
         .eq('id', menuItemId)
         .select('id,product_id')
-        .maybeSingle());
+        .maybeSingle();
     if (row == null || row['product_id']?.toString() != productId) {
       throw StateError('Liaison produit non autorisée ou introuvable.');
     }
@@ -157,13 +158,13 @@ class RestaurantRepository {
         .from('sellers')
         .select('id')
         .eq('user_id', user.id)
-        .maybeSingle();
+        .maybeSingle());
     final sellerId = seller?['id']?.toString();
     if (sellerId == null || sellerId.isEmpty) {
       throw StateError('Profil vendeur introuvable.');
     }
 
-    final rows = await client
+    final rows = await _read(() async => await client
         .from('restaurant_profiles')
         .select(
           'id,shop_id,restaurant_type,cuisine_types,shops!inner(name,seller_id),restaurant_menus!inner(id,name,restaurant_menu_items!inner(id,product_id,products(price),name,description,price,active,restaurant_menu_item_option_groups(id,name,component_type,selection_type,min_selections,max_selections,sort_order,restaurant_menu_item_options(id,name,price_delta,linked_product_id,sort_order))))',
@@ -175,7 +176,6 @@ class RestaurantRepository {
         .map((row) => Map<String, dynamic>.from(row as Map))
         .toList();
   }
-
 
   Future<void> saveDiscoveryProfile({
     required String restaurantId,
@@ -198,8 +198,7 @@ class RestaurantRepository {
     String? cuisineType,
     int limit = 100,
   }) async {
-    final response = await _resilience.run(
-      () => client.rpc(
+    final response = await _read(() => client.rpc(
       'search_restaurant_catalog',
       params: {
         'p_query': query.trim().isEmpty ? null : query.trim(),
@@ -207,10 +206,7 @@ class RestaurantRepository {
         'p_cuisine_type': cuisineType,
         'p_limit': limit,
       },
-    ),
-      retrySafe: true,
-      isRetryable: (error) => error is TimeoutException,
-    );
+    ));
     if (response is! List) {
       throw StateError('Réponse de recherche restaurant invalide.');
     }
