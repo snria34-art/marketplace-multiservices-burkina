@@ -30,7 +30,7 @@ class _NotificationPreferencesPageState
   }
 
   Future<void> _load() async {
-    final client = ref.read(supabaseProvider);
+    final client = ref.read(marketplaceNotificationClientProvider);
     final user = client?.auth.currentUser;
     if (client == null || user == null) {
       if (mounted) setState(() => _loading = false);
@@ -59,7 +59,7 @@ class _NotificationPreferencesPageState
   }
 
   Future<void> _save() async {
-    final client = ref.read(supabaseProvider);
+    final client = ref.read(marketplaceNotificationClientProvider);
     final user = client?.auth.currentUser;
     if (client == null || user == null) return;
 
@@ -95,7 +95,7 @@ class _NotificationPreferencesPageState
 
   @override
   Widget build(BuildContext context) {
-    final user = ref.watch(supabaseProvider)?.auth.currentUser;
+    final user = ref.watch(marketplaceNotificationClientProvider)?.auth.currentUser;
     if (user == null) {
       return const Scaffold(
         body: Center(
