@@ -22,7 +22,7 @@ class _AdminReturnPoliciesPageState extends ConsumerState<AdminReturnPoliciesPag
   }
 
   Future<List<Map<String, dynamic>>> _load() async {
-    final client = ref.read(supabaseProvider);
+    final client = ref.read(marketplaceAdminClientProvider);
     if (client == null || client.auth.currentUser == null) {
       throw StateError('Authentification administrateur requise.');
     }
@@ -36,7 +36,7 @@ class _AdminReturnPoliciesPageState extends ConsumerState<AdminReturnPoliciesPag
     if (_saving.contains(id)) return;
     setState(() => _saving.add(id));
     try {
-      final client = ref.read(supabaseProvider);
+      final client = ref.read(marketplaceAdminClientProvider);
       if (client == null) throw StateError('Service indisponible.');
       await client.rpc('admin_set_return_window', params: {
         'p_category_id': id,
