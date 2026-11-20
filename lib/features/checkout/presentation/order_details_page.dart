@@ -12,6 +12,7 @@ import '../../../core/media/video_preview_controller_factory.dart';
 import '../../../core/media/upload_media_validator.dart';
 import '../../../core/errors/backend_error_message.dart';
 import '../../../core/providers/repository_providers.dart';
+import '../../../core/utils/xof_formatter.dart';
 import '../models/xof_amount.dart';
 
 class OrderDetailsPage extends ConsumerStatefulWidget {
@@ -723,9 +724,7 @@ class _OrderDetailsPageState extends ConsumerState<OrderDetailsPage> {
                     displayStatus + ' • ' + (order['created_at']?.toString() ?? ''),
                   ),
                   trailing: Text(
-                    (order['total']?.toString() ?? '0') +
-                        ' ' +
-                        (order['currency']?.toString() ?? 'XOF'),
+                    formatXof(num.tryParse(order['total']?.toString() ?? '0') ?? 0),
                   ),
                 ),
               ),
@@ -740,9 +739,7 @@ class _OrderDetailsPageState extends ConsumerState<OrderDetailsPage> {
                           (data.payment!['status']?.toString() ?? '-'),
                     ),
                     trailing: Text(
-                      (data.payment!['amount']?.toString() ?? '0') +
-                          ' ' +
-                          (data.payment!['currency']?.toString() ?? 'XOF'),
+                      formatXof(num.tryParse(data.payment!['amount']?.toString() ?? '0') ?? 0),
                     ),
                   ),
                 ),
@@ -773,7 +770,7 @@ class _OrderDetailsPageState extends ConsumerState<OrderDetailsPage> {
                     ),
                     subtitle: Text(
                       _statusLabel(group['status']?.toString()) +
-                          ' • ' + (group['subtotal']?.toString() ?? '0') + ' XOF',
+                          ' • ' + formatXof(num.tryParse(group['subtotal']?.toString() ?? '0') ?? 0),
                     ),
                     children: [
                       ..._items(
@@ -942,7 +939,7 @@ class _OrderDetailsPageState extends ConsumerState<OrderDetailsPage> {
               Map<String, dynamic>.from(choice)).toList()
           : const <Map<String, dynamic>>[];
       final choicesLabel = customizations.map((choice) =>
-          '${choice['option_name']} (+${choice['price_delta']} XOF)').join(', ');
+          '${choice['option_name']} (+${formatXof(num.tryParse(choice['price_delta']?.toString() ?? '0') ?? 0)})').join(', ');
 
       return ListTile(
         title: Text(item['product_name']?.toString() ?? 'Article'),
@@ -950,8 +947,7 @@ class _OrderDetailsPageState extends ConsumerState<OrderDetailsPage> {
           'Quantité : ' +
               (item['quantity']?.toString() ?? '0') +
               ' • ' +
-              (item['total_price']?.toString() ?? '0') +
-              ' XOF' +
+              formatXof(num.tryParse(item['total_price']?.toString() ?? '0') ?? 0) +
               (choicesLabel.isEmpty ? '' : '\nChoix : ' + choicesLabel),
         ),
         trailing: delivered
