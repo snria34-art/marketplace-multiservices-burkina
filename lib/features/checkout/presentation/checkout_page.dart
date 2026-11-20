@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/location/device_location_service.dart';
+import '../../../core/location/burkina_location_directory.dart';
 import '../../../core/errors/backend_error_message.dart';
 import '../../../core/providers/repository_providers.dart';
 
@@ -504,9 +505,23 @@ class _AddressDialogState extends State<_AddressDialog> {
   final _recipient = TextEditingController();
   final _phone = TextEditingController();
   final _address = TextEditingController();
+  final _neighborhood = TextEditingController();
   final _city = TextEditingController();
   final _latitude = TextEditingController();
   final _longitude = TextEditingController();
+
+  late final Future<BurkinaLocationDirectory> _directoryFuture;
+  String? _selectedRegion;
+  String? _selectedProvince;
+  String? _selectedCommune;
+  int? _selectedArrondissement;
+  String? _selectedSectorOrVillage;
+
+  @override
+  void initState() {
+    super.initState();
+    _directoryFuture = BurkinaLocationDirectory.load();
+  }
 
   @override
   void dispose() {
@@ -514,6 +529,7 @@ class _AddressDialogState extends State<_AddressDialog> {
     _recipient.dispose();
     _phone.dispose();
     _address.dispose();
+    _neighborhood.dispose();
     _city.dispose();
     _latitude.dispose();
     _longitude.dispose();
@@ -531,9 +547,230 @@ class _AddressDialogState extends State<_AddressDialog> {
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(safeBackendErrorMessage(error, fallback: 'Position indisponible. Vérifiez les autorisations de localisation et réessayez.'))),
+        SnackBar(
+          content: Text(
+            safeBackendErrorMessage(
+              error,
+              fallback: 'Position indisponible. Vérifiez les autorisations de localisation et réessayez.',
+            ),
+          ),
+        ),
       );
     }
+  }
+
+  Widget _administrativeFields(BurkinaLocationDirectory directory) {
+    final provinces = directory.provincesFor(_selectedRegion);
+    final communes = directory.communesFor(
+      _selectedRegion,
+      _selectedProvince,
+    );
+    final city = _city.text.trim().isNotEmpty
+        ? _city.text.trim()
+        : (_selectedCommune ?? '');
+    final arrondissements = directory.arrondissementsFor(city);
+    final areaOptions = <String>[
+      ...directory.sectorsFor(city, _selectedArrondissement)
+          .map((sector) => 'Secteur $sector'),
+      ...directory.attachedVillagesFor(city, _selectedArrondissement),
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          'Référentiel administratif officiel',
+          style: Theme.of(context).textTheme.titleSmall,
+        ),
+        const SizedBox(height: 8),
+        DropdownButtonFormField<String>(
+          initialValue: _selectedRegion,
+          isExpanded: true,
+          decoration: const InputDecoration(
+            labelText: 'Région',
+            hintText: 'Sélectionner la région',
+          ),
+          items: directory.regionNames
+              .map(
+                (name) => DropdownMenuItem<String>(
+                  value: name,
+                  child: Text(name),
+                ),
+              )
+              .toList(),
+          onChanged: (value) {
+            setState(() {
+              _selectedRegion = value;
+              _selectedProvince = null;
+              _selectedCommune = null;
+              _city.clear();
+              _selectedArrondissement = null;
+              _selectedSectorOrVillage = null;
+            });
+          },
+        ),
+        const SizedBox(height: 8),
+        DropdownButtonFormField<String>(
+          initialValue: provinces.contains(_selectedProvince)
+              ? _selectedProvince
+              : null,
+          isExpanded: true,
+          decoration: const InputDecoration(
+            labelText: 'Province',
+            hintText: 'Sélectionner la province',
+          ),
+          items: provinces
+              .map(
+                (name) => DropdownMenuItem<String>(
+                  value: name,
+                  child: Text(name),
+                ),
+              )
+              .toList(),
+          onChanged: provinces.isEmpty
+              ? null
+              : (value) {
+                  setState(() {
+                    _selectedProvince = value;
+                    _selectedCommune = null;
+                    _city.clear();
+                    _selectedArrondissement = null;
+                    _selectedSectorOrVillage = null;
+                  });
+                },
+        ),
+        const SizedBox(height: 8),
+        DropdownButtonFormField<String>(
+          initialValue: communes.contains(_selectedCommune)
+              ? _selectedCommune
+              : null,
+          isExpanded: true,
+          decoration: const InputDecoration(
+            labelText: 'Commune (sélection facultative)',
+            hintText: 'Sélectionner la commune',
+          ),
+          items: communes
+              .map(
+                (name) => DropdownMenuItem<String>(
+                  value: name,
+                  child: Text(name),
+                ),
+              )
+              .toList(),
+          onChanged: communes.isEmpty
+              ? null
+              : (value) {
+                  setState(() {
+                    _selectedCommune = value;
+                    _city.text = value ?? '';
+                    _selectedArrondissement = null;
+                    _selectedSectorOrVillage = null;
+                  });
+                },
+        ),
+        const SizedBox(height: 8),
+        TextField(
+          controller: _city,
+          decoration: const InputDecoration(
+            labelText: 'Ville / commune',
+            hintText: 'Vous pouvez saisir une localité absente de la liste',
+            helperText: 'La saisie libre reste autorisée partout au Burkina Faso.',
+          ),
+          onChanged: (_) {
+            setState(() {
+              _selectedArrondissement = null;
+              _selectedSectorOrVillage = null;
+            });
+          },
+        ),
+        if (arrondissements.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          DropdownButtonFormField<int>(
+            initialValue: arrondissements.contains(_selectedArrondissement)
+                ? _selectedArrondissement
+                : null,
+            isExpanded: true,
+            decoration: const InputDecoration(
+              labelText: 'Arrondissement (facultatif)',
+            ),
+            items: arrondissements
+                .map(
+                  (number) => DropdownMenuItem<int>(
+                    value: number,
+                    child: Text('Arrondissement n°$number'),
+                  ),
+                )
+                .toList(),
+            onChanged: (value) {
+              setState(() {
+                _selectedArrondissement = value;
+                _selectedSectorOrVillage = null;
+              });
+            },
+          ),
+        ],
+        if (directory.hasPublishedUrbanSectors(city) &&
+            _selectedArrondissement == null)
+          const Padding(
+            padding: EdgeInsets.only(top: 6),
+            child: Text(
+              'Choisissez un arrondissement pour afficher ses secteurs officiels.',
+              style: TextStyle(fontSize: 12),
+            ),
+          ),
+        if (areaOptions.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          DropdownButtonFormField<String>(
+            initialValue: areaOptions.contains(_selectedSectorOrVillage)
+                ? _selectedSectorOrVillage
+                : null,
+            isExpanded: true,
+            decoration: const InputDecoration(
+              labelText: 'Secteur officiel / village rattaché (facultatif)',
+            ),
+            items: areaOptions
+                .map(
+                  (name) => DropdownMenuItem<String>(
+                    value: name,
+                    child: Text(name),
+                  ),
+                )
+                .toList(),
+            onChanged: (value) {
+              setState(() => _selectedSectorOrVillage = value);
+            },
+          ),
+        ],
+        const SizedBox(height: 8),
+        TextField(
+          controller: _neighborhood,
+          decoration: const InputDecoration(
+            labelText: 'Quartier (nom usuel)',
+            hintText: 'Saisir le quartier exact',
+            helperText: 'Champ libre : les noms de quartiers ne sont pas normalisés nationalement.',
+          ),
+        ),
+      ],
+    );
+  }
+
+  String _buildAddressLine() {
+    final parts = <String>[];
+    if (_selectedRegion != null) parts.add('Région : $_selectedRegion');
+    if (_selectedProvince != null) parts.add('Province : $_selectedProvince');
+    if (_selectedArrondissement != null) {
+      parts.add('Arrondissement n°$_selectedArrondissement');
+    }
+    if (_selectedSectorOrVillage != null) {
+      parts.add(_selectedSectorOrVillage!);
+    }
+    if (_neighborhood.text.trim().isNotEmpty) {
+      parts.add('Quartier : ${_neighborhood.text.trim()}');
+    }
+    if (_address.text.trim().isNotEmpty) {
+      parts.add('Adresse / repère : ${_address.text.trim()}');
+    }
+    return parts.join(' • ');
   }
 
   @override
@@ -542,6 +779,7 @@ class _AddressDialogState extends State<_AddressDialog> {
       title: const Text('Nouvelle adresse'),
       content: SingleChildScrollView(
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
             TextField(
               controller: _label,
@@ -558,13 +796,34 @@ class _AddressDialogState extends State<_AddressDialog> {
               keyboardType: TextInputType.phone,
               decoration: const InputDecoration(labelText: 'Téléphone'),
             ),
+            const SizedBox(height: 12),
+            FutureBuilder<BurkinaLocationDirectory>(
+              future: _directoryFuture,
+              builder: (context, snapshot) {
+                if (snapshot.hasData) {
+                  return _administrativeFields(snapshot.data!);
+                }
+                if (snapshot.hasError) {
+                  return const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 8),
+                    child: Text(
+                      'Le répertoire hors ligne est momentanément indisponible. Vous pouvez toujours saisir votre ville et votre quartier manuellement.',
+                    ),
+                  );
+                }
+                return const Padding(
+                  padding: EdgeInsets.all(12),
+                  child: Center(child: CircularProgressIndicator()),
+                );
+              },
+            ),
+            const SizedBox(height: 8),
             TextField(
               controller: _address,
-              decoration: const InputDecoration(labelText: 'Adresse'),
-            ),
-            TextField(
-              controller: _city,
-              decoration: const InputDecoration(labelText: 'Ville'),
+              maxLines: 2,
+              decoration: const InputDecoration(
+                labelText: 'Rue, porte, bâtiment ou point de repère',
+              ),
             ),
             Align(
               alignment: Alignment.centerLeft,
@@ -605,14 +864,17 @@ class _AddressDialogState extends State<_AddressDialog> {
             final recipient = _recipient.text.trim();
             if (recipient.isEmpty) return;
 
+            final city = _city.text.trim().isNotEmpty
+                ? _city.text.trim()
+                : (_selectedCommune ?? '');
             Navigator.pop(
               context,
               <String, dynamic>{
                 'label': _label.text.trim(),
                 'recipient_name': recipient,
                 'phone': _phone.text.trim(),
-                'address_line': _address.text.trim(),
-                'city': _city.text.trim(),
+                'address_line': _buildAddressLine(),
+                'city': city,
                 'latitude': _latitude.text.trim(),
                 'longitude': _longitude.text.trim(),
               },
