@@ -68,7 +68,8 @@ final marketplaceEngineProvider = Provider<MarketplaceEngine>((ref) {
 /// storage, or feature-specific calls. These are convenience gates only;
 /// database RLS and guarded RPCs remain authoritative.
 final marketplacePublicClientProvider = Provider<SupabaseClient?>((ref) {
-  return ref.watch(marketplaceEngineProvider).backendClient;
+  return ref.watch(marketplaceEngineProvider)
+      .clientFor(MarketplaceCapability.discoverPromotions);
 });
 
 final marketplaceAuthenticationClientProvider =
