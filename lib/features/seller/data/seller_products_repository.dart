@@ -64,7 +64,7 @@ class SellerProductsRepository {
     final rows = await client
         .from('products')
         .select(
-          'id,shop_id,category_id,name,slug,description,price,status,is_expirable,expiry_date,created_at,shops(name),inventory(quantity,reserved_quantity,updated_at)',
+          'id,shop_id,category_id,name,slug,description,price,status,is_expirable,expiry_date,created_at,shops(name,restaurant_profiles(id)),inventory(quantity,reserved_quantity,updated_at)',
         )
         .inFilter('shop_id', shopIds)
         .order('created_at', ascending: false)
