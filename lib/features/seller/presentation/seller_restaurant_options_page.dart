@@ -106,8 +106,8 @@ class _SellerRestaurantOptionsPageState
     final options = TextEditingController(
       text: existing != null
           ? _maps(existing['restaurant_menu_item_options'])
-              .map((o) => '${o['name'] ?? ''}|${o['price_delta'] ?? 0}').join('\\n')
-          : portionPreset ? 'Petit|0\\nMoyen|500\\nGrand|1000' : '',
+              .map((o) => '${o['name'] ?? ''}|${o['price_delta'] ?? 0}').join('\n')
+          : portionPreset ? 'Petit|0\nMoyen|500\nGrand|1000' : '',
     );
     var type = existing?['selection_type']?.toString() ?? 'SINGLE';
     var isRequired = portionPreset || (int.tryParse(existing?['min_selections']?.toString() ?? '0') ?? 0) > 0;
