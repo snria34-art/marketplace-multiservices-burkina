@@ -26,7 +26,7 @@ class _SignInPageState extends ConsumerState<SignInPage> {
   }
 
   Future<void> _submit() async {
-    final client = ref.read(supabaseProvider);
+    final client = ref.read(marketplaceAuthenticationClientProvider);
     if (client == null) {
       _show('Configurez SUPABASE_URL et SUPABASE_PUBLISHABLE_KEY.');
       return;
