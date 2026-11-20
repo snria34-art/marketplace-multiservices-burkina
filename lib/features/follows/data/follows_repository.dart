@@ -1,24 +1,31 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../../core/engine/marketplace_resilience.dart';
+
 class FollowsRepository {
-  const FollowsRepository(this.client);
+  const FollowsRepository(this.client, {this.resilience});
 
   final SupabaseClient client;
+  final MarketplaceResilience? resilience;
+  static final _fallbackResilience = MarketplaceResilience();
+  MarketplaceResilience get _retry => resilience ?? _fallbackResilience;
+
+  Future<T> _read<T>(Future<T> Function() operation) => _retry.read(operation);
 
   Future<List<Map<String, dynamic>>> favoriteProducts() async {
-    final raw = await client.rpc(
+    final raw = await _read(() => client.rpc(
       'my_favorite_products',
       params: {'p_limit': 100},
-    );
+    ));
 
     return _maps(raw);
   }
 
   Future<List<Map<String, dynamic>>> followedShops() async {
-    final raw = await client.rpc(
+    final raw = await _read(() => client.rpc(
       'my_followed_shops',
       params: {'p_limit': 100},
-    );
+    ));
 
     return _maps(raw);
   }
