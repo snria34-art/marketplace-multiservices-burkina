@@ -18,7 +18,40 @@ class RestaurantsPage extends ConsumerStatefulWidget {
 }
 
 class _RestaurantsPageState extends ConsumerState<RestaurantsPage> {
+  static const _restaurantTypes = <(String, String)>[
+    ('FAST_FOOD', 'Fast-food'),
+    ('TRADITIONAL', 'Traditionnelle'),
+    ('GRILL', 'Grillades'),
+    ('PIZZERIA', 'Pizzeria'),
+    ('BAKERY', 'Boulangerie'),
+    ('CAFE', 'Café'),
+    ('SEAFOOD', 'Poissons & fruits de mer'),
+    ('VEGETARIAN', 'Végétarien'),
+    ('INTERNATIONAL', 'Cuisine internationale'),
+  ];
+
+  static const _cuisines = <(String, String)>[
+    ('BURKINABE', 'Burkinabè'),
+    ('IVORIAN', 'Ivoirienne'),
+    ('TOGOLESE', 'Togolaise'),
+    ('GHANAIAN', 'Ghanéenne'),
+    ('NIGERIAN', 'Nigériane'),
+    ('SENEGALESE', 'Sénégalaise'),
+    ('MALIENNE', 'Malienne'),
+    ('BENINESE', 'Béninoise'),
+    ('CAMEROONIAN', 'Camerounaise'),
+    ('LEBANESE', 'Libanaise'),
+    ('ITALIAN', 'Italienne'),
+    ('FRENCH', 'Française'),
+    ('CHINESE', 'Chinoise'),
+    ('INDIAN', 'Indienne'),
+    ('MOROCCAN', 'Marocaine'),
+  ];
+
+  final _searchController = TextEditingController();
   late Future<List<Map<String, dynamic>>> _future;
+  String? _restaurantType;
+  String? _cuisineType;
 
   @override
   void initState() {
@@ -26,97 +59,224 @@ class _RestaurantsPageState extends ConsumerState<RestaurantsPage> {
     _future = _load();
   }
 
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
   Future<List<Map<String, dynamic>>> _load() {
-    return ref.read(restaurantRepositoryProvider)?.restaurants() ??
-        Future.value(const []);
+    return ref.read(restaurantRepositoryProvider)?.searchRestaurantCatalog(
+          query: _searchController.text,
+          restaurantType: _restaurantType,
+          cuisineType: _cuisineType,
+          limit: 150,
+        ) ?? Future.value(const []);
+  }
+
+  void _search() => setState(() => _future = _load());
+
+  Widget _filterChips(
+    List<(String, String)> values,
+    String? selected,
+    ValueChanged<String?> onSelected,
+  ) {
+    return SizedBox(
+      height: 48,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(right: 6),
+            child: ChoiceChip(
+              label: const Text('Tout'),
+              selected: selected == null,
+              onSelected: (_) => onSelected(null),
+            ),
+          ),
+          for (final value in values)
+            Padding(
+              padding: const EdgeInsets.only(right: 6),
+              child: ChoiceChip(
+                label: Text(value.$2),
+                selected: selected == value.$1,
+                onSelected: (_) => onSelected(selected == value.$1 ? null : value.$1),
+              ),
+            ),
+        ],
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Restaurants'),
+        title: const Text('Restaurants & plats'),
         actions: [
           IconButton(
             tooltip: 'Actualiser',
-            onPressed: () => setState(() => _future = _load()),
+            onPressed: _search,
             icon: const Icon(Icons.refresh),
           ),
         ],
       ),
-      body: FutureBuilder<List<Map<String, dynamic>>>(
-        future: _future,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          if (snapshot.hasError) {
-            return Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Text('Impossible de charger les restaurants.'),
-                  const SizedBox(height: 8),
-                  FilledButton.icon(
-                    onPressed: () => setState(() => _future = _load()),
-                    icon: const Icon(Icons.refresh),
-                    label: const Text('Réessayer'),
-                  ),
-                ],
-              ),
-            );
-          }
-
-          final restaurants =
-              snapshot.data ?? const <Map<String, dynamic>>[];
-
-          if (restaurants.isEmpty) {
-            return const Center(child: Text('Aucun restaurant disponible.'));
-          }
-
-          return ListView.separated(
-            padding: const EdgeInsets.all(12),
-            itemCount: restaurants.length,
-            separatorBuilder: (_, _) => const SizedBox(height: 10),
-            itemBuilder: (_, index) {
-              final restaurant = restaurants[index];
-              final shop = restaurant['shops'] is Map
-                  ? Map<String, dynamic>.from(restaurant['shops'] as Map)
-                  : const <String, dynamic>{};
-              final cuisines = restaurant['cuisine_types'];
-
-              final rawMenus = restaurant['restaurant_menus'];
-              final menus = rawMenus is List
-                  ? rawMenus
-                      .whereType<Map>()
-                      .map((row) => Map<String, dynamic>.from(row))
-                      .toList()
-                  : const <Map<String, dynamic>>[];
-
-              return Card(
-                child: ExpansionTile(
-                  leading: const CircleAvatar(
-                    child: Icon(Icons.restaurant_outlined),
-                  ),
-                  title: Text(
-                    shop['name']?.toString() ?? 'Restaurant',
-                  ),
-                  subtitle: Text(
-                    cuisines is List && cuisines.isNotEmpty
-                        ? cuisines.join(', ')
-                        : 'Cuisine non renseignée',
-                  ),
-                  children: [
-                    for (final menu in menus) _MenuSection(menu: menu),
-                  ],
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
+            child: TextField(
+              controller: _searchController,
+              textInputAction: TextInputAction.search,
+              onSubmitted: (_) => _search(),
+              decoration: InputDecoration(
+                hintText: 'Rechercher un plat, une cuisine, un restaurant…',
+                prefixIcon: const Icon(Icons.search),
+                suffixIcon: IconButton(
+                  tooltip: 'Rechercher',
+                  onPressed: _search,
+                  icon: const Icon(Icons.arrow_forward),
                 ),
-              );
-            },
-          );
-        },
+                border: const OutlineInputBorder(),
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 4, 12, 0),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text('Type de restaurant',
+                style: Theme.of(context).textTheme.titleSmall),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(left: 12, top: 4),
+            child: _filterChips(_restaurantTypes, _restaurantType, (value) {
+              setState(() {
+                _restaurantType = value;
+                _future = _load();
+              });
+            }),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 4, 12, 0),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text('Cuisine du pays',
+                style: Theme.of(context).textTheme.titleSmall),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(left: 12, top: 4),
+            child: _filterChips(_cuisines, _cuisineType, (value) {
+              setState(() {
+                _cuisineType = value;
+                _future = _load();
+              });
+            }),
+          ),
+          const Divider(height: 1),
+          Expanded(
+            child: FutureBuilder<List<Map<String, dynamic>>>(
+              future: _future,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (snapshot.hasError) {
+                  return Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Text('La recherche des restaurants est indisponible.'),
+                        const SizedBox(height: 8),
+                        FilledButton.icon(
+                          onPressed: _search,
+                          icon: const Icon(Icons.refresh),
+                          label: const Text('Réessayer'),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+                final results = snapshot.data ?? const <Map<String, dynamic>>[];
+                if (results.isEmpty) {
+                  return const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(24),
+                      child: Text('Aucun plat trouvé. Essayez un autre nom ou une autre cuisine.',
+                        textAlign: TextAlign.center),
+                    ),
+                  );
+                }
+                return ListView.separated(
+                  padding: const EdgeInsets.all(12),
+                  itemCount: results.length,
+                  separatorBuilder: (_, _) => const SizedBox(height: 8),
+                  itemBuilder: (context, index) {
+                    final result = results[index];
+                    final cuisines = result['cuisine_types'];
+                    final cuisineLabels = cuisines is List
+                        ? cuisines.map((value) => value.toString()).join(' · ')
+                        : '';
+                    final item = <String, dynamic>{
+                      'id': result['menu_item_id'],
+                      'name': result['dish_name'],
+                      'description': result['dish_description'],
+                      'price': result['price'],
+                      'product_id': result['product_id'],
+                      'restaurant_menu_item_option_groups': result['option_groups'] ?? const [],
+                    };
+                    return Card(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          ListTile(
+                            dense: true,
+                            leading: const CircleAvatar(
+                              child: Icon(Icons.restaurant_outlined),
+                            ),
+                            title: Text(result['restaurant_name']?.toString() ?? 'Restaurant'),
+                            subtitle: Text([
+                              _restaurantTypeLabel(result['restaurant_type']?.toString()),
+                              cuisineLabels,
+                              if (result['address']?.toString().isNotEmpty == true)
+                                result['address'].toString(),
+                            ].where((value) => value.isNotEmpty).join(' · ')),
+                          ),
+                          const Divider(height: 1),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Text(result['menu_name']?.toString() ?? 'Menu',
+                                    style: Theme.of(context).textTheme.labelMedium),
+                                ),
+                                Text(formatXof(num.tryParse(result['price']?.toString() ?? '') ?? 0),
+                                  style: Theme.of(context).textTheme.labelLarge),
+                              ],
+                            ),
+                          ),
+                          _MenuItemTile(item: item),
+                        ],
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
+  }
+
+  String _restaurantTypeLabel(String? value) {
+    for (final type in _restaurantTypes) {
+      if (type.$1 == value) return type.$2;
+    }
+    return 'Restaurant';
   }
 }
 
