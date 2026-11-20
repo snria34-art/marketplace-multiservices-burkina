@@ -58,6 +58,22 @@ as $
   );
 $;
 
+
+-- Trigram indexes support partial matching of dish names, descriptions,
+-- restaurant names and seller-provided search tags.
+create index if not exists idx_restaurant_menu_items_search_name_trgm
+  on public.restaurant_menu_items
+  using gin (public.restaurant_search_normalize(name) gin_trgm_ops);
+create index if not exists idx_restaurant_menu_items_search_description_trgm
+  on public.restaurant_menu_items
+  using gin (public.restaurant_search_normalize(coalesce(description, '')) gin_trgm_ops);
+create index if not exists idx_shops_search_name_trgm
+  on public.shops
+  using gin (public.restaurant_search_normalize(name) gin_trgm_ops);
+create index if not exists idx_product_tags_search_trgm
+  on public.product_tags
+  using gin (public.restaurant_search_normalize(tag) gin_trgm_ops);
+
 create or replace function public.save_restaurant_discovery_profile(
   p_restaurant_id uuid,
   p_restaurant_type text,
