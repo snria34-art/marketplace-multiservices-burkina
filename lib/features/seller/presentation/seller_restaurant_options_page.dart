@@ -98,14 +98,18 @@ class _SellerRestaurantOptionsPageState
   }
 
   Future<void> _configure(Map<String, dynamic> item,
-      {Map<String, dynamic>? existing}) async {
-    final name = TextEditingController(text: existing?['name']?.toString() ?? '');
+      {Map<String, dynamic>? existing, bool portionPreset = false}) async {
+    final name = TextEditingController(
+      text: existing?['name']?.toString() ?? (portionPreset ? 'Taille / portion' : ''),
+    );
     final options = TextEditingController(
-      text: _maps(existing?['restaurant_menu_item_options'])
-          .map((o) => '${o['name'] ?? ''}|${o['price_delta'] ?? 0}').join('\n'),
+      text: existing != null
+          ? _maps(existing['restaurant_menu_item_options'])
+              .map((o) => '${o['name'] ?? ''}|${o['price_delta'] ?? 0}').join('\\n')
+          : portionPreset ? 'Petit|0\\nMoyen|500\\nGrand|1000' : '',
     );
     var type = existing?['selection_type']?.toString() ?? 'SINGLE';
-    var isRequired = (int.tryParse(existing?['min_selections']?.toString() ?? '0') ?? 0) > 0;
+    var isRequired = portionPreset || (int.tryParse(existing?['min_selections']?.toString() ?? '0') ?? 0) > 0;
     var max = int.tryParse(existing?['max_selections']?.toString() ?? '1') ?? 1;
 
     final draft = await showDialog<_OptionDraft>(
@@ -278,6 +282,11 @@ class _SellerRestaurantOptionsPageState
               icon: const Icon(Icons.link),
               onPressed: () => _linkProduct(item),
             ),
+          IconButton(
+            tooltip: 'Configurer les portions petit, moyen et grand',
+            icon: const Icon(Icons.straighten),
+            onPressed: () => _configure(item, portionPreset: true),
+          ),
           IconButton(
             tooltip: 'Ajouter une personnalisation',
             icon: const Icon(Icons.add_circle_outline),
