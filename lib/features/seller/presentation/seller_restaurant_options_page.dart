@@ -265,9 +265,10 @@ class _SellerRestaurantOptionsPageState
 
   Widget _itemTile(Map<String, dynamic> item) {
     final groups = _maps(item['restaurant_menu_item_option_groups']);
+    final product = item['products'] is Map ? Map<String, dynamic>.from(item['products'] as Map) : const <String, dynamic>{};
     return ListTile(
       title: Text(item['name']?.toString() ?? 'Plat'),
-      subtitle: Text('${item['price']?.toString() ?? '0'} XOF · ${groups.length} groupe(s)'),
+      subtitle: Text('${product['price']?.toString() ?? item['price']?.toString() ?? '0'} XOF · ${groups.length} groupe(s)'),
       trailing: Wrap(
         spacing: 4,
         children: [
