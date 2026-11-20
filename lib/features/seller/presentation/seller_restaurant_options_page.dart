@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/providers/repository_providers.dart';
+import '../../../core/utils/xof_formatter.dart';
 import '../../restaurants/data/restaurant_repository.dart';
 
 final sellerRestaurantRepositoryProvider =
@@ -67,7 +68,7 @@ class _SellerRestaurantOptionsPageState
               decoration: const InputDecoration(labelText: 'Produit de votre boutique'),
               items: products.map((product) => DropdownMenuItem(
                 value: product['id'].toString(),
-                child: Text('${product['name']} · ${product['price']} XOF',
+                child: Text('${product['name']} · ${formatXof(num.tryParse(product['price']?.toString() ?? '') ?? 0)}',
                   overflow: TextOverflow.ellipsis),
               )).toList(),
               onChanged: (value) => setDialogState(() => selectedId = value),
@@ -272,7 +273,7 @@ class _SellerRestaurantOptionsPageState
     final product = item['products'] is Map ? Map<String, dynamic>.from(item['products'] as Map) : const <String, dynamic>{};
     return ListTile(
       title: Text(item['name']?.toString() ?? 'Plat'),
-      subtitle: Text('${product['price']?.toString() ?? item['price']?.toString() ?? '0'} XOF · ${groups.length} groupe(s)'),
+      subtitle: Text('${formatXof(num.tryParse((product['price'] ?? item['price'] ?? '0').toString()) ?? 0)} · ${groups.length} groupe(s)'),
       trailing: Wrap(
         spacing: 4,
         children: [
@@ -303,7 +304,7 @@ class _SellerRestaurantOptionsPageState
             ListTile(
               title: Text(group['name']?.toString() ?? 'Choix'),
               subtitle: Text(_maps(group['restaurant_menu_item_options'])
-                .map((o) => '${o['name']} (+${o['price_delta']} XOF)').join('\n')),
+                .map((o) => '${o['name']} (+${formatXof(num.tryParse(o['price_delta']?.toString() ?? '') ?? 0)})').join('\n')),
               trailing: IconButton(
                 icon: const Icon(Icons.edit_outlined), tooltip: 'Modifier',
                 onPressed: () { Navigator.pop(context); _configure(item, existing: group); },
