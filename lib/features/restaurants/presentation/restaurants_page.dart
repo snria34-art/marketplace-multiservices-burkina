@@ -298,33 +298,6 @@ class _RestaurantsPageState extends ConsumerState<RestaurantsPage> {
   }
 }
 
-class _MenuSection extends StatelessWidget {
-  const _MenuSection({required this.menu});
-
-  final Map<String, dynamic> menu;
-
-  @override
-  Widget build(BuildContext context) {
-    final rawItems = menu['restaurant_menu_items'];
-    final items = rawItems is List
-        ? rawItems
-            .whereType<Map>()
-            .map((row) => Map<String, dynamic>.from(row))
-            .toList()
-        : const <Map<String, dynamic>>[];
-
-    return ExpansionTile(
-      title: Text(menu['name']?.toString() ?? 'Menu'),
-      subtitle: Text(menu['description']?.toString() ?? ''),
-      children: [
-        for (final item in items)
-          _MenuItemTile(item: item),
-      ],
-    );
-  }
-}
-
-
 class _MenuItemTile extends ConsumerStatefulWidget {
   const _MenuItemTile({required this.item});
   final Map<String, dynamic> item;
