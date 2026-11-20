@@ -12,6 +12,38 @@ create index if not exists idx_restaurant_options_linked_product
   on public.restaurant_menu_item_options(linked_product_id)
   where linked_product_id is not null;
 
+
+-- Customers cannot see or quote a formula choice whose linked product is no longer active.
+drop policy if exists restaurant_active_options_read
+  on public.restaurant_menu_item_options;
+create policy restaurant_active_options_read
+  on public.restaurant_menu_item_options
+  for select to anon, authenticated
+  using (
+    active = true
+    and exists (
+      select 1
+      from public.restaurant_menu_item_option_groups g
+      join public.restaurant_menu_items mi on mi.id = g.menu_item_id
+      join public.restaurant_menus m on m.id = mi.menu_id
+      where g.id = option_group_id and g.active = true
+        and mi.active = true and m.active = true
+    )
+    and (
+      linked_product_id is null
+      or exists (
+        select 1
+        from public.products p
+        join public.restaurant_menu_item_option_groups g on g.id = option_group_id
+        join public.restaurant_menu_items mi on mi.id = g.menu_item_id
+        join public.restaurant_menus m on m.id = mi.menu_id
+        join public.restaurant_profiles rp on rp.id = m.restaurant_id
+        where p.id = linked_product_id and p.shop_id = rp.shop_id
+          and p.status = 'ACTIVE'
+      )
+    )
+  );
+
 -- Formula component choices must be real active products from the same restaurant shop.
 -- The existing save RPC validates seller ownership and atomically creates option rows.
 create or replace function public.save_restaurant_formula_component(
