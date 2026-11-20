@@ -214,7 +214,7 @@ as $$
         when 'INTERNATIONAL' then 'cuisine internationale'
         else lower(rp.restaurant_type)
       end like '%' || public.restaurant_search_normalize(
-        regexp_replace(trim(p_query), '^(nourriture|cuisine|restaurant)\\s+', '', 'i')
+        regexp_replace(trim(p_query), '^(nourriture|cuisine|restaurant)[[:space:]]+', '', 'i')
       ) || '%'
       or exists (
         select 1 from unnest(rp.cuisine_types) as cuisine(code)
@@ -237,7 +237,7 @@ as $$
             when 'MOROCCAN' then 'marocaine'
             else lower(cuisine.code)
           end like '%' || public.restaurant_search_normalize(
-            regexp_replace(trim(p_query), '^(nourriture|cuisine|restaurant)\\s+', '', 'i')
+            regexp_replace(trim(p_query), '^(nourriture|cuisine|restaurant)[[:space:]]+', '', 'i')
           ) || '%'
       )
       or exists (
