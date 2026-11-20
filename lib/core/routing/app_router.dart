@@ -32,6 +32,7 @@ import '../../features/restaurants/presentation/restaurants_page.dart';
 import '../../features/seller/presentation/seller_dashboard_page.dart';
 import '../../features/seller/presentation/seller_orders_page.dart';
 import '../../features/seller/presentation/seller_products_page.dart';
+import '../../features/seller/presentation/seller_restaurant_options_page.dart';
 import '../../features/seller/presentation/seller_tools_page.dart';
 import '../../features/services/presentation/services_page.dart';
 import '../../features/transport/presentation/transport_page.dart';
@@ -375,6 +376,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/seller/products',
         builder: (_, _) => const SellerProductsPage(),
+      ),
+      GoRoute(
+        path: '/seller/restaurant-options',
+        builder: (_, _) => const SellerRestaurantOptionsPage(),
       ),
       GoRoute(
         path: '/seller/orders',
