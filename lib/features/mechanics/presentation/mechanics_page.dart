@@ -262,6 +262,9 @@ class _MechanicsPageState extends ConsumerState<MechanicsPage> {
         throw StateError('Configuration du profil invalide.');
       }
 
+      final serviceBasePosition = await DeviceLocationService.current();
+      if (!mounted) return;
+
       await repo.saveServiceProfile(
         vehicleTypes: rawVehicles.map((value) => value.toString()).toList(),
         serviceTypes: rawServices.map((value) => value.toString()).toList(),
@@ -273,6 +276,9 @@ class _MechanicsPageState extends ConsumerState<MechanicsPage> {
         homePrice: num.parse(result['home_price'].toString()),
         officePrice: num.parse(result['office_price'].toString()),
         roadsidePrice: num.parse(result['roadside_price'].toString()),
+        serviceLatitude: serviceBasePosition.latitude,
+        serviceLongitude: serviceBasePosition.longitude,
+        serviceRadiusKm: num.parse(result['service_radius_km'].toString()),
         adjustmentNote: result['adjustment_note']?.toString(),
       );
 
@@ -282,7 +288,7 @@ class _MechanicsPageState extends ConsumerState<MechanicsPage> {
         _isMechanicFuture = _loadOwnMechanic();
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Compétences, horaires et tarifs enregistrés.')),
+        const SnackBar(content: Text('Compétences, horaires, tarifs et zone GPS enregistrés.')),
       );
     } catch (error) {
       if (!mounted) return;
