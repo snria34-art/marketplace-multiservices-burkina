@@ -139,12 +139,113 @@ class _MenuSection extends StatelessWidget {
       subtitle: Text(menu['description']?.toString() ?? ''),
       children: [
         for (final item in items)
-          ListTile(
-            title: Text(item['name']?.toString() ?? 'Plat'),
-            subtitle: Text(item['description']?.toString() ?? ''),
-            trailing: Text((item['price']?.toString() ?? '0') + ' XOF'),
-          ),
+          _MenuItemTile(item: item),
       ],
+    );
+  }
+}
+
+
+class _MenuItemTile extends StatelessWidget {
+  const _MenuItemTile({required this.item});
+
+  final Map<String, dynamic> item;
+
+  @override
+  Widget build(BuildContext context) {
+    final rawGroups = item['restaurant_menu_item_option_groups'];
+    final groups = rawGroups is List
+        ? rawGroups
+            .whereType<Map>()
+            .map((row) => Map<String, dynamic>.from(row))
+            .toList()
+        : const <Map<String, dynamic>>[];
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      item['name']?.toString() ?? 'Plat',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    if ((item['description']?.toString() ?? '').isNotEmpty)
+                      Text(item['description'].toString()),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                '\${item['price']?.toString() ?? '0'} XOF',
+                style: Theme.of(context).textTheme.titleSmall,
+              ),
+            ],
+          ),
+          for (final group in groups) _OptionGroupPreview(group: group),
+        ],
+      ),
+    );
+  }
+}
+
+class _OptionGroupPreview extends StatelessWidget {
+  const _OptionGroupPreview({required this.group});
+
+  final Map<String, dynamic> group;
+
+  @override
+  Widget build(BuildContext context) {
+    final rawOptions = group['restaurant_menu_item_options'];
+    final options = rawOptions is List
+        ? rawOptions
+            .whereType<Map>()
+            .map((row) => Map<String, dynamic>.from(row))
+            .toList()
+        : const <Map<String, dynamic>>[];
+    final min = int.tryParse(group['min_selections']?.toString() ?? '') ?? 0;
+    final max = int.tryParse(group['max_selections']?.toString() ?? '') ?? 1;
+    final multiple = group['selection_type']?.toString() == 'MULTIPLE';
+
+    if (options.isEmpty) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '\${group['name']?.toString() ?? 'Personnalisation'} · '
+            '\${multiple ? 'plusieurs choix' : 'un choix'}'
+            '\${min > 0 ? ' · obligatoire' : ' · facultatif'}'
+            '\${multiple ? ' · max. $max' : ''}',
+            style: Theme.of(context).textTheme.labelLarge,
+          ),
+          for (final option in options)
+            Padding(
+              padding: const EdgeInsets.only(left: 8, top: 3),
+              child: Row(
+                children: [
+                  const Icon(Icons.tune, size: 15),
+                  const SizedBox(width: 6),
+                  Expanded(child: Text(option['name']?.toString() ?? 'Option')),
+                  Text(
+                    (num.tryParse(option['price_delta']?.toString() ?? '') ?? 0) == 0
+                        ? 'Inclus'
+                        : '+\${option['price_delta']} XOF',
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
     );
   }
 }
