@@ -45,7 +45,7 @@ class _ServicesPageState extends ConsumerState<ServicesPage> {
 
   Future<void> _requestService(Map<String, dynamic> service) async {
     final repository = ref.read(serviceRepositoryProvider);
-    final client = ref.read(supabaseProvider);
+    final client = ref.read(marketplaceCustomerClientProvider);
 
     if (repository == null || client?.auth.currentUser == null) {
       ScaffoldMessenger.of(context).showSnackBar(
