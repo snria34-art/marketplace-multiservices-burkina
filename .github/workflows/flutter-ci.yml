@@ -4,17 +4,21 @@ on:
   push:
     branches: [main, 'maintenance/audit-01-07-2026-11-15']
     paths:
+      - 'Dockerfile'
       - 'lib/**'
       - 'test/**'
+      - 'scripts/build-web.sh'
       - 'pubspec.yaml'
       - 'pubspec.lock'
       - 'analysis_options.yaml'
       - '.github/workflows/flutter-ci.yml'
   pull_request:
-    branches: [main]
+    branches: [main, 'maintenance/audit-01-07-2026-11-15']
     paths:
+      - 'Dockerfile'
       - 'lib/**'
       - 'test/**'
+      - 'scripts/build-web.sh'
       - 'pubspec.yaml'
       - 'pubspec.lock'
       - 'analysis_options.yaml'
@@ -61,8 +65,9 @@ jobs:
       - name: Run tests
         run: flutter test
 
-      - name: Compile Flutter Web without production credentials
-        run: >-
-          flutter build web --debug
-          --dart-define=SUPABASE_URL=https://example.supabase.co
-          --dart-define=SUPABASE_PUBLISHABLE_KEY=sb_publishable_ci_placeholder
+      - name: Compile Flutter Web through the same redacted build script as Docker
+        env:
+          FLUTTER_BUILD_MODE: debug
+          SUPABASE_URL: https://example.supabase.co
+          SUPABASE_PUBLISHABLE_KEY: sb_publishable_ci_placeholder
+        run: /bin/sh scripts/build-web.sh
