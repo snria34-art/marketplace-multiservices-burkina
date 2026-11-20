@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/providers/repository_providers.dart';
+import '../../../core/utils/xof_formatter.dart';
 
 class SellerOrdersPage extends ConsumerStatefulWidget {
   const SellerOrdersPage({super.key});
@@ -152,8 +153,7 @@ class _SellerOrdersPageState extends ConsumerState<SellerOrdersPage> {
                           '\nÉtat : ' +
                           (group['status']?.toString() ?? '-') +
                           ' • Sous-total : ' +
-                          (group['subtotal']?.toString() ?? '0') +
-                          ' XOF',
+                          formatXof(num.tryParse(group['subtotal']?.toString() ?? '0') ?? 0),
                     ),
                     children: [
                       for (final rawItem in items)
@@ -168,7 +168,7 @@ class _SellerOrdersPageState extends ConsumerState<SellerOrdersPage> {
                                     Map<String, dynamic>.from(choice)).toList()
                                 : const <Map<String, dynamic>>[];
                             final choicesLabel = customizations.map((choice) =>
-                                '${choice['option_name']} (+${choice['price_delta']} XOF)').join(', ');
+                                '${choice['option_name']} (+${formatXof(num.tryParse(choice['price_delta']?.toString() ?? '0') ?? 0)})').join(', ');
 
                             return ListTile(
                               title: Text(
@@ -179,13 +179,11 @@ class _SellerOrdersPageState extends ConsumerState<SellerOrdersPage> {
                                 'Qté : ' +
                                     (item['quantity']?.toString() ?? '0') +
                                     ' • ' +
-                                    (item['unit_price']?.toString() ?? '0') +
-                                    ' XOF' +
+                                    formatXof(num.tryParse(item['unit_price']?.toString() ?? '0') ?? 0) +
                                     (choicesLabel.isEmpty ? '' : '\nChoix : ' + choicesLabel),
                               ),
                               trailing: Text(
-                                (item['total_price']?.toString() ?? '0') +
-                                    ' XOF',
+                                formatXof(num.tryParse(item['total_price']?.toString() ?? '0') ?? 0),
                               ),
                             );
                           },
