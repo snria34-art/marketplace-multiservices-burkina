@@ -93,56 +93,56 @@ final sellerRestaurantRepositoryProvider =
 final cartRepositoryProvider = Provider<CartRepository?>((ref) {
   final engine = ref.watch(marketplaceEngineProvider);
   final client = engine.clientFor(MarketplaceCapability.manageCart);
-  return client == null ? null : CartRepository(client);
+  return client == null ? null : CartRepository(client, resilience: engine.resilience);
 });
 
 final checkoutRepositoryProvider = Provider<CheckoutRepository?>((ref) {
   final engine = ref.watch(marketplaceEngineProvider);
   final client = engine.clientFor(MarketplaceCapability.placeOrder);
-  return client == null ? null : CheckoutRepository(client);
+  return client == null ? null : CheckoutRepository(client, resilience: engine.resilience);
 });
 
 final courierRepositoryProvider = Provider<CourierRepository?>((ref) {
   final engine = ref.watch(marketplaceEngineProvider);
   final client = engine.clientFor(MarketplaceCapability.courierOperations);
-  return client == null ? null : CourierRepository(client);
+  return client == null ? null : CourierRepository(client, resilience: engine.resilience);
 });
 
 final deliveryRepositoryProvider = Provider<DeliveryRepository?>((ref) {
   final engine = ref.watch(marketplaceEngineProvider);
   final client = engine.clientFor(MarketplaceCapability.trackDelivery);
-  return client == null ? null : DeliveryRepository(client);
+  return client == null ? null : DeliveryRepository(client, resilience: engine.resilience);
 });
 
 final followsRepositoryProvider = Provider<FollowsRepository?>((ref) {
   final engine = ref.watch(marketplaceEngineProvider);
   final client = engine.clientFor(MarketplaceCapability.manageFollows);
-  return client == null ? null : FollowsRepository(client);
+  return client == null ? null : FollowsRepository(client, resilience: engine.resilience);
 });
 
 final groupBuyRepositoryProvider = Provider<GroupBuyRepository?>((ref) {
   final engine = ref.watch(marketplaceEngineProvider);
   final client = engine.clientFor(MarketplaceCapability.discoverGroupBuys);
-  return client == null ? null : GroupBuyRepository(client);
+  return client == null ? null : GroupBuyRepository(client, resilience: engine.resilience);
 });
 
 final mechanicRepositoryProvider = Provider<MechanicRepository?>((ref) {
   final engine = ref.watch(marketplaceEngineProvider);
   final client = engine.clientFor(MarketplaceCapability.discoverMechanics);
-  return client == null ? null : MechanicRepository(client);
+  return client == null ? null : MechanicRepository(client, resilience: engine.resilience);
 });
 
 final messagingRepositoryProvider = Provider<MessagingRepository?>((ref) {
   final engine = ref.watch(marketplaceEngineProvider);
   final client = engine.clientFor(MarketplaceCapability.useMessaging);
-  return client == null ? null : MessagingRepository(client);
+  return client == null ? null : MessagingRepository(client, resilience: engine.resilience);
 });
 
 final notificationRepositoryProvider =
     Provider<NotificationRepository?>((ref) {
   final engine = ref.watch(marketplaceEngineProvider);
   final client = engine.clientFor(MarketplaceCapability.readNotifications);
-  return client == null ? null : NotificationRepository(client);
+  return client == null ? null : NotificationRepository(client, resilience: engine.resilience);
 });
 
 final sellerRepositoryProvider = Provider<SellerRepository?>((ref) {
