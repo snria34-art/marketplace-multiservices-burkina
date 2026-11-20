@@ -3,12 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/errors/backend_error_message.dart';
 import '../../../core/providers/repository_providers.dart';
-import '../data/service_repository.dart';
-
-final serviceRepositoryProvider = Provider<ServiceRepository?>((ref) {
-  final client = ref.watch(supabaseProvider);
-  return client == null ? null : ServiceRepository(client);
-});
 
 class ServicesPage extends ConsumerStatefulWidget {
   const ServicesPage({super.key});
