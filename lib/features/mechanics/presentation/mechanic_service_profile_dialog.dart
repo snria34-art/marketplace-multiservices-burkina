@@ -50,6 +50,7 @@ class _MechanicServiceProfileDialogState
   final _note = TextEditingController();
   TimeOfDay _openTime = const TimeOfDay(hour: 8, minute: 0);
   TimeOfDay _closeTime = const TimeOfDay(hour: 20, minute: 0);
+  int _serviceRadiusKm = 10;
 
   @override
   void dispose() {
@@ -119,6 +120,7 @@ class _MechanicServiceProfileDialogState
         'home_price': home,
         'office_price': office,
         'roadside_price': roadside,
+        'service_radius_km': _serviceRadiusKm,
         'adjustment_note': _note.text.trim(),
       },
     );
@@ -286,6 +288,39 @@ class _MechanicServiceProfileDialogState
               const SizedBox(height: 6),
               Text(
                 'Après l’heure de fermeture, votre profil ne sera plus proposé pour de nouvelles demandes.',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+              const Divider(height: 24),
+              Text(
+                'Zone couverte',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 8),
+              DropdownButtonFormField<int>(
+                initialValue: _serviceRadiusKm,
+                decoration: const InputDecoration(
+                  labelText: 'Rayon maximal autour de ma position',
+                  suffixText: 'km',
+                  border: OutlineInputBorder(),
+                ),
+                items: const [
+                  DropdownMenuItem(value: 5, child: Text('5 km')),
+                  DropdownMenuItem(value: 10, child: Text('10 km')),
+                  DropdownMenuItem(value: 20, child: Text('20 km')),
+                  DropdownMenuItem(value: 30, child: Text('30 km')),
+                  DropdownMenuItem(value: 50, child: Text('50 km')),
+                  DropdownMenuItem(value: 100, child: Text('100 km')),
+                  DropdownMenuItem(value: 200, child: Text('200 km')),
+                ],
+                onChanged: (value) {
+                  if (value != null) {
+                    setState(() => _serviceRadiusKm = value);
+                  }
+                },
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Votre position GPS actuelle sera enregistrée comme point de départ pour ne proposer que les demandes dans ce rayon.',
                 style: Theme.of(context).textTheme.bodySmall,
               ),
               const Divider(height: 24),
