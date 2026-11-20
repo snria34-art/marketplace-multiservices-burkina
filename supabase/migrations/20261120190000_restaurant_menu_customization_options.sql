@@ -66,6 +66,46 @@ create policy restaurant_active_options_read
   );
 
 
+
+
+-- Permit a restaurant owner to link each menu item to a product in the same shop.
+grant update(product_id) on public.restaurant_menu_items to authenticated;
+
+drop policy if exists restaurant_seller_item_link_update on public.restaurant_menu_items;
+create policy restaurant_seller_item_link_update on public.restaurant_menu_items
+for update to authenticated
+using (exists (
+  select 1
+  from public.restaurant_menus m
+  join public.restaurant_profiles rp on rp.id = m.restaurant_id
+  join public.shops s on s.id = rp.shop_id
+  join public.sellers se on se.id = s.seller_id
+  where m.id = menu_id and se.user_id = (select auth.uid())
+))
+with check (
+  exists (
+    select 1
+    from public.restaurant_menus m
+    join public.restaurant_profiles rp on rp.id = m.restaurant_id
+    join public.shops s on s.id = rp.shop_id
+    join public.sellers se on se.id = s.seller_id
+    where m.id = menu_id and se.user_id = (select auth.uid())
+  )
+  and (
+    product_id is null
+    or exists (
+      select 1
+      from public.restaurant_menus m
+      join public.restaurant_profiles rp on rp.id = m.restaurant_id
+      join public.shops s on s.id = rp.shop_id
+      join public.sellers se on se.id = s.seller_id
+      join public.products p on p.shop_id = s.id
+      where m.id = menu_id and p.id = product_id
+        and se.user_id = (select auth.uid())
+    )
+  )
+);
+
 -- Seller catalog visibility and ownership policies allow SECURITY INVOKER writes.
 drop policy if exists restaurant_seller_profile_read on public.restaurant_profiles;
 create policy restaurant_seller_profile_read on public.restaurant_profiles
