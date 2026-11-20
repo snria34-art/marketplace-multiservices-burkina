@@ -148,30 +148,30 @@ final notificationRepositoryProvider =
 final sellerRepositoryProvider = Provider<SellerRepository?>((ref) {
   final engine = ref.watch(marketplaceEngineProvider);
   final client = engine.clientFor(MarketplaceCapability.readSellerFinance);
-  return client == null ? null : SellerRepository(client);
+  return client == null ? null : SellerRepository(client, resilience: engine.resilience);
 });
 
 final sellerProductsRepositoryProvider =
     Provider<SellerProductsRepository?>((ref) {
   final engine = ref.watch(marketplaceEngineProvider);
   final client = engine.clientFor(MarketplaceCapability.manageSellerCatalog);
-  return client == null ? null : SellerProductsRepository(client);
+  return client == null ? null : SellerProductsRepository(client, resilience: engine.resilience);
 });
 
 final serviceRepositoryProvider = Provider<ServiceRepository?>((ref) {
   final engine = ref.watch(marketplaceEngineProvider);
   final client = engine.clientFor(MarketplaceCapability.discoverServices);
-  return client == null ? null : ServiceRepository(client);
+  return client == null ? null : ServiceRepository(client, resilience: engine.resilience);
 });
 
 final transportRepositoryProvider = Provider<TransportRepository?>((ref) {
   final engine = ref.watch(marketplaceEngineProvider);
   final client = engine.clientFor(MarketplaceCapability.discoverTransport);
-  return client == null ? null : TransportRepository(client);
+  return client == null ? null : TransportRepository(client, resilience: engine.resilience);
 });
 
 final verticalRepositoryProvider = Provider<VerticalRepository?>((ref) {
   final engine = ref.watch(marketplaceEngineProvider);
   final client = engine.clientFor(MarketplaceCapability.discoverVerticals);
-  return client == null ? null : VerticalRepository(client);
+  return client == null ? null : VerticalRepository(client, resilience: engine.resilience);
 });
