@@ -3,12 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/errors/backend_error_message.dart';
 import '../../../core/providers/repository_providers.dart';
-import '../data/group_buy_repository.dart';
-
-final groupBuyRepositoryProvider = Provider<GroupBuyRepository?>((ref) {
-  final client = ref.watch(supabaseProvider);
-  return client == null ? null : GroupBuyRepository(client);
-});
 
 class GroupBuyPage extends ConsumerStatefulWidget {
   const GroupBuyPage({super.key});
