@@ -52,8 +52,12 @@ class CartRepository {
 
     for (final item in mappedItems) {
       final menuItemId = item['restaurant_menu_item_id']?.toString();
-      if (menuItemId == null || menuItemId.isEmpty) continue;
       final rawSelections = item['restaurant_selections'];
+      if (menuItemId == null || menuItemId.isEmpty) {
+        item['customization_invalid'] =
+            rawSelections is Map && rawSelections.isNotEmpty;
+        continue;
+      }
       final selections = <String, List<String>>{};
       if (rawSelections is Map) {
         for (final entry in rawSelections.entries) {
