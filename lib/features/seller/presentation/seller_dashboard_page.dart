@@ -5,12 +5,6 @@ import 'package:go_router/go_router.dart';
 import '../../../core/errors/backend_error_message.dart';
 import '../../../core/providers/repository_providers.dart';
 import '../../../core/widgets/account_session_action_button.dart';
-import '../data/seller_repository.dart';
-
-final sellerRepositoryProvider = Provider<SellerRepository?>((ref) {
-  final client = ref.watch(supabaseProvider);
-  return client == null ? null : SellerRepository(client);
-});
 
 class SellerDashboardPage extends ConsumerStatefulWidget {
   const SellerDashboardPage({super.key});
@@ -108,7 +102,7 @@ class _SellerDashboardPageState
 
   @override
   Widget build(BuildContext context) {
-    final client = ref.watch(supabaseProvider);
+    final client = ref.watch(marketplaceSellerClientProvider);
 
     if (client?.auth.currentUser == null) {
       return Scaffold(
