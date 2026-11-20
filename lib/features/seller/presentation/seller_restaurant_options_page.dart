@@ -46,6 +46,121 @@ class _SellerRestaurantOptionsPageState
   }
 
 
+
+  static const _restaurantTypes = <(String, String)>[
+    ('FAST_FOOD', 'Fast-food'),
+    ('TRADITIONAL', 'Cuisine traditionnelle'),
+    ('GRILL', 'Grillades'),
+    ('PIZZERIA', 'Pizzeria'),
+    ('BAKERY', 'Boulangerie'),
+    ('CAFE', 'Café'),
+    ('SEAFOOD', 'Poissons & fruits de mer'),
+    ('VEGETARIAN', 'Végétarien'),
+    ('INTERNATIONAL', 'Cuisine internationale'),
+    ('OTHER', 'Autre'),
+  ];
+
+  static const _cuisines = <(String, String)>[
+    ('BURKINABE', 'Burkinabè'),
+    ('IVORIAN', 'Ivoirienne'),
+    ('TOGOLESE', 'Togolaise'),
+    ('GHANAIAN', 'Ghanéenne'),
+    ('NIGERIAN', 'Nigériane'),
+    ('SENEGALESE', 'Sénégalaise'),
+    ('MALIENNE', 'Malienne'),
+    ('BENINESE', 'Béninoise'),
+    ('CAMEROONIAN', 'Camerounaise'),
+    ('LEBANESE', 'Libanaise'),
+    ('ITALIAN', 'Italienne'),
+    ('FRENCH', 'Française'),
+    ('CHINESE', 'Chinoise'),
+    ('INDIAN', 'Indienne'),
+    ('MOROCCAN', 'Marocaine'),
+    ('OTHER', 'Autre cuisine'),
+  ];
+
+  Future<void> _configureDiscovery(Map<String, dynamic> restaurant) async {
+    final repository = ref.read(sellerRestaurantRepositoryProvider);
+    if (repository == null) return;
+    var type = _restaurantTypes.any((entry) => entry.$1 == restaurant['restaurant_type'])
+        ? restaurant['restaurant_type'].toString()
+        : 'OTHER';
+    final rawCuisines = restaurant['cuisine_types'];
+    final selected = <String>{
+      if (rawCuisines is List) ...rawCuisines.map((value) => value.toString()),
+    };
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Catégories du restaurant'),
+          content: SizedBox(
+            width: 440,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  DropdownButtonFormField<String>(
+                    value: type,
+                    isExpanded: true,
+                    decoration: const InputDecoration(labelText: 'Genre de restaurant'),
+                    items: _restaurantTypes.map((entry) => DropdownMenuItem(
+                      value: entry.$1, child: Text(entry.$2),
+                    )).toList(),
+                    onChanged: (value) {
+                      if (value != null) setDialogState(() => type = value);
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  Text('Origine des cuisines proposées',
+                    style: Theme.of(context).textTheme.titleSmall),
+                  for (final cuisine in _cuisines)
+                    CheckboxListTile(
+                      dense: true,
+                      contentPadding: EdgeInsets.zero,
+                      value: selected.contains(cuisine.$1),
+                      title: Text(cuisine.$2),
+                      onChanged: (checked) => setDialogState(() {
+                        if (checked == true) {
+                          if (selected.length < 10) selected.add(cuisine.$1);
+                        } else {
+                          selected.remove(cuisine.$1);
+                        }
+                      }),
+                    ),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Annuler'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text('Enregistrer'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (!mounted || result != true) return;
+    try {
+      await repository.saveDiscoveryProfile(
+        restaurantId: restaurant['id'].toString(),
+        restaurantType: type,
+        cuisineTypes: selected.toList(),
+      );
+      if (!mounted) return;
+      setState(() => _future = _load());
+      _show('Catégories enregistrées. Elles sont maintenant utilisables dans la recherche client.');
+    } catch (_) {
+      _show('Impossible d’enregistrer les catégories du restaurant.');
+    }
+  }
+
   Future<void> _linkProduct(Map<String, dynamic> item) async {
     final repository = ref.read(sellerRestaurantRepositoryProvider);
     if (repository == null) return;
@@ -341,9 +456,22 @@ class _SellerRestaurantOptionsPageState
         ? Map<String, dynamic>.from(restaurant['shops'] as Map) : const <String, dynamic>{};
     final menus = _maps(restaurant['restaurant_menus']);
     return [
-      Padding(padding: const EdgeInsets.only(top: 12, bottom: 4),
-        child: Text(shop['name']?.toString() ?? 'Restaurant',
-          style: Theme.of(context).textTheme.titleLarge)),
+      Padding(
+        padding: const EdgeInsets.only(top: 12, bottom: 4),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(shop['name']?.toString() ?? 'Restaurant',
+                style: Theme.of(context).textTheme.titleLarge),
+            ),
+            OutlinedButton.icon(
+              onPressed: () => _configureDiscovery(restaurant),
+              icon: const Icon(Icons.category_outlined),
+              label: const Text('Catégories'),
+            ),
+          ],
+        ),
+      ),
       for (final menu in menus)
         Card(child: ExpansionTile(
           title: Text(menu['name']?.toString() ?? 'Menu'),
