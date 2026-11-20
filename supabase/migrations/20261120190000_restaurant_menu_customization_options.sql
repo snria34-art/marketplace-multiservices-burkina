@@ -384,6 +384,57 @@ revoke all on function public.quote_restaurant_menu_item(uuid,jsonb) from public
 grant execute on function public.quote_restaurant_menu_item(uuid,jsonb) to anon, authenticated;
 
 
+
+
+-- Prevent the generic product add RPC from silently merging an uncustomized
+-- purchase into a restaurant line that already has selected options.
+create or replace function public.guard_restaurant_cart_line_quantity()
+returns trigger
+language plpgsql
+security invoker
+set search_path = ''
+as $
+begin
+  if old.restaurant_menu_item_id is not null
+     and new.quantity > old.quantity
+     and coalesce(pg_catalog.current_setting('app.restaurant_menu_rpc', true), '') <> 'true'
+     and coalesce(pg_catalog.current_setting('app.cart_quantity_rpc', true), '') <> 'true' then
+    raise exception 'restaurant_item_requires_customization';
+  end if;
+  return new;
+end;
+$;
+
+drop trigger if exists trg_guard_restaurant_cart_line_quantity
+  on public.cart_items;
+create trigger trg_guard_restaurant_cart_line_quantity
+before update of quantity on public.cart_items
+for each row execute function public.guard_restaurant_cart_line_quantity();
+
+-- The ordinary quantity editor may increase an already-customized line because
+-- it preserves the same selections; mark that trusted RPC for this transaction.
+do $patch$
+declare
+  v_definition text;
+begin
+  v_definition := pg_catalog.pg_get_functiondef(
+    'public.set_cart_item_quantity(uuid,integer)'::regprocedure
+  );
+  if v_definition not like '%app.cart_quantity_rpc%' then
+    v_definition := replace(
+      v_definition,
+      '  update public.cart_items' || chr(10) || '     set quantity = p_quantity',
+      '  perform pg_catalog.set_config(''app.cart_quantity_rpc'', ''true'', true);'
+        || chr(10) || '  update public.cart_items' || chr(10) || '     set quantity = p_quantity'
+    );
+    if v_definition not like '%app.cart_quantity_rpc%' then
+      raise exception 'cart_quantity_rpc_guard_patch_failed';
+    end if;
+    execute v_definition;
+  end if;
+end;
+$patch$;
+
 -- Keep customization selections in the cart and immutable price/name snapshots on orders.
 alter table public.cart_items
   add column if not exists restaurant_menu_item_id uuid
@@ -445,6 +496,7 @@ begin
     raise exception 'cart_item_customization_conflict';
   end if;
 
+  perform pg_catalog.set_config('app.restaurant_menu_rpc', 'true', true);
   v_item_id := public.add_to_cart(v_product_id, p_quantity, null);
 
   update public.cart_items
