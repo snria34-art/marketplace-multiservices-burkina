@@ -41,15 +41,46 @@ class CartRepository {
     final items = await client
         .from('cart_items')
         .select(
-          'id,product_id,variant_id,quantity,unit_price,created_at,products(name,price),product_variants(name)',
+          'id,product_id,variant_id,quantity,unit_price,created_at,products(name,price),product_variants(name),restaurant_menu_item_id,restaurant_selections,restaurant_menu_items(name,restaurant_menu_item_option_groups(id,name,restaurant_menu_item_options(id,name,price_delta)))',
         )
         .eq('cart_id', cartId)
         .order('created_at');
 
-    cart['items'] = (items as List)
+    final mappedItems = (items as List)
         .map((row) => Map<String, dynamic>.from(row as Map))
         .toList();
 
+    for (final item in mappedItems) {
+      final menuItemId = item['restaurant_menu_item_id']?.toString();
+      if (menuItemId == null || menuItemId.isEmpty) continue;
+      final rawSelections = item['restaurant_selections'];
+      final selections = <String, List<String>>{};
+      if (rawSelections is Map) {
+        for (final entry in rawSelections.entries) {
+          if (entry.value is List) {
+            selections[entry.key.toString()] =
+                (entry.value as List).map((id) => id.toString()).toList();
+          }
+        }
+      }
+      try {
+        final quote = await client.rpc(
+          'quote_restaurant_menu_item',
+          params: {
+            'p_menu_item_id': menuItemId,
+            'p_selections': selections,
+          },
+        );
+        if (quote is! Map) throw StateError('invalid_customization_quote');
+        item['restaurant_options_total'] = quote['options_total'];
+        item['restaurant_unit_total'] = quote['unit_total'];
+        item['customization_invalid'] = false;
+      } catch (_) {
+        item['customization_invalid'] = true;
+      }
+    }
+
+    cart['items'] = mappedItems;
     return cart;
   }
 
