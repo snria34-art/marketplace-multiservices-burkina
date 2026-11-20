@@ -69,7 +69,20 @@ class BurkinaLocationDirectory {
     if (province.isEmpty) return const [];
     final communes = province.first['communes'];
     if (communes is! List) return const [];
-    return communes.map((value) => value.toString()).toList(growable: false);
+
+    // INSD table 1.1.01 lists the 12 Ouagadougou and 7 Bobo-Dioulasso
+    // arrondissements as commune-level administrative units. The address
+    // form offers each city as a parent selection so that its arrondissement
+    // and sector can be selected in the next fields.
+    final names = communes.map((value) => value.toString()).toList();
+    if (regionName == 'Kadiogo' && provinceName == 'Kadiogo') {
+      names.removeWhere((name) => name.startsWith('Arrondissement n°'));
+      names.insert(0, 'Ouagadougou');
+    } else if (regionName == 'Guiriko' && provinceName == 'Houet') {
+      names.removeWhere((name) => name.startsWith('Arrondissement n°'));
+      names.insert(0, 'Bobo-Dioulasso');
+    }
+    return names.toList(growable: false);
   }
 
   List<int> arrondissementsFor(String? communeName) {
