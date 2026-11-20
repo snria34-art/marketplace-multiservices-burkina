@@ -16,6 +16,20 @@ create index if not exists idx_restaurant_profiles_type
 create index if not exists idx_restaurant_profiles_cuisines
   on public.restaurant_profiles using gin(cuisine_types);
 
+create or replace function public.restaurant_search_normalize(p_value text)
+returns text
+language sql
+immutable
+parallel safe
+set search_path = ''
+as $
+  select translate(
+    lower(coalesce(p_value, '')),
+    'àáâäãåçèéêëìíîïñòóôöõùúûüýÿ',
+    'aaaaaaceeeeiiiinooooouuuuyy'
+  );
+$;
+
 create or replace function public.save_restaurant_discovery_profile(
   p_restaurant_id uuid,
   p_restaurant_type text,
@@ -156,17 +170,36 @@ as $$
       or upper(trim(p_cuisine_type)) = any(rp.cuisine_types))
     and (
       nullif(trim(p_query), '') is null
-      or mi.name ilike '%' || trim(p_query) || '%'
-      or coalesce(mi.description, '') ilike '%' || trim(p_query) || '%'
-      or m.name ilike '%' || trim(p_query) || '%'
-      or s.name ilike '%' || trim(p_query) || '%'
+      or public.restaurant_search_normalize(mi.name) like '%' || public.restaurant_search_normalize(p_query) || '%'
+      or public.restaurant_search_normalize(coalesce(mi.description, '')) like '%' || public.restaurant_search_normalize(p_query) || '%'
+      or public.restaurant_search_normalize(m.name) like '%' || public.restaurant_search_normalize(p_query) || '%'
+      or public.restaurant_search_normalize(s.name) like '%' || public.restaurant_search_normalize(p_query) || '%'
       or exists (
-        select 1 from unnest(rp.cuisine_types) cuisine
-        where cuisine ilike '%' || trim(p_query) || '%'
+        select 1 from unnest(rp.cuisine_types) as cuisine(code)
+        where public.restaurant_search_normalize(cuisine.code) like '%' || public.restaurant_search_normalize(p_query) || '%'
+          or case cuisine.code
+            when 'BURKINABE' then 'burkinabe'
+            when 'IVORIAN' then 'ivoirienne'
+            when 'TOGOLESE' then 'togolaise'
+            when 'GHANAIAN' then 'ghanéenne'
+            when 'NIGERIAN' then 'nigériane'
+            when 'SENEGALESE' then 'sénégalaise'
+            when 'MALIENNE' then 'malienne'
+            when 'BENINESE' then 'béninoise'
+            when 'CAMEROONIAN' then 'camerounaise'
+            when 'LEBANESE' then 'libanaise'
+            when 'ITALIAN' then 'italienne'
+            when 'FRENCH' then 'française'
+            when 'CHINESE' then 'chinoise'
+            when 'INDIAN' then 'indienne'
+            when 'MOROCCAN' then 'marocaine'
+            else lower(cuisine.code)
+          end like '%' || public.restaurant_search_normalize(p_query) || '%'
       )
       or exists (
         select 1 from public.product_tags pt
-        where pt.product_id = p.id and pt.tag ilike '%' || trim(p_query) || '%'
+        where pt.product_id = p.id
+          and public.restaurant_search_normalize(pt.tag) like '%' || public.restaurant_search_normalize(p_query) || '%'
       )
     )
   order by
