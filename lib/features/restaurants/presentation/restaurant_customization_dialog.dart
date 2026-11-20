@@ -22,6 +22,25 @@ class _RestaurantCustomizationDialogState
   final Map<String, String> _selectedLevelByOption = {};
   int _quantity = 1;
 
+  @override
+  void initState() {
+    super.initState();
+    for (final group in widget.groups) {
+      final options = _options(group);
+      for (final option in options) {
+        final optionId = option['id']?.toString();
+        if (optionId == null) continue;
+        final defaults = _levels(option)
+            .where((level) => level['is_default'] == true)
+            .toList();
+        if (defaults.length == 1) {
+          _selectedLevelByOption[optionId] =
+              defaults.first['id'].toString();
+        }
+      }
+    }
+  }
+
   List<Map<String, dynamic>> _options(Map<String, dynamic> group) {
     final raw = group['product_options'];
     if (raw is! List) return const [];
