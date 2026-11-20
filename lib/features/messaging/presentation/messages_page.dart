@@ -7,12 +7,6 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/errors/backend_error_message.dart';
 import '../../../core/providers/repository_providers.dart';
-import '../data/messaging_repository.dart';
-
-final messagingRepositoryProvider = Provider<MessagingRepository?>((ref) {
-  final client = ref.watch(supabaseProvider);
-  return client == null ? null : MessagingRepository(client);
-});
 
 class MessagesPage extends ConsumerStatefulWidget {
   const MessagesPage({super.key});
