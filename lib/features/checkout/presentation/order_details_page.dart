@@ -178,7 +178,7 @@ class _OrderDetailsPageState extends ConsumerState<OrderDetailsPage> {
     final groups = await client
         .from('order_groups')
         .select(
-          'id,shop_id,status,subtotal,shops(name),order_items(id,product_id,product_name,quantity,unit_price,total_price)',
+          'id,shop_id,status,subtotal,shops(name),order_items(id,product_id,product_name,quantity,unit_price,total_price,restaurant_customizations)',
         )
         .eq('order_id', widget.orderId)
         .order('created_at');
@@ -936,6 +936,13 @@ class _OrderDetailsPageState extends ConsumerState<OrderDetailsPage> {
     return items.map((item) {
       final itemId = item['id']?.toString() ?? '';
       final productId = item['product_id']?.toString() ?? '';
+      final rawCustomizations = item['restaurant_customizations'];
+      final customizations = rawCustomizations is List
+          ? rawCustomizations.whereType<Map>().map((choice) =>
+              Map<String, dynamic>.from(choice)).toList()
+          : const <Map<String, dynamic>>[];
+      final choicesLabel = customizations.map((choice) =>
+          '${choice['option_name']} (+${choice['price_delta']} XOF)').join(', ');
 
       return ListTile(
         title: Text(item['product_name']?.toString() ?? 'Article'),
@@ -944,7 +951,8 @@ class _OrderDetailsPageState extends ConsumerState<OrderDetailsPage> {
               (item['quantity']?.toString() ?? '0') +
               ' • ' +
               (item['total_price']?.toString() ?? '0') +
-              ' XOF',
+              ' XOF' +
+              (choicesLabel.isEmpty ? '' : '\nChoix : ' + choicesLabel),
         ),
         trailing: delivered
             ? Wrap(
