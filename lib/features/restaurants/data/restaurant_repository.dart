@@ -37,6 +37,31 @@ class RestaurantRepository {
   }
 
 
+  /// Saves a formula slot whose choices are real active products from this shop.
+  Future<String> saveFormulaComponent({
+    String? groupId,
+    required String menuItemId,
+    required String name,
+    required String componentType,
+    required List<Map<String, dynamic>> products,
+  }) async {
+    final result = await client.rpc(
+      'save_restaurant_formula_component',
+      params: {
+        'p_group_id': groupId,
+        'p_menu_item_id': menuItemId,
+        'p_name': name.trim(),
+        'p_component_type': componentType,
+        'p_options': products,
+      },
+    );
+    final id = result?.toString().trim() ?? '';
+    if (id.isEmpty || id.toLowerCase() == 'null') {
+      throw StateError('Enregistrement de formule invalide.');
+    }
+    return id;
+  }
+
   Future<String> addMenuItemToCart({
     required String menuItemId,
     int quantity = 1,
@@ -133,7 +158,7 @@ class RestaurantRepository {
     final rows = await client
         .from('restaurant_profiles')
         .select(
-          'id,shop_id,shops!inner(name,seller_id),restaurant_menus!inner(id,name,restaurant_menu_items!inner(id,product_id,products(price),name,description,price,active,restaurant_menu_item_option_groups(id,name,selection_type,min_selections,max_selections,sort_order,restaurant_menu_item_options(id,name,price_delta,sort_order))))',
+          'id,shop_id,shops!inner(name,seller_id),restaurant_menus!inner(id,name,restaurant_menu_items!inner(id,product_id,products(price),name,description,price,active,restaurant_menu_item_option_groups(id,name,component_type,selection_type,min_selections,max_selections,sort_order,restaurant_menu_item_options(id,name,price_delta,linked_product_id,sort_order))))',
         )
         .eq('shops.seller_id', sellerId)
         .order('created_at', ascending: false);
