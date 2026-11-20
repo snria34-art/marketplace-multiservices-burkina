@@ -38,12 +38,13 @@ final marketplaceResilienceProvider = Provider<MarketplaceResilience>((ref) {
   return MarketplaceResilience();
 });
 
+// The engine is the single gateway used by repositories to obtain backend access.
 final marketplaceEngineProvider = Provider<MarketplaceEngine>((ref) {
   return MarketplaceEngine(ref.watch(supabaseProvider));
 });
 
 final catalogRepositoryProvider = Provider<CatalogRepository?>((ref) {
-  final client = ref.watch(supabaseProvider);
+  final client = ref.watch(marketplaceEngineProvider).backendClient;
   return client == null
       ? null
       : CatalogRepository(
@@ -53,38 +54,38 @@ final catalogRepositoryProvider = Provider<CatalogRepository?>((ref) {
 });
 
 final cartRepositoryProvider = Provider<CartRepository?>((ref) {
-  final client = ref.watch(supabaseProvider);
+  final client = ref.watch(marketplaceEngineProvider).backendClient;
   return client == null ? null : CartRepository(client);
 });
 
 final checkoutRepositoryProvider = Provider<CheckoutRepository?>((ref) {
-  final client = ref.watch(supabaseProvider);
+  final client = ref.watch(marketplaceEngineProvider).backendClient;
   return client == null ? null : CheckoutRepository(client);
 });
 
 final messagingRepositoryProvider = Provider<MessagingRepository?>((ref) {
-  final client = ref.watch(supabaseProvider);
+  final client = ref.watch(marketplaceEngineProvider).backendClient;
   return client == null ? null : MessagingRepository(client);
 });
 
 final notificationRepositoryProvider =
     Provider<NotificationRepository?>((ref) {
-  final client = ref.watch(supabaseProvider);
+  final client = ref.watch(marketplaceEngineProvider).backendClient;
   return client == null ? null : NotificationRepository(client);
 });
 
 final sellerRepositoryProvider = Provider<SellerRepository?>((ref) {
-  final client = ref.watch(supabaseProvider);
+  final client = ref.watch(marketplaceEngineProvider).backendClient;
   return client == null ? null : SellerRepository(client);
 });
 
 final sellerProductsRepositoryProvider =
     Provider<SellerProductsRepository?>((ref) {
-  final client = ref.watch(supabaseProvider);
+  final client = ref.watch(marketplaceEngineProvider).backendClient;
   return client == null ? null : SellerProductsRepository(client);
 });
 
 final verticalRepositoryProvider = Provider<VerticalRepository?>((ref) {
-  final client = ref.watch(supabaseProvider);
+  final client = ref.watch(marketplaceEngineProvider).backendClient;
   return client == null ? null : VerticalRepository(client);
 });
