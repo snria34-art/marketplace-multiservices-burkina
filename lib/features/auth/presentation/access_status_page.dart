@@ -29,7 +29,7 @@ class AccessStatusPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final client = ref.read(supabaseProvider);
+    final client = ref.read(marketplaceAuthenticationClientProvider);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Accès restreint')),
