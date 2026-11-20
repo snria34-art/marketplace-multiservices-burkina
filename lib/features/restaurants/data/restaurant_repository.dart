@@ -36,6 +36,30 @@ class RestaurantRepository {
     return id;
   }
 
+
+  Future<String> addMenuItemToCart({
+    required String menuItemId,
+    int quantity = 1,
+    required Map<String, List<String>> selections,
+  }) async {
+    if (quantity < 1 || quantity > 1000) {
+      throw ArgumentError('Quantité invalide.');
+    }
+    final result = await client.rpc(
+      'add_restaurant_menu_item_to_cart',
+      params: {
+        'p_menu_item_id': menuItemId,
+        'p_quantity': quantity,
+        'p_selections': selections,
+      },
+    );
+    final id = result?.toString().trim() ?? '';
+    if (id.isEmpty || id.toLowerCase() == 'null') {
+      throw StateError('Ajout au panier invalide.');
+    }
+    return id;
+  }
+
   /// Gets an authoritative XOF unit price from the database for chosen options.
   Future<Map<String, dynamic>> quoteMenuItem({
     required String menuItemId,
