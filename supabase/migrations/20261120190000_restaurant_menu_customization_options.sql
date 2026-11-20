@@ -65,6 +65,85 @@ create policy restaurant_active_options_read
     )
   );
 
+
+-- Seller catalog visibility and ownership policies allow SECURITY INVOKER writes.
+drop policy if exists restaurant_seller_profile_read on public.restaurant_profiles;
+create policy restaurant_seller_profile_read on public.restaurant_profiles
+for select to authenticated
+using (exists (
+  select 1 from public.shops s
+  join public.sellers se on se.id = s.seller_id
+  where s.id = shop_id and se.user_id = (select auth.uid())
+));
+
+drop policy if exists restaurant_seller_menu_read on public.restaurant_menus;
+create policy restaurant_seller_menu_read on public.restaurant_menus
+for select to authenticated
+using (exists (
+  select 1 from public.restaurant_profiles rp
+  join public.shops s on s.id = rp.shop_id
+  join public.sellers se on se.id = s.seller_id
+  where rp.id = restaurant_id and se.user_id = (select auth.uid())
+));
+
+drop policy if exists restaurant_seller_item_read on public.restaurant_menu_items;
+create policy restaurant_seller_item_read on public.restaurant_menu_items
+for select to authenticated
+using (exists (
+  select 1 from public.restaurant_menus m
+  join public.restaurant_profiles rp on rp.id = m.restaurant_id
+  join public.shops s on s.id = rp.shop_id
+  join public.sellers se on se.id = s.seller_id
+  where m.id = menu_id and se.user_id = (select auth.uid())
+));
+
+drop policy if exists restaurant_seller_option_groups_manage on public.restaurant_menu_item_option_groups;
+create policy restaurant_seller_option_groups_manage on public.restaurant_menu_item_option_groups
+for all to authenticated
+using (exists (
+  select 1 from public.restaurant_menu_items mi
+  join public.restaurant_menus m on m.id = mi.menu_id
+  join public.restaurant_profiles rp on rp.id = m.restaurant_id
+  join public.shops s on s.id = rp.shop_id
+  join public.sellers se on se.id = s.seller_id
+  where mi.id = menu_item_id and se.user_id = (select auth.uid())
+))
+with check (exists (
+  select 1 from public.restaurant_menu_items mi
+  join public.restaurant_menus m on m.id = mi.menu_id
+  join public.restaurant_profiles rp on rp.id = m.restaurant_id
+  join public.shops s on s.id = rp.shop_id
+  join public.sellers se on se.id = s.seller_id
+  where mi.id = menu_item_id and se.user_id = (select auth.uid())
+));
+
+drop policy if exists restaurant_seller_options_manage on public.restaurant_menu_item_options;
+create policy restaurant_seller_options_manage on public.restaurant_menu_item_options
+for all to authenticated
+using (exists (
+  select 1 from public.restaurant_menu_item_option_groups g
+  join public.restaurant_menu_items mi on mi.id = g.menu_item_id
+  join public.restaurant_menus m on m.id = mi.menu_id
+  join public.restaurant_profiles rp on rp.id = m.restaurant_id
+  join public.shops s on s.id = rp.shop_id
+  join public.sellers se on se.id = s.seller_id
+  where g.id = option_group_id and se.user_id = (select auth.uid())
+))
+with check (exists (
+  select 1 from public.restaurant_menu_item_option_groups g
+  join public.restaurant_menu_items mi on mi.id = g.menu_item_id
+  join public.restaurant_menus m on m.id = mi.menu_id
+  join public.restaurant_profiles rp on rp.id = m.restaurant_id
+  join public.shops s on s.id = rp.shop_id
+  join public.sellers se on se.id = s.seller_id
+  where g.id = option_group_id and se.user_id = (select auth.uid())
+));
+
+grant select on public.restaurant_menu_item_option_groups,
+  public.restaurant_menu_item_options to anon, authenticated;
+grant insert, update, delete on public.restaurant_menu_item_option_groups,
+  public.restaurant_menu_item_options to authenticated;
+
 -- Sellers configure a whole option group atomically. Client roles cannot write
 -- the option tables directly; ownership is checked against the authenticated seller.
 create or replace function public.save_restaurant_item_option_group(
@@ -77,8 +156,8 @@ create or replace function public.save_restaurant_item_option_group(
   p_group_id uuid default null
 ) returns uuid
 language plpgsql
-security definer
-set search_path = pg_catalog, public
+security invoker
+set search_path = ''
 as $$
 declare
   v_user_id uuid := auth.uid();
@@ -170,8 +249,8 @@ create or replace function public.quote_restaurant_menu_item(
   p_selections jsonb default '{}'::jsonb
 ) returns jsonb
 language plpgsql
-security definer
-set search_path = pg_catalog, public
+security invoker
+set search_path = ''
 as $$
 declare
   v_item public.restaurant_menu_items%rowtype;
