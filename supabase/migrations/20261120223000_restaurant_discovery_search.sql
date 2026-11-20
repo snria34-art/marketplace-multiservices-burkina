@@ -50,13 +50,13 @@ language sql
 immutable
 parallel safe
 set search_path = ''
-as $
+as $$
   select translate(
     lower(coalesce(p_value, '')),
     'àáâäãåçèéêëìíîïñòóôöõùúûüýÿ',
     'aaaaaaceeeeiiiinooooouuuuyy'
   );
-$;
+$$;
 
 
 -- Trigram indexes support partial matching of dish names, descriptions,
