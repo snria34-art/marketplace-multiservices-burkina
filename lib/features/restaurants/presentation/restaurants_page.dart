@@ -184,7 +184,7 @@ class _MenuItemTile extends StatelessWidget {
               ),
               const SizedBox(width: 12),
               Text(
-                '\${item['price']?.toString() ?? '0'} XOF',
+                '${item['price']?.toString() ?? '0'} XOF',
                 style: Theme.of(context).textTheme.titleSmall,
               ),
             ],
@@ -222,10 +222,10 @@ class _OptionGroupPreview extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '\${group['name']?.toString() ?? 'Personnalisation'} · '
-            '\${multiple ? 'plusieurs choix' : 'un choix'}'
-            '\${min > 0 ? ' · obligatoire' : ' · facultatif'}'
-            '\${multiple ? ' · max. $max' : ''}',
+            '${group['name']?.toString() ?? 'Personnalisation'} · '
+            '${multiple ? 'plusieurs choix' : 'un choix'}'
+            '${min > 0 ? ' · obligatoire' : ' · facultatif'}'
+            '${multiple ? ' · max. $max' : ''}',
             style: Theme.of(context).textTheme.labelLarge,
           ),
           for (final option in options)
@@ -239,7 +239,7 @@ class _OptionGroupPreview extends StatelessWidget {
                   Text(
                     (num.tryParse(option['price_delta']?.toString() ?? '') ?? 0) == 0
                         ? 'Inclus'
-                        : '+\${option['price_delta']} XOF',
+                        : '+${option['price_delta']} XOF',
                   ),
                 ],
               ),
