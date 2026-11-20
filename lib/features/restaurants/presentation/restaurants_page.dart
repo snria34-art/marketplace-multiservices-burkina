@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/providers/repository_providers.dart';
 import '../data/restaurant_repository.dart';
+import 'restaurant_customization_dialog.dart';
 
 final restaurantRepositoryProvider = Provider<RestaurantRepository?>((ref) {
   final client = ref.watch(supabaseProvider);
@@ -99,13 +100,13 @@ class _RestaurantsPageState extends ConsumerState<RestaurantsPage> {
   }
 }
 
-class _MenuSection extends StatelessWidget {
+class _MenuSection extends ConsumerWidget {
   const _MenuSection({required this.menu});
 
   final Map<String, dynamic> menu;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final rawItems = menu['restaurant_menu_items'];
     final items = rawItems is List
         ? rawItems
@@ -123,6 +124,74 @@ class _MenuSection extends StatelessWidget {
             title: Text(item['name']?.toString() ?? 'Plat'),
             subtitle: Text(item['description']?.toString() ?? ''),
             trailing: Text((item['price']?.toString() ?? '0') + ' XOF'),
+            onTap: () async {
+              final product = item['products'] is Map
+                  ? Map<String, dynamic>.from(item['products'] as Map)
+                  : const <String, dynamic>{};
+              final productId = item['product_id']?.toString() ??
+                  product['id']?.toString();
+              if (productId == null || productId.trim().isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Ce plat n’est pas encore relié à un produit commandable.'),
+                  ),
+                );
+                return;
+              }
+
+              final repository = ref.read(restaurantRepositoryProvider);
+              if (repository == null) return;
+
+              try {
+                final groups = await repository.productOptionGroups(productId);
+                if (!context.mounted) return;
+
+                final basePrice = num.tryParse(
+                      product['price']?.toString() ??
+                          item['price']?.toString() ??
+                          '',
+                    ) ??
+                    0;
+                final result = await showDialog<Map<String, dynamic>>(
+                  context: context,
+                  builder: (_) => RestaurantCustomizationDialog(
+                    productName: item['name']?.toString() ?? 'Plat',
+                    basePrice: basePrice,
+                    groups: groups,
+                  ),
+                );
+                if (!context.mounted || result == null) return;
+
+                final rawLevels = result['selected_level_ids'];
+                final levelIds = rawLevels is List
+                    ? rawLevels.map((value) => value.toString()).toList()
+                    : <String>[];
+                final quantity = int.tryParse(
+                      result['quantity']?.toString() ?? '',
+                    ) ??
+                    1;
+
+                await repository.addConfiguredRestaurantItemToCart(
+                  productId: productId,
+                  quantity: quantity,
+                  selectedLevelIds: levelIds,
+                );
+                if (!context.mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Plat ajouté au panier.')),
+                );
+              } catch (error) {
+                if (!context.mounted) return;
+                final message = error.toString().contains('product_option_required')
+                    ? 'Choisissez les options obligatoires de ce plat.'
+                    : error.toString().contains('insufficient_stock')
+                        ? 'Stock insuffisant pour ce plat.'
+                        : 'Impossible d’ajouter ce plat. Vérifiez les options et réessayez.';
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(message)),
+                );
+              }
+            },
           ),
       ],
     );
