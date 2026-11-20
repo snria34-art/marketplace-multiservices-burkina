@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/providers/repository_providers.dart';
+import '../../../core/utils/xof_formatter.dart';
 
 class ExpiryPage extends ConsumerStatefulWidget {
   const ExpiryPage({super.key});
@@ -95,11 +96,8 @@ class _ExpiryPageState extends ConsumerState<ExpiryPage> {
                     product['name']?.toString() ?? 'Produit',
                   ),
                   subtitle: Text(
-                    'Expiration : ' +
-                        (product['expiry_date']?.toString() ?? '-') +
-                        '\nPrix : ' +
-                        (product['price']?.toString() ?? '0') +
-                        ' XOF',
+                    'Expiration : ${product['expiry_date']?.toString() ?? '-'}'
+                    '\nPrix : ${formatXof(num.tryParse(product['price']?.toString() ?? '0') ?? 0)}',
                   ),
                 ),
               );

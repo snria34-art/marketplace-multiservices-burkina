@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/errors/backend_error_message.dart';
 import '../../../core/providers/repository_providers.dart';
+import '../../../core/utils/xof_formatter.dart';
 import '../../verticals/data/vertical_repository.dart';
 
 final businessMobilityListingsProvider =
@@ -199,7 +200,7 @@ class _DigitalServiceCard extends StatelessWidget {
         trailing: price == null
             ? null
             : Text(
-                '${price.toString()} F',
+                '${formatXof(num.tryParse(price.toString()) ?? 0)}',
                 style: Theme.of(context).textTheme.labelLarge,
               ),
         isThreeLine: item['description'] != null,
@@ -239,10 +240,10 @@ class _RentalCard extends StatelessWidget {
           item['vehicle_type']?.toString() ?? 'Véhicule / moto',
           if (providerName != null && providerName.isNotEmpty) providerName,
           if (item['deposit_amount'] != null)
-            'Caution : ${item['deposit_amount']} F',
+            'Caution : ${formatXof(num.tryParse(item['deposit_amount'].toString()) ?? 0)}',
         ].join(' • ')),
         trailing: Text(
-          '${item['daily_price'] ?? '—'} F/j',
+          '${formatXof(num.tryParse(item['daily_price']?.toString() ?? '') ?? 0)} / jour',
           style: Theme.of(context).textTheme.labelLarge,
         ),
       ),

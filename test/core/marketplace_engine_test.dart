@@ -26,6 +26,7 @@ void main() {
         MarketplaceCapability.discoverTransport,
         MarketplaceCapability.discoverVerticals,
         MarketplaceCapability.discoverPromotions,
+        MarketplaceCapability.discoverModules,
         MarketplaceCapability.authenticate,
       ];
       for (final capability in capabilities) {

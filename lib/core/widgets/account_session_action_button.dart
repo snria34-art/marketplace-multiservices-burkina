@@ -60,7 +60,9 @@ class _AccountSessionActionButtonState
     setState(() => _busy = true);
     try {
       await PushNotificationService.instance
-          .signOutAndDeactivateCurrentDevice(client: client);
+          .signOutAndDeactivateCurrentDevice(
+            engine: ref.read(marketplaceEngineProvider),
+          );
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

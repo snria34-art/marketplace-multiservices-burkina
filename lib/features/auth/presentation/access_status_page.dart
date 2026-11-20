@@ -56,7 +56,9 @@ class AccessStatusPage extends ConsumerWidget {
                     }
                     try {
                       await PushNotificationService.instance
-                          .signOutAndDeactivateCurrentDevice(client: client);
+                          .signOutAndDeactivateCurrentDevice(
+                            engine: ref.read(marketplaceEngineProvider),
+                          );
                     } catch (_) {
                       if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
