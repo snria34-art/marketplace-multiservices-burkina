@@ -3,7 +3,7 @@
 String formatXof(num value) {
   final rounded = value.round().toString();
   final grouped = rounded.replaceAllMapped(
-    RegExp(r'(\\d)(?=(\\d{3})+(?!\\d))'),
+    RegExp(r'(\d)(?=(\d{3})+(?!\d))'),
     (match) => '${match[1]} ',
   );
   return '$grouped F CFA';
