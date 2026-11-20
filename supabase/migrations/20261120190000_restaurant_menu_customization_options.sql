@@ -333,3 +333,203 @@ $$;
 
 revoke all on function public.quote_restaurant_menu_item(uuid,jsonb) from public, anon, authenticated;
 grant execute on function public.quote_restaurant_menu_item(uuid,jsonb) to anon, authenticated;
+
+
+-- Keep customization selections in the cart and immutable price/name snapshots on orders.
+alter table public.cart_items
+  add column if not exists restaurant_menu_item_id uuid
+    references public.restaurant_menu_items(id) on delete set null,
+  add column if not exists restaurant_selections jsonb not null default '{}'::jsonb;
+
+alter table public.order_items
+  add column if not exists restaurant_menu_item_id uuid
+    references public.restaurant_menu_items(id) on delete set null,
+  add column if not exists restaurant_customizations jsonb not null default '[]'::jsonb;
+
+create or replace function public.add_restaurant_menu_item_to_cart(
+  p_menu_item_id uuid,
+  p_quantity integer,
+  p_selections jsonb default '{}'::jsonb
+) returns uuid
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_user_id uuid := auth.uid();
+  v_product_id uuid;
+  v_item_id uuid;
+  v_cart_id uuid;
+  v_existing_menu_item_id uuid;
+  v_existing_selections jsonb;
+begin
+  if v_user_id is null then raise exception 'not_authenticated'; end if;
+  if p_quantity is null or p_quantity < 1 or p_quantity > 1000 then
+    raise exception 'invalid_quantity';
+  end if;
+  if p_selections is null or jsonb_typeof(p_selections) <> 'object' then
+    raise exception 'invalid_selections';
+  end if;
+
+  select mi.product_id into v_product_id
+  from public.restaurant_menu_items mi
+  join public.restaurant_menus m on m.id = mi.menu_id
+  where mi.id = p_menu_item_id and mi.active = true and m.active = true
+  for share;
+  if v_product_id is null then
+    raise exception 'restaurant_item_not_linked_to_product';
+  end if;
+
+  perform public.quote_restaurant_menu_item(p_menu_item_id, p_selections);
+
+  v_item_id := public.add_to_cart(v_product_id, p_quantity, null);
+
+  select c.id into v_cart_id
+  from public.carts c
+  where c.customer_id = v_user_id and c.status = 'ACTIVE'
+  for update;
+  if v_cart_id is null then raise exception 'active_cart_not_found'; end if;
+
+  select ci.restaurant_menu_item_id, ci.restaurant_selections
+    into v_existing_menu_item_id, v_existing_selections
+  from public.cart_items ci
+  where ci.id = v_item_id and ci.cart_id = v_cart_id
+  for update;
+
+  if v_existing_menu_item_id is not null
+     and (v_existing_menu_item_id <> p_menu_item_id
+          or v_existing_selections is distinct from p_selections) then
+    raise exception 'cart_item_customization_conflict';
+  end if;
+
+  if v_existing_menu_item_id is null and v_existing_selections <> '{}'::jsonb then
+    raise exception 'cart_item_customization_conflict';
+  end if;
+
+  update public.cart_items
+  set restaurant_menu_item_id = p_menu_item_id,
+      restaurant_selections = p_selections
+  where id = v_item_id and cart_id = v_cart_id;
+
+  return v_item_id;
+end;
+$$;
+
+revoke all on function public.add_restaurant_menu_item_to_cart(uuid,integer,jsonb)
+  from public, anon, authenticated;
+grant execute on function public.add_restaurant_menu_item_to_cart(uuid,integer,jsonb)
+  to authenticated;
+
+create or replace function public.snapshot_restaurant_item_customizations()
+returns trigger
+language plpgsql
+security invoker
+set search_path = ''
+as $$
+declare
+  v_customer_id uuid;
+  v_menu_item_id uuid;
+  v_selections jsonb;
+  v_quote jsonb;
+  v_surcharge numeric := 0;
+begin
+  select o.customer_id into v_customer_id
+  from public.order_groups og
+  join public.orders o on o.id = og.order_id
+  where og.id = new.order_group_id;
+
+  select ci.restaurant_menu_item_id, ci.restaurant_selections
+    into v_menu_item_id, v_selections
+  from public.carts c
+  join public.cart_items ci on ci.cart_id = c.id
+  where c.customer_id = v_customer_id
+    and c.status = 'ACTIVE'
+    and ci.product_id = new.product_id
+    and coalesce(ci.variant_id, '00000000-0000-0000-0000-000000000000'::uuid)
+        = coalesce(new.variant_id, '00000000-0000-0000-0000-000000000000'::uuid)
+  limit 1;
+
+  if v_menu_item_id is null then
+    new.restaurant_customizations := '[]'::jsonb;
+    return new;
+  end if;
+
+  if not exists (
+    select 1 from public.restaurant_menu_items mi
+    where mi.id = v_menu_item_id and mi.product_id = new.product_id
+  ) then
+    raise exception 'restaurant_item_product_mismatch';
+  end if;
+
+  v_quote := public.quote_restaurant_menu_item(v_menu_item_id, v_selections);
+  v_surcharge := coalesce((v_quote->>'options_total')::numeric, 0);
+  new.restaurant_menu_item_id := v_menu_item_id;
+  new.unit_price := new.unit_price + v_surcharge;
+  new.total_price := new.unit_price * new.quantity;
+
+  select coalesce(
+    jsonb_agg(
+      jsonb_build_object(
+        'group_id', g.id,
+        'group_name', g.name,
+        'option_id', op.id,
+        'option_name', op.name,
+        'price_delta', op.price_delta
+      ) order by g.sort_order, op.sort_order, op.id
+    ),
+    '[]'::jsonb
+  ) into new.restaurant_customizations
+  from jsonb_each(v_selections) as selected(group_id, option_ids)
+  join public.restaurant_menu_item_option_groups g
+    on g.id = selected.group_id::uuid and g.menu_item_id = v_menu_item_id
+  cross join lateral jsonb_array_elements_text(selected.option_ids) as chosen(option_id)
+  join public.restaurant_menu_item_options op
+    on op.id = chosen.option_id::uuid and op.option_group_id = g.id
+  where g.active = true and op.active = true;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_snapshot_restaurant_item_customizations
+  on public.order_items;
+create trigger trg_snapshot_restaurant_item_customizations
+before insert on public.order_items
+for each row execute function public.snapshot_restaurant_item_customizations();
+
+create or replace function public.apply_restaurant_customization_totals()
+returns trigger
+language plpgsql
+security invoker
+set search_path = ''
+as $$
+declare
+  v_surcharge numeric := 0;
+  v_order_id uuid;
+begin
+  select coalesce(sum((choice->>'price_delta')::numeric), 0) * new.quantity
+    into v_surcharge
+  from jsonb_array_elements(coalesce(new.restaurant_customizations, '[]'::jsonb)) choice;
+
+  if v_surcharge <= 0 then return new; end if;
+
+  update public.order_groups
+  set subtotal = subtotal + v_surcharge
+  where id = new.order_group_id
+  returning order_id into v_order_id;
+
+  update public.orders
+  set subtotal = subtotal + v_surcharge,
+      total = total + v_surcharge
+  where id = v_order_id;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_apply_restaurant_customization_totals
+  on public.order_items;
+create trigger trg_apply_restaurant_customization_totals
+after insert on public.order_items
+for each row execute function public.apply_restaurant_customization_totals();
+
