@@ -65,12 +65,48 @@ class _CartPageState extends ConsumerState<CartPage> {
 
     return items.fold<double>(0, (sum, raw) {
       final item = Map<String, dynamic>.from(raw as Map);
-      final price =
-          double.tryParse(item['unit_price']?.toString() ?? '') ?? 0;
+      final price = double.tryParse(
+            (item['restaurant_unit_total'] ?? item['unit_price'])?.toString() ?? '',
+          ) ?? 0;
       final quantity =
           int.tryParse(item['quantity']?.toString() ?? '') ?? 0;
       return sum + (price * quantity);
     });
+  }
+
+
+  List<String> _customizationLabels(Map<String, dynamic> item) {
+    final rawMenu = item['restaurant_menu_items'];
+    if (rawMenu is! Map) return const [];
+    final menu = Map<String, dynamic>.from(rawMenu);
+    final rawSelections = item['restaurant_selections'];
+    if (rawSelections is! Map) return const [];
+    final labels = <String>[];
+    final rawGroups = menu['restaurant_menu_item_option_groups'];
+    if (rawGroups is! List) return labels;
+
+    for (final rawGroup in rawGroups) {
+      if (rawGroup is! Map) continue;
+      final group = Map<String, dynamic>.from(rawGroup);
+      final groupId = group['id']?.toString() ?? '';
+      final selected = rawSelections[groupId];
+      if (selected is! List || selected.isEmpty) continue;
+      final selectedIds = selected.map((id) => id.toString()).toSet();
+      final rawOptions = group['restaurant_menu_item_options'];
+      if (rawOptions is! List) continue;
+      final names = <String>[];
+      for (final rawOption in rawOptions) {
+        if (rawOption is! Map) continue;
+        final option = Map<String, dynamic>.from(rawOption);
+        if (selectedIds.contains(option['id']?.toString())) {
+          names.add(option['name']?.toString() ?? 'Option');
+        }
+      }
+      if (names.isNotEmpty) {
+        labels.add('${group['name']?.toString() ?? 'Choix'} : ${names.join(', ')}');
+      }
+    }
+    return labels;
   }
 
   @override
@@ -137,11 +173,16 @@ class _CartPageState extends ConsumerState<CartPage> {
                     }
 
                     if (index == items.length + 1) {
+                      final hasInvalidCustomization = items.any((raw) =>
+                          raw is Map && raw['customization_invalid'] == true);
                       return FilledButton.icon(
-                        onPressed: () =>
-                            context.push('/checkout/' + cart!['id'].toString()),
+                        onPressed: hasInvalidCustomization
+                            ? null
+                            : () => context.push('/checkout/' + cart!['id'].toString()),
                         icon: const Icon(Icons.lock_outline),
-                        label: const Text('Choisir la livraison et payer'),
+                        label: Text(hasInvalidCustomization
+                            ? 'Retirez les choix devenus indisponibles'
+                            : 'Choisir la livraison et payer'),
                       );
                     }
 
@@ -158,6 +199,8 @@ class _CartPageState extends ConsumerState<CartPage> {
                     final variantName = variant['name']?.toString().trim();
                     final quantity =
                         int.tryParse(item['quantity']?.toString() ?? '') ?? 1;
+                    final customizationLabels = _customizationLabels(item);
+                    final customizationInvalid = item['customization_invalid'] == true;
 
                     return Card(
                       child: ListTile(
@@ -168,7 +211,12 @@ class _CartPageState extends ConsumerState<CartPage> {
                           [
                             if (variantName != null && variantName.isNotEmpty)
                               'Variante : ' + variantName,
-                            (item['unit_price']?.toString() ?? '0') + ' XOF',
+                            if (customizationLabels.isNotEmpty)
+                              'Choix : ' + customizationLabels.join(' • '),
+                            if (customizationInvalid)
+                              'Personnalisation modifiée par le restaurant : retirez cet article et ajoutez-le à nouveau.',
+                            (item['restaurant_unit_total']?.toString() ??
+                                item['unit_price']?.toString() ?? '0') + ' XOF / unité',
                           ].join('\n'),
                         ),
                         trailing: SizedBox(
