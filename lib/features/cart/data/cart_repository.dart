@@ -41,15 +41,28 @@ class CartRepository {
     final items = await client
         .from('cart_items')
         .select(
-          'id,product_id,variant_id,quantity,unit_price,created_at,products(name,price)',
+          'id,product_id,variant_id,quantity,unit_price,selected_option_level_ids,created_at,products(name,price)',
         )
         .eq('cart_id', cartId)
         .order('created_at');
 
-    cart['items'] = (items as List)
+    final mappedItems = (items as List)
         .map((row) => Map<String, dynamic>.from(row as Map))
         .toList();
 
+    for (final item in mappedItems) {
+      final snapshot = await client.rpc(
+        'get_my_cart_item_customizations',
+        params: {'p_cart_item_id': item['id']},
+      );
+      item['customizations'] = snapshot is List
+          ? snapshot.whereType<Map>()
+              .map((entry) => Map<String, dynamic>.from(entry))
+              .toList()
+          : const <Map<String, dynamic>>[];
+    }
+
+    cart['items'] = mappedItems;
     return cart;
   }
 
