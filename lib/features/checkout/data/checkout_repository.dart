@@ -1,24 +1,31 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../../core/engine/marketplace_resilience.dart';
+
 import '../models/payment_provider_availability.dart';
 
 class CheckoutRepository {
-  const CheckoutRepository(this.client);
+  const CheckoutRepository(this.client, {this.resilience});
 
   final SupabaseClient client;
+  final MarketplaceResilience? resilience;
+  static final _fallbackResilience = MarketplaceResilience();
+  MarketplaceResilience get _retry => resilience ?? _fallbackResilience;
+
+  Future<T> _read<T>(Future<T> Function() operation) => _retry.read(operation);
 
   Future<List<Map<String, dynamic>>> addresses() async {
     final user = client.auth.currentUser;
     if (user == null) return const [];
 
-    final rows = await client
+    final rows = await _read(() async => await client
         .from('delivery_addresses')
         .select(
           'id,label,recipient_name,phone,address_line,city,latitude,longitude,is_default,created_at',
         )
         .eq('customer_id', user.id)
         .order('is_default', ascending: false)
-        .order('created_at', ascending: false);
+        .order('created_at', ascending: false));
 
     return _maps(rows);
   }
@@ -63,7 +70,7 @@ class CheckoutRepository {
     required String cartId,
     required Map<String, dynamic> address,
   }) async {
-    final raw = await client.rpc(
+    final raw = await _read(() => client.rpc(
       'calculate_delivery_fee',
       params: {
         'p_cart_id': cartId,
@@ -73,7 +80,7 @@ class CheckoutRepository {
           'longitude': address['longitude'],
         },
       },
-    );
+    ));
 
     if (raw is Map) {
       return Map<String, dynamic>.from(raw);
@@ -91,10 +98,10 @@ class CheckoutRepository {
   }) async {
     final normalized = PaymentProviderAvailability.normalizeProvider(provider);
 
-    final response = await client.functions.invoke(
+    final response = await _read(() => client.functions.invoke(
       'check-payment-provider-config',
       body: {'provider': normalized},
-    );
+    ));
 
     final availability =
         PaymentProviderAvailability.fromResponse(response.data);
@@ -168,13 +175,13 @@ class CheckoutRepository {
     int limit = 20,
     int offset = 0,
   }) async {
-    final raw = await client.rpc(
+    final raw = await _read(() => client.rpc(
       'get_my_orders_with_completion',
       params: {
         'p_limit': limit,
         'p_offset': offset,
       },
-    );
+    ));
 
     return _maps(raw);
   }
