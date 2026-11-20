@@ -393,7 +393,7 @@ returns trigger
 language plpgsql
 security invoker
 set search_path = ''
-as $
+as $$
 begin
   if old.restaurant_menu_item_id is not null
      and new.quantity > old.quantity
@@ -403,7 +403,7 @@ begin
   end if;
   return new;
 end;
-$;
+$$;
 
 drop trigger if exists trg_guard_restaurant_cart_line_quantity
   on public.cart_items;
