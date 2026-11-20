@@ -50,7 +50,7 @@ class _SellerOrdersPageState extends ConsumerState<SellerOrdersPage> {
     final groups = await client
         .from('order_groups')
         .select(
-          'id,order_id,shop_id,status,subtotal,created_at,delivery_place_type,scheduled_delivery_at,delivery_instructions,shops(name),order_items(product_name,quantity,unit_price,total_price)',
+          'id,order_id,shop_id,status,subtotal,created_at,delivery_place_type,scheduled_delivery_at,delivery_instructions,shops(name),order_items(product_name,quantity,unit_price,total_price,customizations)',
         )
         .inFilter('shop_id', shopIds)
         .order('created_at', ascending: false)
@@ -192,6 +192,28 @@ class _SellerOrdersPageState extends ConsumerState<SellerOrdersPage> {
                             final item =
                                 Map<String, dynamic>.from(rawItem as Map);
 
+                            final rawCustomizations = item['customizations'];
+                            final choices = rawCustomizations is List
+                                ? rawCustomizations.whereType<Map>().map((row) {
+                                    final selected =
+                                        Map<String, dynamic>.from(row);
+                                    final group = selected['group_name']?.toString() ?? '';
+                                    final option = selected['option_name']?.toString() ?? '';
+                                    final level = selected['level_name']?.toString() ?? '';
+                                    final delta = num.tryParse(
+                                          selected['price_delta']?.toString() ?? '',
+                                        ) ??
+                                        0;
+                                    return (group.isEmpty ? '' : '$group — ') +
+                                        option +
+                                        ': ' +
+                                        level +
+                                        ' (+' +
+                                        delta.toStringAsFixed(0) +
+                                        ' XOF)';
+                                  }).toList()
+                                : <String>[];
+
                             return ListTile(
                               title: Text(
                                 item['product_name']?.toString() ??
@@ -202,7 +224,10 @@ class _SellerOrdersPageState extends ConsumerState<SellerOrdersPage> {
                                     (item['quantity']?.toString() ?? '0') +
                                     ' • ' +
                                     (item['unit_price']?.toString() ?? '0') +
-                                    ' XOF',
+                                    ' XOF' +
+                                    (choices.isEmpty
+                                        ? ''
+                                        : '\n' + choices.join('\n')),
                               ),
                               trailing: Text(
                                 (item['total_price']?.toString() ?? '0') +
