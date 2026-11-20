@@ -26,6 +26,7 @@ class MechanicRepository {
   Future<String> createRequest({
     required String vehicleType,
     required String serviceLocationType,
+    required String serviceType,
     required String problemType,
     String? description,
     String? locationNote,
@@ -37,6 +38,7 @@ class MechanicRepository {
       params: {
         'p_vehicle_type': vehicleType,
         'p_service_location_type': serviceLocationType,
+        'p_service_type': serviceType,
         'p_problem_type': problemType,
         'p_description': description,
         'p_location_note': locationNote,
