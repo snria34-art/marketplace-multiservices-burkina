@@ -29,6 +29,7 @@ class MarketplaceResilience {
   int _consecutiveFailures = 0;
   DateTime? _openedAt;
   bool _probeInFlight = false;
+  int _failureGeneration = 0;
 
   bool get isOpen {
     final openedAt = _openedAt;
@@ -50,6 +51,7 @@ class MarketplaceResilience {
     }
 
     var ownsProbe = false;
+    final generationAtStart = _failureGeneration;
     final openedAt = _openedAt;
     if (openedAt != null) {
       if (_clock().difference(openedAt) < cooldown) {
@@ -69,7 +71,8 @@ class MarketplaceResilience {
           final result = await operation().timeout(operationTimeout);
           // A request that began before the circuit opened cannot close a
           // half-open circuit while its dedicated probe is still running.
-          if (!(_probeInFlight && !ownsProbe)) {
+          if (_failureGeneration == generationAtStart &&
+              !(_probeInFlight && !ownsProbe)) {
             _consecutiveFailures = 0;
             _openedAt = null;
           }
@@ -104,6 +107,7 @@ class MarketplaceResilience {
   }
 
   void _recordFailure() {
+    _failureGeneration++;
     _consecutiveFailures++;
     if (_consecutiveFailures >= failureThreshold) {
       _openedAt = _clock();
@@ -112,6 +116,7 @@ class MarketplaceResilience {
 
   /// Reset after an operator-confirmed recovery or a successful health check.
   void reset() {
+    _failureGeneration++;
     _consecutiveFailures = 0;
     _openedAt = null;
     _probeInFlight = false;
