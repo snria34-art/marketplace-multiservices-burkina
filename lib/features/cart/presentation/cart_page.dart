@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/errors/backend_error_message.dart';
 import '../../../core/providers/repository_providers.dart';
+import '../../../core/utils/xof_formatter.dart';
 
 class CartPage extends ConsumerStatefulWidget {
   const CartPage({super.key});
@@ -166,7 +167,7 @@ class _CartPageState extends ConsumerState<CartPage> {
                       return ListTile(
                         title: const Text('Sous-total'),
                         trailing: Text(
-                          _total(cart!).toStringAsFixed(0) + ' XOF',
+                          formatXof(_total(cart!)),
                           style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
                       );
@@ -215,8 +216,7 @@ class _CartPageState extends ConsumerState<CartPage> {
                               'Choix : ' + customizationLabels.join(' • '),
                             if (customizationInvalid)
                               'Personnalisation modifiée par le restaurant : retirez cet article et ajoutez-le à nouveau.',
-                            (item['restaurant_unit_total']?.toString() ??
-                                item['unit_price']?.toString() ?? '0') + ' XOF / unité',
+                            formatXof(num.tryParse((item['restaurant_unit_total'] ?? item['unit_price'] ?? '0').toString()) ?? 0) + ' / unité',
                           ].join('\n'),
                         ),
                         trailing: SizedBox(
