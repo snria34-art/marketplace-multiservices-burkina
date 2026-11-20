@@ -1,0 +1,252 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../../core/providers/repository_providers.dart';
+import '../../restaurants/data/restaurant_repository.dart';
+
+final sellerRestaurantRepositoryProvider =
+    Provider<RestaurantRepository?>((ref) {
+  final client = ref.watch(supabaseProvider);
+  return client == null ? null : RestaurantRepository(client);
+});
+
+class SellerRestaurantOptionsPage extends ConsumerStatefulWidget {
+  const SellerRestaurantOptionsPage({super.key});
+
+  @override
+  ConsumerState<SellerRestaurantOptionsPage> createState() =>
+      _SellerRestaurantOptionsPageState();
+}
+
+class _SellerRestaurantOptionsPageState
+    extends ConsumerState<SellerRestaurantOptionsPage> {
+  late Future<List<Map<String, dynamic>>> _future;
+
+  @override
+  void initState() {
+    super.initState();
+    _future = _load();
+  }
+
+  Future<List<Map<String, dynamic>>> _load() {
+    return ref.read(sellerRestaurantRepositoryProvider)?.sellerMenuItems() ??
+        Future.value(const []);
+  }
+
+  List<Map<String, dynamic>> _maps(dynamic value) {
+    if (value is! List) return const [];
+    return value.whereType<Map>()
+        .map((row) => Map<String, dynamic>.from(row)).toList();
+  }
+
+  void _show(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  Future<void> _configure(Map<String, dynamic> item,
+      {Map<String, dynamic>? existing}) async {
+    final name = TextEditingController(text: existing?['name']?.toString() ?? '');
+    final options = TextEditingController(
+      text: _maps(existing?['restaurant_menu_item_options'])
+          .map((o) => '${o['name'] ?? ''}|${o['price_delta'] ?? 0}').join('\n'),
+    );
+    var type = existing?['selection_type']?.toString() ?? 'SINGLE';
+    var required = (int.tryParse(existing?['min_selections']?.toString() ?? '0') ?? 0) > 0;
+    var max = int.tryParse(existing?['max_selections']?.toString() ?? '1') ?? 1;
+
+    final draft = await showDialog<_OptionDraft>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Text(existing == null ? 'Ajouter une personnalisation' : 'Modifier la personnalisation'),
+          content: SizedBox(
+            width: 440,
+            child: SingleChildScrollView(
+              child: Column(mainAxisSize: MainAxisSize.min, children: [
+                TextField(controller: name, maxLength: 80,
+                  decoration: const InputDecoration(labelText: 'Nom du groupe', hintText: 'Ex. : Accompagnement')),
+                DropdownButtonFormField<String>(
+                  value: type,
+                  decoration: const InputDecoration(labelText: 'Type de sélection'),
+                  items: const [
+                    DropdownMenuItem(value: 'SINGLE', child: Text('Un seul choix')),
+                    DropdownMenuItem(value: 'MULTIPLE', child: Text('Plusieurs choix')),
+                  ],
+                  onChanged: (v) { if (v != null) setDialogState(() { type = v; if (v == 'SINGLE') max = 1; }); },
+                ),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Choix obligatoire'),
+                  value: required,
+                  onChanged: (v) => setDialogState(() => required = v),
+                ),
+                if (type == 'MULTIPLE')
+                  DropdownButtonFormField<int>(
+                    value: max,
+                    decoration: const InputDecoration(labelText: 'Nombre maximum de choix'),
+                    items: List.generate(20, (i) => DropdownMenuItem(value: i + 1, child: Text('${i + 1}'))),
+                    onChanged: (v) { if (v != null) setDialogState(() => max = v); },
+                  ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: options, minLines: 4, maxLines: 8,
+                  decoration: const InputDecoration(
+                    labelText: 'Options et suppléments',
+                    hintText: 'Riz|0\nFrites|500\nAlloco|750\nPoulet supplémentaire|1000',
+                    helperText: 'Une ligne par choix : nom|supplément en XOF. 0 = inclus.',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ]),
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Annuler')),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, _OptionDraft(
+                name: name.text.trim(), type: type, required: required,
+                max: max, options: options.text,
+              )),
+              child: const Text('Enregistrer'),
+            ),
+          ],
+        ),
+      ),
+    );
+    name.dispose();
+    options.dispose();
+    if (!mounted || draft == null) return;
+
+    final parsed = <Map<String, dynamic>>[];
+    for (final line in draft.options.split('\n')) {
+      final value = line.trim();
+      if (value.isEmpty) continue;
+      final split = value.lastIndexOf('|');
+      if (split <= 0 || split == value.length - 1) {
+        _show('Format invalide. Utilisez nom|prix pour chaque option.');
+        return;
+      }
+      final optionName = value.substring(0, split).trim();
+      final price = num.tryParse(value.substring(split + 1).trim());
+      if (optionName.isEmpty || price == null || price < 0) {
+        _show('Nom ou supplément invalide. Le prix doit être positif ou nul.');
+        return;
+      }
+      parsed.add({'name': optionName, 'price_delta': price});
+    }
+    if (draft.name.isEmpty || parsed.isEmpty || parsed.length > 30) {
+      _show('Ajoutez un nom et entre 1 et 30 options.');
+      return;
+    }
+
+    try {
+      await ref.read(sellerRestaurantRepositoryProvider)!.saveItemOptionGroup(
+        groupId: existing?['id']?.toString(),
+        menuItemId: item['id'].toString(),
+        name: draft.name,
+        selectionType: draft.type,
+        minSelections: draft.required ? 1 : 0,
+        maxSelections: draft.max,
+        options: parsed,
+      );
+      if (!mounted) return;
+      setState(() => _future = _load());
+      _show('Personnalisation enregistrée. Les tarifs restent contrôlés par le serveur.');
+    } catch (_) {
+      _show('Enregistrement impossible. Vérifiez vos droits vendeur et les options.');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Personnalisation des plats'),
+        actions: [IconButton(onPressed: () => setState(() => _future = _load()),
+          icon: const Icon(Icons.refresh), tooltip: 'Actualiser')]),
+      body: FutureBuilder<List<Map<String, dynamic>>>(
+        future: _future,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.hasError) {
+            return Center(child: FilledButton.icon(
+              onPressed: () => setState(() => _future = _load()),
+              icon: const Icon(Icons.refresh), label: const Text('Réessayer')));
+          }
+          final restaurants = snapshot.data ?? const <Map<String, dynamic>>[];
+          if (restaurants.isEmpty) {
+            return const Center(child: Padding(
+              padding: EdgeInsets.all(24),
+              child: Text('Aucun menu de restaurant associé à vos boutiques. Créez d’abord votre profil restaurant et vos plats.',
+                textAlign: TextAlign.center)));
+          }
+          return ListView(padding: const EdgeInsets.all(12), children: [
+            const Card(child: Padding(padding: EdgeInsets.all(12),
+              child: Text('Définissez les choix proposés au client et le supplément en XOF. Le client ne peut pas modifier ces tarifs.'))),
+            for (final restaurant in restaurants) ..._restaurantWidgets(restaurant),
+          ]);
+        },
+      ),
+    );
+  }
+
+  List<Widget> _restaurantWidgets(Map<String, dynamic> restaurant) {
+    final shop = restaurant['shops'] is Map
+        ? Map<String, dynamic>.from(restaurant['shops'] as Map) : const <String, dynamic>{};
+    final menus = _maps(restaurant['restaurant_menus']);
+    return [
+      Padding(padding: const EdgeInsets.only(top: 12, bottom: 4),
+        child: Text(shop['name']?.toString() ?? 'Restaurant',
+          style: Theme.of(context).textTheme.titleLarge)),
+      for (final menu in menus)
+        Card(child: ExpansionTile(
+          title: Text(menu['name']?.toString() ?? 'Menu'),
+          children: [
+            for (final item in _maps(menu['restaurant_menu_items'])) _itemTile(item),
+          ],
+        )),
+    ];
+  }
+
+  Widget _itemTile(Map<String, dynamic> item) {
+    final groups = _maps(item['restaurant_menu_item_option_groups']);
+    return ListTile(
+      title: Text(item['name']?.toString() ?? 'Plat'),
+      subtitle: Text('${item['price']?.toString() ?? '0'} XOF · ${groups.length} groupe(s)'),
+      trailing: IconButton(
+        tooltip: 'Ajouter une personnalisation',
+        icon: const Icon(Icons.add_circle_outline),
+        onPressed: () => _configure(item),
+      ),
+      onTap: groups.isEmpty ? null : () => showModalBottomSheet<void>(
+        context: context,
+        builder: (context) => ListView(padding: const EdgeInsets.all(16), children: [
+          Text(item['name']?.toString() ?? 'Plat',
+            style: Theme.of(context).textTheme.titleLarge),
+          for (final group in groups)
+            ListTile(
+              title: Text(group['name']?.toString() ?? 'Choix'),
+              subtitle: Text(_maps(group['restaurant_menu_item_options'])
+                .map((o) => '${o['name']} (+${o['price_delta']} XOF)').join('\n')),
+              trailing: IconButton(
+                icon: const Icon(Icons.edit_outlined), tooltip: 'Modifier',
+                onPressed: () { Navigator.pop(context); _configure(item, existing: group); },
+              ),
+            ),
+        ]),
+      ),
+    );
+  }
+}
+
+class _OptionDraft {
+  const _OptionDraft({required this.name, required this.type, required this.required,
+    required this.max, required this.options});
+  final String name;
+  final String type;
+  final bool required;
+  final int max;
+  final String options;
+}
