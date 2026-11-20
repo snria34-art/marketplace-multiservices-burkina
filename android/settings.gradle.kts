@@ -16,15 +16,13 @@ pluginManagement {
         gradlePluginPortal()
     }
 
-    plugins {
-        // Flutter 3.47.2 requires Kotlin Gradle Plugin 2.2.20 or newer.
-        id("org.jetbrains.kotlin.android") version "2.2.20"
-    }
 }
 
 plugins {
     id("dev.flutter.flutter-plugin-loader") version "1.0.0"
     id("com.android.application") version "8.11.1" apply false
+    // Pin the Kotlin Gradle Plugin at the root so every Android module resolves the same version.
+    id("org.jetbrains.kotlin.android") version "2.2.20" apply false
 }
 
 include(":app")
