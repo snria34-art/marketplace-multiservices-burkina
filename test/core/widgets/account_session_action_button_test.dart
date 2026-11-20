@@ -14,7 +14,7 @@ void main() {
           overrides: [
             supabaseProvider.overrideWithValue(null),
           ],
-          child: const MaterialApp(
+          child: MaterialApp(
             home: Scaffold(
               appBar: AppBar(
                 actions: [
