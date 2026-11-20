@@ -116,12 +116,14 @@ class _SellerRestaurantOptionsPageState
         for (final option in _maps(existing?['restaurant_menu_item_options']))
           if (option['linked_product_id'] != null) option['linked_product_id'].toString(),
       };
-      final initialName = existing?['name']?.toString() ?? switch (componentType) {
-        'MAIN' => 'Plat de la formule',
-        'DRINK' => 'Boisson de la formule',
-        'DESSERT' => 'Dessert de la formule',
-        _ => 'Accompagnement de la formule',
-      };
+      final defaultName = componentType == 'MAIN'
+          ? 'Plat de la formule'
+          : componentType == 'DRINK'
+              ? 'Boisson de la formule'
+              : componentType == 'DESSERT'
+                  ? 'Dessert de la formule'
+                  : 'Accompagnement de la formule';
+      final initialName = existing?['name']?.toString() ?? defaultName;
       final chosen = await showDialog<List<String>>(
         context: context,
         builder: (dialogContext) => StatefulBuilder(
@@ -387,8 +389,9 @@ class _SellerRestaurantOptionsPageState
             tooltip: 'Composer une formule avec des produits',
             icon: const Icon(Icons.restaurant_menu),
             onSelected: (type) {
-              final existing = groups.where((group) => group['component_type'] == type).firstOrNull;
-              _configureFormula(item, componentType: type, existing: existing);
+              final matches = groups.where((group) => group['component_type'] == type).toList();
+              _configureFormula(item, componentType: type,
+                existing: matches.isEmpty ? null : matches.first);
             },
             itemBuilder: (context) => const [
               PopupMenuItem(value: 'MAIN', child: Text('Plat de la formule')),
