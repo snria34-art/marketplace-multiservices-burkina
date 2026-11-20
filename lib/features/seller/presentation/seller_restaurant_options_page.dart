@@ -52,7 +52,7 @@ class _SellerRestaurantOptionsPageState
           .map((o) => '${o['name'] ?? ''}|${o['price_delta'] ?? 0}').join('\n'),
     );
     var type = existing?['selection_type']?.toString() ?? 'SINGLE';
-    var required = (int.tryParse(existing?['min_selections']?.toString() ?? '0') ?? 0) > 0;
+    var isRequired = (int.tryParse(existing?['min_selections']?.toString() ?? '0') ?? 0) > 0;
     var max = int.tryParse(existing?['max_selections']?.toString() ?? '1') ?? 1;
 
     final draft = await showDialog<_OptionDraft>(
@@ -78,8 +78,8 @@ class _SellerRestaurantOptionsPageState
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
                   title: const Text('Choix obligatoire'),
-                  value: required,
-                  onChanged: (v) => setDialogState(() => required = v),
+                  value: isRequired,
+                  onChanged: (v) => setDialogState(() => isRequired = v),
                 ),
                 if (type == 'MULTIPLE')
                   DropdownButtonFormField<int>(
@@ -105,7 +105,7 @@ class _SellerRestaurantOptionsPageState
             TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Annuler')),
             FilledButton(
               onPressed: () => Navigator.pop(dialogContext, _OptionDraft(
-                name: name.text.trim(), type: type, required: required,
+                name: name.text.trim(), type: type, required: isRequired,
                 max: max, options: options.text,
               )),
               child: const Text('Enregistrer'),
