@@ -61,7 +61,8 @@ class _NotificationPreferencesPageState
   }
 
   Future<void> _save() async {
-    final client = ref.read(marketplaceNotificationClientProvider);
+    final engine = ref.read(marketplaceEngineProvider);
+    final client = engine.clientFor(MarketplaceCapability.readNotifications);
     final user = client?.auth.currentUser;
     if (client == null || user == null) return;
 

@@ -247,12 +247,13 @@ class _SellerModerationPageState extends ConsumerState<SellerModerationPage> {
       );
       setState(() => _future = _load());
     } catch (error) {
-      if (mediaPath != null && uploadClient != null) {
+      final cleanupPath = mediaPath;
+      final cleanupClient = uploadClient;
+      if (cleanupPath != null && cleanupClient != null) {
         try {
-          final cleanupClient = uploadClient;
           await engine.mutate(() => cleanupClient.storage
               .from('order-feedback-media')
-              .remove([mediaPath]));
+              .remove([cleanupPath]));
         } catch (_) {
           // Best-effort cleanup; preserve the original submission error.
         }
