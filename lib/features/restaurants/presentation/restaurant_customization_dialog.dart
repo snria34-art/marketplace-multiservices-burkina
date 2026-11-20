@@ -282,9 +282,6 @@ class _OptionLevelPicker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final optionKind = option['option_kind']?.toString();
-    final prefix = optionKind == 'REMOVE' ? 'Retirer' : 'Ajouter';
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
