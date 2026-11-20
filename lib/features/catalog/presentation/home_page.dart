@@ -147,7 +147,7 @@ class _HomePageState extends ConsumerState<HomePage> {
 
   Future<void> _addToCart(Map<String, dynamic> product) async {
     final cart = ref.read(cartRepositoryProvider);
-    final client = ref.read(supabaseProvider);
+    final client = ref.read(marketplaceCustomerClientProvider);
 
     if (client == null || cart == null || client.auth.currentUser == null) {
       if (mounted) context.push('/auth');
