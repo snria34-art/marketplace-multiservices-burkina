@@ -51,7 +51,7 @@ class _VerticalDiscoveryPageState
       widget.module == VerticalModule.parcels;
 
   Future<bool> _ensureAuth() async {
-    final client = ref.read(supabaseProvider);
+    final client = ref.read(marketplaceCustomerClientProvider);
     if (client?.auth.currentUser != null) return true;
     _info('Connectez-vous pour continuer.');
     return false;
@@ -3021,7 +3021,7 @@ class _VerticalDiscoveryPageState
 
   @override
   Widget build(BuildContext context) {
-    final client = ref.watch(supabaseProvider);
+    final client = ref.watch(marketplaceCustomerClientProvider);
 
     return Scaffold(
       appBar: AppBar(
