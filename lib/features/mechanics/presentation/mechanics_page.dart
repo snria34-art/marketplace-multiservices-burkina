@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/location/device_location_service.dart';
 import '../../../core/providers/repository_providers.dart';
 import '../data/mechanic_repository.dart';
+import 'mechanic_service_profile_dialog.dart';
 
 final mechanicRepositoryProvider = Provider<MechanicRepository?>((ref) {
   final client = ref.watch(supabaseProvider);
@@ -200,8 +201,10 @@ class _MechanicsPageState extends ConsumerState<MechanicsPage> {
 
       final id = await repo.createRequest(
         vehicleType: result['vehicle_type']!,
+        serviceLocationType: result['service_location_type']!,
         problemType: result['problem_type']!,
         description: result['description'],
+        locationNote: result['location_note'],
         latitude: pos.latitude,
         longitude: pos.longitude,
       );
@@ -226,6 +229,82 @@ class _MechanicsPageState extends ConsumerState<MechanicsPage> {
           ),
         ),
       );
+    }
+  }
+
+  Future<void> _manageServiceProfile() async {
+    final canManage = await _loadOwnMechanic();
+    if (!mounted) return;
+    if (!canManage) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Aucun profil mécanicien lié à ce compte.')),
+      );
+      return;
+    }
+
+    final result = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (_) => const MechanicServiceProfileDialog(),
+    );
+    if (!mounted || result == null) return;
+
+    final repo = ref.read(mechanicRepositoryProvider);
+    if (repo == null) return;
+
+    try {
+      final rawVehicles = result['vehicle_types'];
+      final rawDays = result['service_days'];
+      if (rawVehicles is! List || rawDays is! List) {
+        throw StateError('Configuration du profil invalide.');
+      }
+
+      await repo.saveServiceProfile(
+        vehicleTypes: rawVehicles.map((value) => value.toString()).toList(),
+        openTime: result['open_time'].toString(),
+        closeTime: result['close_time'].toString(),
+        serviceDays: rawDays
+            .map((value) => int.tryParse(value.toString()) ?? 0)
+            .toList(),
+        homePrice: num.parse(result['home_price'].toString()),
+        officePrice: num.parse(result['office_price'].toString()),
+        roadsidePrice: num.parse(result['roadside_price'].toString()),
+        adjustmentNote: result['adjustment_note']?.toString(),
+      );
+
+      if (!mounted) return;
+      setState(() {
+        _mechanicsFuture = _loadMechanics();
+        _isMechanicFuture = _loadOwnMechanic();
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Compétences, horaires et tarifs enregistrés.')),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Enregistrement refusé : $error')),
+      );
+    }
+  }
+
+  String _vehicleLabel(String? value) {
+    switch (value) {
+      case 'MOTORCYCLE':
+        return 'Moto classique';
+      case 'ELECTRIC_MOTORCYCLE':
+        return 'Moto électrique';
+      case 'CAR':
+        return 'Voiture';
+      case 'ELECTRIC_CAR':
+        return 'Voiture électrique';
+      case 'BICYCLE':
+        return 'Vélo';
+      case 'ELECTRIC_BICYCLE':
+        return 'Vélo électrique';
+      case 'TRUCK':
+        return 'Camion';
+      default:
+        return 'Véhicule';
     }
   }
 
@@ -260,10 +339,20 @@ class _MechanicsPageState extends ConsumerState<MechanicsPage> {
             future: _isMechanicFuture,
             builder: (context, snapshot) {
               if (snapshot.data != true) return const SizedBox.shrink();
-              return IconButton(
-                onPressed: _manageAvailability,
-                icon: const Icon(Icons.schedule_outlined),
-                tooltip: 'Gérer ma disponibilité',
+              return Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    onPressed: _manageServiceProfile,
+                    icon: const Icon(Icons.build_circle_outlined),
+                    tooltip: 'Mes compétences, horaires et tarifs',
+                  ),
+                  IconButton(
+                    onPressed: _manageAvailability,
+                    icon: const Icon(Icons.schedule_outlined),
+                    tooltip: 'Gérer ma disponibilité',
+                  ),
+                ],
               );
             },
           ),
@@ -311,9 +400,22 @@ class _MechanicsPageState extends ConsumerState<MechanicsPage> {
                         _availabilityLabel(
                           availability?['status']?.toString(),
                         ) +
+                            '\nHoraires : ' +
+                            (mechanic['service_open_time']?.toString() ?? '08:00') +
+                            '–' +
+                            (mechanic['service_close_time']?.toString() ?? '20:00') +
+                            '\nVéhicules : ' +
+                            ((mechanic['mechanic_services'] is List)
+                                ? (mechanic['mechanic_services'] as List)
+                                    .whereType<Map>()
+                                    .map((service) => _vehicleLabel(
+                                          service['vehicle_type']?.toString(),
+                                        ))
+                                    .toSet()
+                                    .join(', ')
+                                : 'Compétences non renseignées') +
                             '\nRayon : ' +
-                            (mechanic['service_radius_km']?.toString() ??
-                                '-') +
+                            (mechanic['service_radius_km']?.toString() ?? '-') +
                             ' km',
                       ),
                     ),
@@ -400,62 +502,145 @@ class _MechanicRequestDialog extends StatefulWidget {
   const _MechanicRequestDialog();
 
   @override
-  State<_MechanicRequestDialog> createState() =>
-      _MechanicRequestDialogState();
+  State<_MechanicRequestDialog> createState() => _MechanicRequestDialogState();
 }
 
 class _MechanicRequestDialogState extends State<_MechanicRequestDialog> {
-  String _vehicle = 'CAR';
+  String _vehicle = 'MOTORCYCLE';
+  String _locationType = 'ROADSIDE';
   final _problem = TextEditingController();
   final _description = TextEditingController();
+  final _locationNote = TextEditingController();
 
   @override
   void dispose() {
     _problem.dispose();
     _description.dispose();
+    _locationNote.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    final locationLabel = switch (_locationType) {
+      'HOME' => 'Adresse et repère du domicile',
+      'OFFICE' => 'Nom du bureau, bâtiment et étage',
+      _ => 'Repère de la panne (rue, quartier, point connu)',
+    };
+
     return AlertDialog(
       title: const Text('Demander un mécanicien'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          DropdownButtonFormField<String>(
-            initialValue: _vehicle,
-            decoration: const InputDecoration(labelText: 'Véhicule'),
-            items: const [
-              DropdownMenuItem(value: 'CAR', child: Text('Voiture')),
-              DropdownMenuItem(
-                value: 'MOTORCYCLE',
-                child: Text('Moto'),
+      content: SizedBox(
+        width: 460,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              DropdownButtonFormField<String>(
+                initialValue: _vehicle,
+                isExpanded: true,
+                decoration: const InputDecoration(labelText: 'Véhicule'),
+                items: const [
+                  DropdownMenuItem(
+                    value: 'MOTORCYCLE',
+                    child: Text('Moto classique'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'ELECTRIC_MOTORCYCLE',
+                    child: Text('Moto électrique'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'CAR',
+                    child: Text('Voiture'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'ELECTRIC_CAR',
+                    child: Text('Voiture électrique'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'BICYCLE',
+                    child: Text('Vélo'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'ELECTRIC_BICYCLE',
+                    child: Text('Vélo électrique'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'TRUCK',
+                    child: Text('Camion'),
+                  ),
+                ],
+                onChanged: (value) {
+                  if (value != null) setState(() => _vehicle = value);
+                },
               ),
-              DropdownMenuItem(
-                value: 'BICYCLE',
-                child: Text('Vélo'),
+              const SizedBox(height: 14),
+              Text(
+                'Où se trouve le véhicule ?',
+                style: Theme.of(context).textTheme.titleSmall,
+              ),
+              const SizedBox(height: 6),
+              SegmentedButton<String>(
+                segments: const [
+                  ButtonSegment(
+                    value: 'HOME',
+                    icon: Icon(Icons.home_outlined),
+                    label: Text('Maison'),
+                  ),
+                  ButtonSegment(
+                    value: 'OFFICE',
+                    icon: Icon(Icons.business_outlined),
+                    label: Text('Bureau'),
+                  ),
+                  ButtonSegment(
+                    value: 'ROADSIDE',
+                    icon: Icon(Icons.warning_amber_outlined),
+                    label: Text('En panne'),
+                  ),
+                ],
+                selected: {_locationType},
+                onSelectionChanged: (selection) {
+                  setState(() => _locationType = selection.first);
+                },
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: _locationNote,
+                maxLength: 240,
+                decoration: InputDecoration(
+                  labelText: locationLabel,
+                  hintText: _locationType == 'OFFICE'
+                      ? 'Ex. Immeuble Z, entrée principale'
+                      : _locationType == 'HOME'
+                          ? 'Ex. Porte verte, près du marché'
+                          : 'Ex. Route de Kossodo, près de la station',
+                ),
+              ),
+              TextField(
+                controller: _problem,
+                maxLength: 160,
+                decoration: const InputDecoration(
+                  labelText: 'Panne ou réparation recherchée',
+                  hintText: 'Pneu crevé, batterie, moteur, diagnostic électronique…',
+                ),
+              ),
+              TextField(
+                controller: _description,
+                maxLines: 3,
+                maxLength: 600,
+                decoration: const InputDecoration(
+                  labelText: 'Autres détails (facultatif)',
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Votre position GPS sera jointe à la demande. Le mécanicien ne recevra que les demandes correspondant aux types de véhicules et aux lieux qu’il prend en charge, pendant ses heures de service.',
+                style: Theme.of(context).textTheme.bodySmall,
               ),
             ],
-            onChanged: (value) {
-              if (value != null) setState(() => _vehicle = value);
-            },
           ),
-          TextField(
-            controller: _problem,
-            decoration: const InputDecoration(
-              labelText: 'Problème',
-              hintText: 'Pneu crevé, plus d’essence…',
-            ),
-          ),
-          TextField(
-            controller: _description,
-            maxLines: 3,
-            decoration: const InputDecoration(
-              labelText: 'Détails',
-            ),
-          ),
-        ],
+        ),
       ),
       actions: [
         TextButton(
@@ -464,17 +649,25 @@ class _MechanicRequestDialogState extends State<_MechanicRequestDialog> {
         ),
         FilledButton(
           onPressed: () {
-            if (_problem.text.trim().isEmpty) return;
+            final problem = _problem.text.trim();
+            final locationNote = _locationNote.text.trim();
+            if (problem.isEmpty ||
+                ((_locationType == 'HOME' || _locationType == 'OFFICE') &&
+                    locationNote.isEmpty)) {
+              return;
+            }
             Navigator.pop(
               context,
-              {
+              <String, String>{
                 'vehicle_type': _vehicle,
-                'problem_type': _problem.text.trim(),
+                'service_location_type': _locationType,
+                'location_note': locationNote,
+                'problem_type': problem,
                 'description': _description.text.trim(),
               },
             );
           },
-          child: const Text('Envoyer'),
+          child: const Text('Envoyer la demande'),
         ),
       ],
     );
