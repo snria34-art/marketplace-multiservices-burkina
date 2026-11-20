@@ -50,7 +50,7 @@ class _SellerOrdersPageState extends ConsumerState<SellerOrdersPage> {
     final groups = await client
         .from('order_groups')
         .select(
-          'id,order_id,shop_id,status,subtotal,created_at,shops(name),order_items(product_name,quantity,unit_price,total_price)',
+          'id,order_id,shop_id,status,subtotal,created_at,shops(name),order_items(product_name,quantity,unit_price,total_price,restaurant_customizations)',
         )
         .inFilter('shop_id', shopIds)
         .order('created_at', ascending: false)
@@ -162,6 +162,14 @@ class _SellerOrdersPageState extends ConsumerState<SellerOrdersPage> {
                             final item =
                                 Map<String, dynamic>.from(rawItem as Map);
 
+                            final rawCustomizations = item['restaurant_customizations'];
+                            final customizations = rawCustomizations is List
+                                ? rawCustomizations.whereType<Map>().map((choice) =>
+                                    Map<String, dynamic>.from(choice)).toList()
+                                : const <Map<String, dynamic>>[];
+                            final choicesLabel = customizations.map((choice) =>
+                                '${choice['option_name']} (+${choice['price_delta']} XOF)').join(', ');
+
                             return ListTile(
                               title: Text(
                                 item['product_name']?.toString() ??
@@ -172,7 +180,8 @@ class _SellerOrdersPageState extends ConsumerState<SellerOrdersPage> {
                                     (item['quantity']?.toString() ?? '0') +
                                     ' • ' +
                                     (item['unit_price']?.toString() ?? '0') +
-                                    ' XOF',
+                                    ' XOF' +
+                                    (choicesLabel.isEmpty ? '' : '\nChoix : ' + choicesLabel),
                               ),
                               trailing: Text(
                                 (item['total_price']?.toString() ?? '0') +
