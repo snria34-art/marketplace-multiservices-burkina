@@ -112,7 +112,7 @@ class _CartPageState extends ConsumerState<CartPage> {
 
   @override
   Widget build(BuildContext context) {
-    final client = ref.watch(supabaseProvider);
+    final client = ref.watch(marketplaceCustomerClientProvider);
     final signedIn = client?.auth.currentUser != null;
 
     return Scaffold(
