@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../core/location/device_location_service.dart';
 import '../../../core/errors/backend_error_message.dart';
 import '../../../core/providers/repository_providers.dart';
+import '../../../core/utils/xof_formatter.dart';
 
 class CheckoutPage extends ConsumerStatefulWidget {
   const CheckoutPage({
@@ -389,7 +390,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
               Card(
                 child: ListTile(
                   title: Text(
-                    fee == null ? 'Devis non calculé' : fee + ' XOF',
+                    fee == null ? 'Devis non calculé' : formatXof(num.tryParse(fee) ?? 0),
                   ),
                   subtitle: Text(
                     distance == null
