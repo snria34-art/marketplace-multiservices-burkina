@@ -115,12 +115,22 @@ class CheckoutRepository {
     required num deliveryFee,
     String? couponCode,
     required String idempotencyKey,
+    String deliveryPlaceType = 'HOME',
+    DateTime? scheduledDeliveryAt,
+    String? deliveryInstructions,
   }) async {
     final raw = await client.rpc(
       'checkout_cart',
       params: {
         'p_cart_id': cartId,
-        'p_delivery_address': {'id': addressId},
+        'p_delivery_address': {
+          'id': addressId,
+          'delivery_place_type': deliveryPlaceType,
+          if (scheduledDeliveryAt != null)
+            'scheduled_delivery_at': scheduledDeliveryAt.toUtc().toIso8601String(),
+          if (deliveryInstructions != null && deliveryInstructions.trim().isNotEmpty)
+            'delivery_instructions': deliveryInstructions.trim(),
+        },
         'p_delivery_fee': deliveryFee,
         'p_coupon_code': couponCode,
         'p_idempotency_key': idempotencyKey,
