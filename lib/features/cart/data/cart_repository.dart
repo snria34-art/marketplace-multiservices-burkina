@@ -1,9 +1,16 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../../core/engine/marketplace_resilience.dart';
+
 class CartRepository {
-  const CartRepository(this.client);
+  const CartRepository(this.client, {this.resilience});
 
   final SupabaseClient client;
+  final MarketplaceResilience? resilience;
+  static final _fallbackResilience = MarketplaceResilience();
+  MarketplaceResilience get _retry => resilience ?? _fallbackResilience;
+
+  Future<T> _read<T>(Future<T> Function() operation) => _retry.read(operation);
 
   Future<String> addToCart({
     required String productId,
@@ -26,25 +33,25 @@ class CartRepository {
     final user = client.auth.currentUser;
     if (user == null) return null;
 
-    final carts = await client
+    final carts = await _read(() async => await client
         .from('carts')
         .select('id,status,updated_at')
         .eq('customer_id', user.id)
         .eq('status', 'ACTIVE')
-        .limit(1);
+        .limit(1));
 
     if ((carts as List).isEmpty) return null;
 
     final cart = Map<String, dynamic>.from(carts.first as Map);
     final cartId = cart['id'].toString();
 
-    final items = await client
+    final items = await _read(() async => await client
         .from('cart_items')
         .select(
           'id,product_id,variant_id,quantity,unit_price,created_at,products(name,price),product_variants(name),restaurant_menu_item_id,restaurant_selections,restaurant_menu_items(name,restaurant_menu_item_option_groups(id,name,restaurant_menu_item_options(id,name,price_delta)))',
         )
         .eq('cart_id', cartId)
-        .order('created_at');
+        .order('created_at'));
 
     final mappedItems = (items as List)
         .map((row) => Map<String, dynamic>.from(row as Map))
@@ -68,13 +75,13 @@ class CartRepository {
         }
       }
       try {
-        final quote = await client.rpc(
+        final quote = await _read(() => client.rpc(
           'quote_restaurant_menu_item',
           params: {
             'p_menu_item_id': menuItemId,
             'p_selections': selections,
           },
-        );
+        ));
         if (quote is! Map) throw StateError('invalid_customization_quote');
         item['restaurant_options_total'] = quote['options_total'];
         item['restaurant_unit_total'] = quote['unit_total'];
