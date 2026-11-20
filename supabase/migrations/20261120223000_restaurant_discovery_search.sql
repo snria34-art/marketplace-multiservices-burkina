@@ -202,6 +202,20 @@ as $$
       or public.restaurant_search_normalize(coalesce(mi.description, '')) like '%' || public.restaurant_search_normalize(p_query) || '%'
       or public.restaurant_search_normalize(m.name) like '%' || public.restaurant_search_normalize(p_query) || '%'
       or public.restaurant_search_normalize(s.name) like '%' || public.restaurant_search_normalize(p_query) || '%'
+      or case rp.restaurant_type
+        when 'FAST_FOOD' then 'fast food'
+        when 'TRADITIONAL' then 'traditionnelle'
+        when 'GRILL' then 'grillades'
+        when 'PIZZERIA' then 'pizzeria'
+        when 'BAKERY' then 'boulangerie'
+        when 'CAFE' then 'cafe'
+        when 'SEAFOOD' then 'poissons fruits de mer'
+        when 'VEGETARIAN' then 'vegetarien'
+        when 'INTERNATIONAL' then 'cuisine internationale'
+        else lower(rp.restaurant_type)
+      end like '%' || public.restaurant_search_normalize(
+        regexp_replace(trim(p_query), '^(nourriture|cuisine|restaurant)\\s+', '', 'i')
+      ) || '%'
       or exists (
         select 1 from unnest(rp.cuisine_types) as cuisine(code)
         where public.restaurant_search_normalize(cuisine.code) like '%' || public.restaurant_search_normalize(p_query) || '%'
@@ -222,7 +236,9 @@ as $$
             when 'INDIAN' then 'indienne'
             when 'MOROCCAN' then 'marocaine'
             else lower(cuisine.code)
-          end like '%' || public.restaurant_search_normalize(p_query) || '%'
+          end like '%' || public.restaurant_search_normalize(
+            regexp_replace(trim(p_query), '^(nourriture|cuisine|restaurant)\\s+', '', 'i')
+          ) || '%'
       )
       or exists (
         select 1 from public.product_tags pt
