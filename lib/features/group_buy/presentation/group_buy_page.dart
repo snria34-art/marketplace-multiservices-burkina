@@ -26,7 +26,7 @@ class _GroupBuyPageState extends ConsumerState<GroupBuyPage> {
 
   Future<void> _join(Map<String, dynamic> group) async {
     final repository = ref.read(groupBuyRepositoryProvider);
-    final client = ref.read(supabaseProvider);
+    final client = ref.read(marketplaceCustomerClientProvider);
 
     if (repository == null || client?.auth.currentUser == null) {
       ScaffoldMessenger.of(context).showSnackBar(
