@@ -25,6 +25,10 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
   Map<String, dynamic>? _quote;
   String _paymentProvider = 'CINETPAY';
   final TextEditingController _couponController = TextEditingController();
+  final TextEditingController _deliveryInstructionsController = TextEditingController();
+  String _deliveryPlaceType = 'HOME';
+  DateTime _deliveryDate = DateTime.now();
+  int _deliveryHour = 12;
   bool _loading = false;
   bool _quoteLoading = false;
   bool _quoteError = false;
@@ -35,6 +39,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
   @override
   void dispose() {
     _couponController.dispose();
+    _deliveryInstructionsController.dispose();
     super.dispose();
   }
 
@@ -200,6 +205,38 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
     }
   }
 
+  DateTime get _scheduledDeliveryAt => DateTime.utc(
+        _deliveryDate.year,
+        _deliveryDate.month,
+        _deliveryDate.day,
+        _deliveryHour,
+      );
+
+  String _formatDeliveryDate(DateTime value) {
+    final day = value.day.toString().padLeft(2, '0');
+    final month = value.month.toString().padLeft(2, '0');
+    return '$day/$month/${value.year}';
+  }
+
+  Future<void> _chooseDeliveryDate() async {
+    final today = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _deliveryDate.isBefore(DateTime(today.year, today.month, today.day))
+          ? DateTime(today.year, today.month, today.day)
+          : _deliveryDate,
+      firstDate: DateTime(today.year, today.month, today.day),
+      lastDate: DateTime(today.year, today.month, today.day).add(
+        const Duration(days: 30),
+      ),
+      helpText: 'Choisir le jour de livraison',
+    );
+    if (!mounted || picked == null) return;
+    setState(() {
+      _deliveryDate = DateTime(picked.year, picked.month, picked.day);
+    });
+  }
+
   Future<void> _checkout() async {
     final repo = ref.read(checkoutRepositoryProvider);
     final addressId = _selectedAddressId;
@@ -210,6 +247,16 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
           content: Text(
             'Sélectionnez une adresse et calculez la livraison.',
           ),
+        ),
+      );
+      return;
+    }
+
+    if (_deliveryPlaceType == 'OFFICE' &&
+        !_scheduledDeliveryAt.isAfter(DateTime.now().toUtc())) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Choisissez une heure de bureau encore à venir.'),
         ),
       );
       return;
@@ -236,6 +283,10 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
             ? null
             : _couponController.text.trim(),
         idempotencyKey: _idempotencyKey,
+        deliveryPlaceType: _deliveryPlaceType,
+        scheduledDeliveryAt:
+            _deliveryPlaceType == 'OFFICE' ? _scheduledDeliveryAt : null,
+        deliveryInstructions: _deliveryInstructionsController.text,
       );
       if (!mounted) return;
 
@@ -411,6 +462,109 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
                     ),
                   ),
                 ),
+              const SizedBox(height: 18),
+              Text(
+                'Lieu de réception',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              const SizedBox(height: 8),
+              SegmentedButton<String>(
+                segments: const [
+                  ButtonSegment(
+                    value: 'HOME',
+                    icon: Icon(Icons.home_outlined),
+                    label: Text('Domicile'),
+                  ),
+                  ButtonSegment(
+                    value: 'OFFICE',
+                    icon: Icon(Icons.business_outlined),
+                    label: Text('Bureau'),
+                  ),
+                ],
+                selected: {_deliveryPlaceType},
+                onSelectionChanged: _loading
+                    ? null
+                    : (selection) {
+                        setState(() {
+                          _deliveryPlaceType = selection.first;
+                          if (_deliveryPlaceType == 'OFFICE') {
+                            _deliveryDate = DateTime.now();
+                          }
+                        });
+                      },
+              ),
+              if (_deliveryPlaceType == 'OFFICE') ...[
+                const SizedBox(height: 10),
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Heure exacte souhaitée',
+                          style: TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                        const SizedBox(height: 6),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                onPressed: _loading ? null : _chooseDeliveryDate,
+                                icon: const Icon(Icons.calendar_today_outlined),
+                                label: Text(_formatDeliveryDate(_deliveryDate)),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: DropdownButtonFormField<int>(
+                                initialValue: _deliveryHour,
+                                decoration: const InputDecoration(
+                                  labelText: 'À pile',
+                                  isDense: true,
+                                  border: OutlineInputBorder(),
+                                ),
+                                items: [
+                                  for (var hour = 6; hour <= 22; hour++)
+                                    DropdownMenuItem(
+                                      value: hour,
+                                      child: Text(
+                                        '${hour.toString().padLeft(2, '0')}:00',
+                                      ),
+                                    ),
+                                ],
+                                onChanged: _loading
+                                    ? null
+                                    : (value) {
+                                        if (value != null) {
+                                          setState(() => _deliveryHour = value);
+                                        }
+                                      },
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Livraison demandée le ${_formatDeliveryDate(_deliveryDate)} à ${_deliveryHour.toString().padLeft(2, '0')}:00 pile.',
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                        const SizedBox(height: 6),
+                        TextField(
+                          controller: _deliveryInstructionsController,
+                          enabled: !_loading,
+                          maxLength: 300,
+                          decoration: const InputDecoration(
+                            labelText: 'Nom du bureau, étage ou repère',
+                            hintText: 'Ex. Bâtiment B, 2e étage',
+                            border: OutlineInputBorder(),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
               const SizedBox(height: 18),
               Text(
                 'Code promotionnel',
