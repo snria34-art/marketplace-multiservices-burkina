@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:marketplace_multiservices_burkina/core/engine/marketplace_engine.dart';
 
@@ -22,6 +24,8 @@ void main() {
         MarketplaceCapability.discoverServices,
         MarketplaceCapability.discoverTransport,
         MarketplaceCapability.discoverVerticals,
+        MarketplaceCapability.discoverPromotions,
+        MarketplaceCapability.authenticate,
       ];
       for (final capability in capabilities) {
         expect(
@@ -86,6 +90,35 @@ void main() {
         ),
         CapabilityState.authenticationRequired,
       );
+    });
+
+    test('engine retries safe reads but never retries mutations', () async {
+      var readCalls = 0;
+      final engine = MarketplaceEngine(
+        null,
+        resilience: MarketplaceResilience(
+          wait: (_) async {},
+        ),
+      );
+
+      final value = await engine.read(() async {
+        readCalls++;
+        if (readCalls == 1) throw TimeoutException('temporary read timeout');
+        return 'loaded';
+      });
+
+      expect(value, 'loaded');
+      expect(readCalls, 2);
+
+      var mutationCalls = 0;
+      await expectLater(
+        engine.mutate(() async {
+          mutationCalls++;
+          throw StateError('unknown mutation outcome');
+        }),
+        throwsStateError,
+      );
+      expect(mutationCalls, 1);
     });
 
     test('authenticated server-backed actions become available', () {
