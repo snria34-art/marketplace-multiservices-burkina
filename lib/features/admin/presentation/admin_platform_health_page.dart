@@ -24,7 +24,7 @@ class _AdminPlatformHealthPageState
   }
 
   Future<Map<String, dynamic>> _load() async {
-    final client = ref.read(supabaseProvider);
+    final client = ref.read(marketplaceAdminClientProvider);
     if (client == null || client.auth.currentUser == null) {
       throw StateError('Authentification administrateur requise.');
     }
@@ -40,7 +40,7 @@ class _AdminPlatformHealthPageState
   }
 
   Future<void> _runMonitor() async {
-    final client = ref.read(supabaseProvider);
+    final client = ref.read(marketplaceAdminClientProvider);
     if (client == null) return;
     setState(() => _running = true);
     try {
@@ -67,7 +67,7 @@ class _AdminPlatformHealthPageState
     final backupId = details['backup_id']?.toString();
     if (backupId == null || backupId.isEmpty) return;
     try {
-      final client = ref.read(supabaseProvider);
+      final client = ref.read(marketplaceAdminClientProvider);
       if (client == null) throw StateError('Service indisponible.');
       await client.rpc('rollback_platform_repair', params: {'p_backup_id': backupId});
       if (!mounted) return;
@@ -84,7 +84,7 @@ class _AdminPlatformHealthPageState
   }
 
   Future<void> _runRepairs() async {
-    final client = ref.read(supabaseProvider);
+    final client = ref.read(marketplaceAdminClientProvider);
     if (client == null) return;
     try {
       final count = await client.rpc('admin_run_safe_platform_repairs');
