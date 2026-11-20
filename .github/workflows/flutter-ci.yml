@@ -2,7 +2,7 @@ name: Flutter CI
 
 on:
   push:
-    branches: [main, 'maintenance/audit-01-07-2026-11-15']
+    branches: [main, 'maintenance/audit-01-07-2026-11-15', 'maintenance/hide-supabase-build-vars-2026-11-21']
     paths:
       - 'Dockerfile'
       - 'lib/**'
