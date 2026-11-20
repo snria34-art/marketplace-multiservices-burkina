@@ -7,12 +7,6 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/providers/repository_providers.dart';
-import '../data/delivery_repository.dart';
-
-final deliveryRepositoryProvider = Provider<DeliveryRepository?>((ref) {
-  final client = ref.watch(supabaseProvider);
-  return client == null ? null : DeliveryRepository(client);
-});
 
 class DeliveryTrackingPage extends ConsumerStatefulWidget {
   const DeliveryTrackingPage({
