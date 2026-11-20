@@ -202,6 +202,7 @@ class _MechanicsPageState extends ConsumerState<MechanicsPage> {
       final id = await repo.createRequest(
         vehicleType: result['vehicle_type']!,
         serviceLocationType: result['service_location_type']!,
+        serviceType: result['service_type']!,
         problemType: result['problem_type']!,
         description: result['description'],
         locationNote: result['location_note'],
@@ -547,6 +548,7 @@ class _MechanicRequestDialog extends StatefulWidget {
 class _MechanicRequestDialogState extends State<_MechanicRequestDialog> {
   String _vehicle = 'MOTORCYCLE';
   String _locationType = 'ROADSIDE';
+  String _serviceType = 'GENERAL_REPAIR';
   final _problem = TextEditingController();
   final _description = TextEditingController();
   final _locationNote = TextEditingController();
@@ -612,6 +614,47 @@ class _MechanicRequestDialogState extends State<_MechanicRequestDialog> {
                 ],
                 onChanged: (value) {
                   if (value != null) setState(() => _vehicle = value);
+                },
+              ),
+              const SizedBox(height: 10),
+              DropdownButtonFormField<String>(
+                initialValue: _serviceType,
+                isExpanded: true,
+                decoration: const InputDecoration(
+                  labelText: 'Réparation recherchée',
+                ),
+                items: const [
+                  DropdownMenuItem(
+                    value: 'GENERAL_REPAIR',
+                    child: Text('Réparation générale'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'ENGINE',
+                    child: Text('Moteur'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'ELECTRICAL',
+                    child: Text('Électricité'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'ELECTRONIC_DIAGNOSTICS',
+                    child: Text('Diagnostic électronique'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'BRAKES',
+                    child: Text('Freins'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'TIRES',
+                    child: Text('Pneus'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'BATTERY',
+                    child: Text('Batterie'),
+                  ),
+                ],
+                onChanged: (value) {
+                  if (value != null) setState(() => _serviceType = value);
                 },
               ),
               const SizedBox(height: 14),
@@ -700,6 +743,7 @@ class _MechanicRequestDialogState extends State<_MechanicRequestDialog> {
               <String, String>{
                 'vehicle_type': _vehicle,
                 'service_location_type': _locationType,
+                'service_type': _serviceType,
                 'location_note': locationNote,
                 'problem_type': problem,
                 'description': _description.text.trim(),
