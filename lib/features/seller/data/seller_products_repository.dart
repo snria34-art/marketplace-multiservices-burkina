@@ -1,23 +1,30 @@
 import 'package:image_picker/image_picker.dart';
 
+import '../../../core/engine/marketplace_resilience.dart';
+
 import '../../../core/media/upload_media_validator.dart';
 import 'seller_product_validation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class SellerProductsRepository {
-  const SellerProductsRepository(this.client);
+  const SellerProductsRepository(this.client, {this.resilience});
 
   final SupabaseClient client;
+  final MarketplaceResilience? resilience;
+  static final _fallbackResilience = MarketplaceResilience();
+  MarketplaceResilience get _retry => resilience ?? _fallbackResilience;
+
+  Future<T> _read<T>(Future<T> Function() operation) => _retry.read(operation);
 
   Future<String?> _sellerId() async {
     final user = client.auth.currentUser;
     if (user == null) return null;
 
-    final rows = await client
+    final rows = await _read(() async => await client
         .from('sellers')
         .select('id')
         .eq('user_id', user.id)
-        .limit(1);
+        .limit(1));
 
     if ((rows as List).isEmpty) return null;
 
@@ -32,22 +39,22 @@ class SellerProductsRepository {
     final sellerId = await _sellerId();
     if (sellerId == null) return const [];
 
-    final rows = await client
+    final rows = await _read(() async => await client
         .from('shops')
         .select('id,name,status,verification_status')
         .eq('seller_id', sellerId)
-        .order('created_at');
+        .order('created_at'));
 
     return _maps(rows);
   }
 
   Future<List<Map<String, dynamic>>> categories() async {
-    final rows = await client
+    final rows = await _read(() async => await client
         .from('categories')
         .select('id,name,slug')
         .eq('is_active', true)
         .order('sort_order')
-        .limit(200);
+        .limit(200));
 
     return _maps(rows);
   }
@@ -56,10 +63,10 @@ class SellerProductsRepository {
     final sellerId = await _sellerId();
     if (sellerId == null) return const [];
 
-    final shopsRows = await client
+    final shopsRows = await _read(() async => await client
         .from('shops')
         .select('id')
-        .eq('seller_id', sellerId);
+        .eq('seller_id', sellerId));
 
     final shopIds = (shopsRows as List)
         .map((row) => (row as Map)['id']?.toString())
@@ -68,14 +75,14 @@ class SellerProductsRepository {
 
     if (shopIds.isEmpty) return const [];
 
-    final rows = await client
+    final rows = await _read(() async => await client
         .from('products')
         .select(
           'id,shop_id,category_id,name,slug,description,price,status,is_expirable,expiry_date,created_at,shops(name),inventory(quantity,reserved_quantity,updated_at)',
         )
         .inFilter('shop_id', shopIds)
         .order('created_at', ascending: false)
-        .limit(500);
+        .limit(500));
 
     return _maps(rows);
   }
@@ -235,10 +242,10 @@ class SellerProductsRepository {
     String productId,
   ) async {
     if (!isValidSellerProductUuid(productId)) throw StateError('product_id_invalid');
-    final rows = await client.rpc(
+    final rows = await _read(() => client.rpc(
       'get_seller_product_variant_inventory',
       params: {'p_product_id': productId.trim()},
-    );
+    ));
     return _maps(rows);
   }
 
