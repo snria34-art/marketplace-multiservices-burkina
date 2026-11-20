@@ -31,7 +31,7 @@ class _AdminAccountsPageState extends ConsumerState<AdminAccountsPage> {
   }
 
   Future<List<Map<String, dynamic>>> _load() async {
-    final client = ref.read(supabaseProvider);
+    final client = ref.read(marketplaceAdminClientProvider);
     if (client?.auth.currentUser == null) {
       throw StateError('Authentification requise.');
     }
@@ -81,7 +81,7 @@ class _AdminAccountsPageState extends ConsumerState<AdminAccountsPage> {
     if (!mounted || reason == null) return;
 
     try {
-      final client = ref.read(supabaseProvider);
+      final client = ref.read(marketplaceAdminClientProvider);
       await client?.rpc(
         'admin_set_account_status',
         params: {
