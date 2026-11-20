@@ -195,7 +195,7 @@ Future<String?> _guardRoute(
 }
 
 final appRouterProvider = Provider<GoRouter>((ref) {
-  final client = ref.watch(supabaseProvider);
+  final client = ref.watch(marketplaceEngineProvider).backendClient;
   final authRefresh = _AuthRefreshListenable(client);
 
   final router = GoRouter(
