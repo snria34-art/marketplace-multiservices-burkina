@@ -509,7 +509,7 @@ declare
 begin
   select coalesce(sum((choice->>'price_delta')::numeric), 0) * new.quantity
     into v_surcharge
-  from jsonb_array_elements(coalesce(new.restaurant_customizations, '[]'::jsonb)) choice;
+  from jsonb_array_elements(coalesce(new.restaurant_customizations, '[]'::jsonb)) as choices(choice);
 
   if v_surcharge <= 0 then return new; end if;
 
