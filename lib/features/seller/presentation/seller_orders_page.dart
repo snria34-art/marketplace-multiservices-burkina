@@ -21,7 +21,7 @@ class _SellerOrdersPageState extends ConsumerState<SellerOrdersPage> {
   }
 
   Future<List<Map<String, dynamic>>> _load() async {
-    final client = ref.read(supabaseProvider);
+    final client = ref.read(marketplaceSellerClientProvider);
     final user = client?.auth.currentUser;
 
     if (client == null || user == null) return const [];
@@ -64,7 +64,7 @@ class _SellerOrdersPageState extends ConsumerState<SellerOrdersPage> {
 
   @override
   Widget build(BuildContext context) {
-    final signedIn = ref.watch(supabaseProvider)?.auth.currentUser != null;
+    final signedIn = ref.watch(marketplaceSellerClientProvider)?.auth.currentUser != null;
 
     if (!signedIn) {
       return const Scaffold(
