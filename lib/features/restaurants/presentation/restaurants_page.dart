@@ -2,12 +2,23 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/providers/repository_providers.dart';
+import '../../../core/engine/marketplace_engine.dart';
 import '../../../core/utils/xof_formatter.dart';
 import '../data/restaurant_repository.dart';
 
 final restaurantRepositoryProvider = Provider<RestaurantRepository?>((ref) {
-  final client = ref.watch(supabaseProvider);
-  return client == null ? null : RestaurantRepository(client);
+  final engine = ref.watch(marketplaceEngineProvider);
+  if (engine.stateFor(MarketplaceCapability.discoverRestaurants) !=
+      CapabilityState.available) {
+    return null;
+  }
+  final client = engine.backendClient;
+  return client == null
+      ? null
+      : RestaurantRepository(
+          client,
+          resilience: ref.watch(marketplaceResilienceProvider),
+        );
 });
 
 class RestaurantsPage extends ConsumerStatefulWidget {
