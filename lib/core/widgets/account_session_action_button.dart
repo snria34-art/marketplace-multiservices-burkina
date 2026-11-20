@@ -30,7 +30,7 @@ class _AccountSessionActionButtonState
   void initState() {
     super.initState();
     _authSubscription = ref
-        .read(supabaseProvider)
+        .read(marketplaceEngineProvider).backendClient
         ?.auth
         .onAuthStateChange
         .listen((_) {
