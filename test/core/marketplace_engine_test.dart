@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:marketplace_multiservices_burkina/core/engine/marketplace_engine.dart';
+import 'package:marketplace_multiservices_burkina/core/engine/marketplace_resilience.dart';
 
 void main() {
   group('MarketplaceEngine capability policy', () {
