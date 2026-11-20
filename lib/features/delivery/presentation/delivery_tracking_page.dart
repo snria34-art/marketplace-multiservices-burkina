@@ -47,7 +47,7 @@ class _DeliveryTrackingPageState
   }
 
   Future<void> _subscribeRealtime() async {
-    final client = ref.read(supabaseProvider);
+    final client = ref.read(marketplaceCustomerClientProvider);
     final repo = ref.read(deliveryRepositoryProvider);
     if (client == null || repo == null) return;
 
@@ -90,7 +90,7 @@ class _DeliveryTrackingPageState
 
   Future<void> _removeChannelSafely(RealtimeChannel channel) async {
     try {
-      await ref.read(supabaseProvider)?.removeChannel(channel);
+      await ref.read(marketplaceCustomerClientProvider)?.removeChannel(channel);
     } catch (_) {
       // Disposal is best-effort; no unhandled async error should escape.
     }
