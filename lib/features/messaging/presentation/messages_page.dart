@@ -104,7 +104,7 @@ class _MessagesPageState extends ConsumerState<MessagesPage> {
     _poll?.cancel();
     _poll = null;
 
-    final client = ref.read(supabaseProvider);
+    final client = ref.read(marketplaceCustomerClientProvider);
     final channel = _channel;
     _channel = null;
     if (client != null && channel != null) {
@@ -157,7 +157,7 @@ class _MessagesPageState extends ConsumerState<MessagesPage> {
   void dispose() {
     _poll?.cancel();
 
-    final client = ref.read(supabaseProvider);
+    final client = ref.read(marketplaceCustomerClientProvider);
     final channel = _channel;
     _channel = null;
     if (client != null && channel != null) {
@@ -170,7 +170,7 @@ class _MessagesPageState extends ConsumerState<MessagesPage> {
   @override
   Widget build(BuildContext context) {
     final signedIn =
-        ref.watch(supabaseProvider)?.auth.currentUser != null;
+        ref.watch(marketplaceCustomerClientProvider)?.auth.currentUser != null;
 
     if (!signedIn) {
       return Scaffold(
@@ -374,7 +374,7 @@ class _ConversationViewState
 
   @override
   Widget build(BuildContext context) {
-    final userId = ref.read(supabaseProvider)?.auth.currentUser?.id;
+    final userId = ref.read(marketplaceCustomerClientProvider)?.auth.currentUser?.id;
 
     return Column(
       children: [
