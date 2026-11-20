@@ -79,6 +79,43 @@ class RestaurantRepository {
   }
 
 
+
+  Future<List<Map<String, dynamic>>> sellerProducts() async {
+    final user = client.auth.currentUser;
+    if (user == null) throw StateError('Authentification requise.');
+    final seller = await client.from('sellers').select('id')
+        .eq('user_id', user.id).maybeSingle();
+    final sellerId = seller?['id']?.toString();
+    if (sellerId == null || sellerId.isEmpty) return const [];
+    final shops = await client.from('shops').select('id').eq('seller_id', sellerId);
+    final shopIds = (shops as List)
+        .map((row) => (row as Map)['id']?.toString())
+        .whereType<String>().toList();
+    if (shopIds.isEmpty) return const [];
+    final rows = await client.from('products')
+        .select('id,name,price,shop_id')
+        .inFilter('shop_id', shopIds)
+        .eq('status', 'ACTIVE')
+        .order('name')
+        .limit(500);
+    return (rows as List)
+        .map((row) => Map<String, dynamic>.from(row as Map)).toList();
+  }
+
+  Future<void> linkMenuItemProduct({
+    required String menuItemId,
+    required String productId,
+  }) async {
+    final row = await client.from('restaurant_menu_items')
+        .update({'product_id': productId})
+        .eq('id', menuItemId)
+        .select('id,product_id')
+        .maybeSingle();
+    if (row == null || row['product_id']?.toString() != productId) {
+      throw StateError('Liaison produit non autorisée ou introuvable.');
+    }
+  }
+
   Future<List<Map<String, dynamic>>> sellerMenuItems() async {
     final user = client.auth.currentUser;
     if (user == null) throw StateError('Authentification requise.');
@@ -96,7 +133,7 @@ class RestaurantRepository {
     final rows = await client
         .from('restaurant_profiles')
         .select(
-          'id,shop_id,shops!inner(name,seller_id),restaurant_menus!inner(id,name,restaurant_menu_items!inner(id,name,description,price,active,restaurant_menu_item_option_groups(id,name,selection_type,min_selections,max_selections,sort_order,restaurant_menu_item_options(id,name,price_delta,sort_order))))',
+          'id,shop_id,shops!inner(name,seller_id),restaurant_menus!inner(id,name,restaurant_menu_items!inner(id,product_id,name,description,price,active,restaurant_menu_item_option_groups(id,name,selection_type,min_selections,max_selections,sort_order,restaurant_menu_item_options(id,name,price_delta,sort_order))))',
         )
         .eq('shops.seller_id', sellerId)
         .order('created_at', ascending: false);
