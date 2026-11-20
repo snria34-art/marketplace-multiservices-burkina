@@ -20,7 +20,7 @@ class _PromotionsPageState extends ConsumerState<PromotionsPage> {
   }
 
   Future<List<Map<String, dynamic>>> _load() async {
-    final client = ref.read(supabaseProvider);
+    final client = ref.read(marketplacePublicClientProvider);
     if (client == null) return const [];
 
     final rows = await client
