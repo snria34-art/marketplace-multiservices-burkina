@@ -12,7 +12,7 @@ class GroupBuyRepository {
         .from('group_buys')
         .select(
           'id,product_id,seller_id,title,target_quantity,current_quantity,'
-          'group_price,starts_at,ends_at,status',
+          'group_price,starts_at,ends_at,status,products(name,description,price)',
         )
         .eq('status', 'OPEN')
         .lte('starts_at', now)
