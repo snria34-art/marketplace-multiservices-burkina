@@ -58,7 +58,7 @@ begin
   if cardinality(v_cuisines) > 10 then
     raise exception 'too_many_cuisine_types';
   end if;
-  if exists (select 1 from unnest(v_cuisines) c where upper(trim(c)) <> all(v_allowed)) then
+  if exists (select 1 from unnest(v_cuisines) as cuisine(code) where upper(trim(cuisine.code)) <> all(v_allowed)) then
     raise exception 'invalid_cuisine_type';
   end if;
 
