@@ -158,7 +158,7 @@ class _SellerRestaurantOptionsPageState
             TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Annuler')),
             FilledButton(
               onPressed: () => Navigator.pop(dialogContext, _OptionDraft(
-                name: name.text.trim(), type: type, required: isRequired,
+                name: name.text.trim(), type: type, isRequired: isRequired,
                 max: max, options: options.text,
               )),
               child: const Text('Enregistrer'),
@@ -199,7 +199,7 @@ class _SellerRestaurantOptionsPageState
         menuItemId: item['id'].toString(),
         name: draft.name,
         selectionType: draft.type,
-        minSelections: draft.required ? 1 : 0,
+        minSelections: draft.isRequired ? 1 : 0,
         maxSelections: draft.max,
         options: parsed,
       );
@@ -307,11 +307,11 @@ class _SellerRestaurantOptionsPageState
 }
 
 class _OptionDraft {
-  const _OptionDraft({required this.name, required this.type, required this.required,
+  const _OptionDraft({required this.name, required this.type, required this.isRequired,
     required this.max, required this.options});
   final String name;
   final String type;
-  final bool required;
+  final bool isRequired;
   final int max;
   final String options;
 }
