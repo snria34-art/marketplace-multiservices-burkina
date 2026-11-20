@@ -58,7 +58,7 @@ class RestaurantRepository {
     final rows = await client
         .from('restaurant_profiles')
         .select(
-          'id,shop_id,cuisine_types,preparation_time_min,delivery_available,shops(name,address,status),restaurant_menus(id,name,description,restaurant_menu_items(id,name,description,price,active,sort_order))',
+          'id,shop_id,cuisine_types,preparation_time_min,delivery_available,shops(name,address,status),restaurant_menus(id,name,description,restaurant_menu_items(id,product_id,name,description,price,active,sort_order,products(id,price)))',
         )
         .order('created_at', ascending: false)
         .limit(100);
