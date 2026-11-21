@@ -42,7 +42,7 @@ class DeliveryRepository {
         final activeAssignments = assignments is List
             ? assignments.where((raw) {
                 final status = (raw as Map)['status']?.toString().toUpperCase();
-                return __activeAssignmentStatuses.contains(status);
+                return _activeAssignmentStatuses.contains(status);
               }).toList()
             : const [];
         final assignment = activeAssignments.isNotEmpty
