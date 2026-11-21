@@ -124,7 +124,7 @@ class DeliveryRepository {
           final courierId = assignment['courier_id']?.toString();
           if (courierId != null &&
               courierId.isNotEmpty &&
-              activeAssignmentStatuses.contains(status)) {
+              _activeAssignmentStatuses.contains(status)) {
             courierIds.add(courierId);
           }
         }
