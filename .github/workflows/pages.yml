@@ -42,7 +42,7 @@ jobs:
           fi
           flutter build web --release \
             --base-href /marketplace-multiservices-burkina/ \
-            --dart-define=SUPABASE_URL=https://dzhhsoikzxibmngjzcch.supabase.co \
+            --dart-define=SUPABASE_URL=https://piojnvhpqbyvaijzhatm.supabase.co \
             --dart-define=SUPABASE_PUBLISHABLE_KEY="$SUPABASE_PUBLISHABLE_KEY" \
             --dart-define=SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY"
 
