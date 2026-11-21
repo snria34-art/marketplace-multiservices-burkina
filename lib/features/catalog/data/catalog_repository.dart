@@ -8,7 +8,7 @@ class _CachedSignedUrl {
 }
 
 class CatalogRepository {
-  const CatalogRepository(this.client);
+  CatalogRepository(this.client);
 
   final SupabaseClient client;
   final Map<String, _CachedSignedUrl> _imageUrlCache = {};
