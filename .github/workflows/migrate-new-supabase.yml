@@ -1,0 +1,70 @@
+name: Migrate database to the new Supabase project
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm_target:
+        description: "Type the exact new Supabase project ref to confirm the destination"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: migrate-new-supabase-project
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    name: Apply repository migrations to Supabase P
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Verify the exact destination
+        env:
+          CONFIRM_TARGET: ${{ inputs.confirm_target }}
+          SUPABASE_PROJECT_REF: piojnvhpqbyvaijzhatm
+        run: |
+          if [ "$CONFIRM_TARGET" != "$SUPABASE_PROJECT_REF" ]; then
+            echo "Confirmation did not match the fixed destination project."
+            exit 1
+          fi
+
+      - name: Checkout the validated application branch
+        uses: actions/checkout@v4
+        with:
+          ref: maintenance/audit-01-07-2026-11-15
+
+      - name: Install pinned Supabase CLI
+        uses: supabase/setup-cli@v2
+        with:
+          version: 2.122.1
+
+      - name: Link only to the new Supabase project
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_NEW_DB_PASSWORD }}
+          SUPABASE_PROJECT_REF: piojnvhpqbyvaijzhatm
+        run: |
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          test -n "$SUPABASE_DB_PASSWORD"
+          supabase link --project-ref "$SUPABASE_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
+
+      - name: Preview pending migrations
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_NEW_DB_PASSWORD }}
+        run: supabase db push --linked --dry-run
+
+      - name: Apply all pending migrations to the new project
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_NEW_DB_PASSWORD }}
+        run: supabase db push --linked --yes
+
+      - name: Verify migration history
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_NEW_DB_PASSWORD }}
+        run: supabase migration list --linked
