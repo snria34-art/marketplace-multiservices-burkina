@@ -68,7 +68,7 @@ Les identifiants à utiliser pour rattacher les applications clientes au projet 
 - Android : `com.marketplaceburkina.marketplace_multiservices_burkina`
 - iOS (Bundle ID) : `com.marketplaceburkina.marketplaceMultiservicesBurkina`
 
-Les fichiers Android et iOS officiels sont maintenant présents dans `android/app/google-services.json` et `ios/Runner/GoogleService-Info.plist`. Ils proviennent du projet Firebase `marketplace-multiservices-bf` et correspondent respectivement aux identifiants `com.marketplaceburkina.marketplace_multiservices_burkina` et `com.marketplaceburkina.marketplaceMultiservicesBurkina`. Vérifier que le fichier iOS est bien associé à la cible Runner dans Xcode. Le plug-in Google Services Android s'active uniquement lorsque le fichier JSON officiel est présent.
+Les fichiers Android et iOS officiels sont maintenant présents dans `android/app/google-services.json` et `ios/Runner/GoogleService-Info.plist`. Ils proviennent du projet Firebase `marketplace-multiservices-bf` et correspondent respectivement aux identifiants `com.marketplaceburkina.marketplace_multiservices_burkina` et `com.marketplaceburkina.marketplaceMultiservicesBurkina`. Le fichier iOS est référencé dans `ios/Runner.xcodeproj/project.pbxproj` et ajouté aux ressources de la cible Runner. Le plug-in Google Services Android s'active uniquement lorsque le fichier JSON officiel est présent.
 
 Les configurations clientes Firebase ne remplacent pas le compte de service de l'Edge Function. La clé privée de ce compte reste dans les secrets Supabase sous `FCM_SERVICE_ACCOUNT_JSON`, jamais dans l'app ou dans Railway.
 
