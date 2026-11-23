@@ -22,6 +22,27 @@ Les versions déclarées dans `pubspec.yaml` :
 
 Le service Flutter intercepte les erreurs d'initialisation Firebase. Si la configuration native Firebase est absente, les notifications sont désactivées sans empêcher l'application de démarrer. Cela ne signifie pas que FCM est opérationnel.
 
+## Raccordement des configurations natives Firebase
+
+Le dépôt conserve séparément la configuration publique de chaque application cliente et les identifiants privés du serveur d'envoi.
+
+Identifiants d'applications Firebase à enregistrer dans le même projet Firebase :
+
+- Android : `com.marketplaceburkina.marketplace_multiservices_burkina`
+- iOS : `com.marketplaceburkina.marketplaceMultiservicesBurkina`
+
+Emplacements attendus :
+
+- Android : `android/app/google-services.json`
+- iOS : `ios/Runner/GoogleService-Info.plist`, associé à la cible Runner dans Xcode.
+- Configuration Flutter multiplateforme : générer `lib/firebase_options.dart` avec `flutterfire configure` depuis la racine du projet, en sélectionnant le projet Firebase existant et les applications Android/iOS déjà enregistrées.
+
+Le plug-in Google Services Gradle `4.6.0` est préparé dans la configuration Android. Il est appliqué uniquement lorsque `android/app/google-services.json` est présent ; les compilations de maintenance sans fichier Firebase restent ainsi indépendantes de cette configuration.
+
+Les fichiers de configuration clients Firebase contiennent des identifiants propres à l'application, pas le compte de service d'envoi. Le compte de service JSON est un secret privé : ne pas le mettre dans GitHub, Railway, Flutter ou le bundle mobile. Il doit rester dans les secrets des Supabase Edge Functions sous `FCM_SERVICE_ACCOUNT_JSON`. Le code récupère normalement le `project_id` depuis ce JSON ; `FCM_PROJECT_ID` sert de valeur de secours facultative.
+
+État de cette branche : la structure Gradle Android est préparée, mais les deux fichiers natifs Firebase et les options générées ne sont pas encore disponibles dans le dépôt. Aucune valeur Firebase n'a été inventée.
+
 ## Configuration externe obligatoire
 
 Pour activer réellement FCM, le propriétaire du projet doit :
