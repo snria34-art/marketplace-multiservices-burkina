@@ -9,7 +9,7 @@ Le Dockerfile de l'application consomme :
 - `SUPABASE_URL`
 - `SUPABASE_PUBLISHABLE_KEY`
 
-Ces deux variables sont déjà présentes sur le service Railway observé. Le connecteur masque leurs valeurs ; leur validité exacte n'a donc pas été vérifiée.
+Ces deux variables sont déjà présentes sur le service Railway observé. Le connecteur masque leurs valeurs ; leur validité exacte n'a donc pas été vérifiée. `SUPABASE_ACCESS_TOKEN` figure également dans la liste Railway, mais le Dockerfile Flutter ne le consomme pas. Je ne le supprime pas sans vérifier les autres usages possibles du service.
 
 `SUPABASE_PUBLISHABLE_KEY` est la clé publique destinée au client Flutter. Ne jamais remplacer cette clé par `SUPABASE_SERVICE_ROLE_KEY` ou par une clé secrète Supabase.
 
@@ -22,7 +22,7 @@ Le workflow manuel `.github/workflows/repair-aud-07-migration-history.yml` réf�
 - `SUPABASE_ACCESS_TOKEN`
 - `SUPABASE_DB_PASSWORD`
 
-Ces secrets servent à ce workflow d'administration/migration. Ils ne sont pas des variables de l'application mobile et ne doivent pas être copiés dans le code Flutter.
+Ces secrets servent à ce workflow d'administration/migration. La présence d'un `SUPABASE_ACCESS_TOKEN` dans Railway ne prouve pas que le secret GitHub Actions est configuré : GitHub ne permet pas au connecteur présent ici de lire les valeurs ou de confirmer leur présence. Ces secrets ne sont pas des variables de l'application mobile et ne doivent pas être copiés dans le code Flutter.
 
 Ne pas lancer ce workflow dans le cadre de l'intégration des clés : il modifie l'historique des migrations du projet Supabase officiel.
 
