@@ -60,6 +60,18 @@ Pour recevoir FCM sur iPhone, activer Push Notifications et Background Modes dan
 
 Le job iOS du workflow de validation s'exécute uniquement lors d'un déclenchement manuel (`workflow_dispatch`) ; il n'est pas lancé par les pushes de maintenance. Il exécute `flutter build ios --simulator --debug`. C’est une compilation de simulateur en debug, **pas** un IPA release et **pas** une archive de publication. Ce job n'est pas une étape de déploiement.
 
+
+## Identifiants d'applications Firebase
+
+Les identifiants à utiliser pour rattacher les applications clientes au projet Firebase existant sont :
+
+- Android : `com.marketplaceburkina.marketplace_multiservices_burkina`
+- iOS (Bundle ID) : `com.marketplaceburkina.marketplaceMultiservicesBurkina`
+
+Placer le fichier Android téléchargé depuis la console Firebase dans `android/app/google-services.json`, et le fichier Apple dans `ios/Runner/GoogleService-Info.plist` en vérifiant son appartenance à la cible Runner. Le plug-in Google Services Android est préparé pour s'activer uniquement si le fichier JSON officiel est présent.
+
+Les configurations clientes Firebase ne remplacent pas le compte de service de l'Edge Function. La clé privée de ce compte reste dans les secrets Supabase sous `FCM_SERVICE_ACCOUNT_JSON`, jamais dans l'app ou dans Railway.
+
 ## Firebase natif
 
 Les fichiers `google-services.json` et `GoogleService-Info.plist` dépendent du véritable projet Firebase et ne doivent pas être fabriqués. Après création/enregistrement des applications Android et iOS, exécuter `flutterfire configure` pour générer `firebase_options.dart` et les fichiers natifs appropriés.
