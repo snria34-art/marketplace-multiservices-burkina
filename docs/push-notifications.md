@@ -26,10 +26,12 @@ Le service Flutter intercepte les erreurs d'initialisation Firebase. Si la confi
 
 Le dépôt conserve séparément la configuration publique de chaque application cliente et les identifiants privés du serveur d'envoi.
 
-Identifiants d'applications Firebase à enregistrer dans le même projet Firebase :
+Projet Firebase utilisé : `marketplace-multiservices-bf`.
 
-- Android : `com.marketplaceburkina.marketplace_multiservices_burkina`
-- iOS : `com.marketplaceburkina.marketplaceMultiservicesBurkina`
+Identifiants des applications à rattacher à ce même projet :
+
+- Android : `com.marketplaceburkina.marketplace_multiservices_burkina` — application enregistrée et fichier de configuration officiel ajouté à cette branche.
+- iOS : `com.marketplaceburkina.marketplaceMultiservicesBurkina` — application à enregistrer ou vérifier dans le même projet Firebase.
 
 Emplacements attendus :
 
@@ -41,14 +43,14 @@ Le plug-in Google Services Gradle `4.6.0` est préparé dans la configuration An
 
 Les fichiers de configuration clients Firebase contiennent des identifiants propres à l'application, pas le compte de service d'envoi. Le compte de service JSON est un secret privé : ne pas le mettre dans GitHub, Railway, Flutter ou le bundle mobile. Il doit rester dans les secrets des Supabase Edge Functions sous `FCM_SERVICE_ACCOUNT_JSON`. Le code récupère normalement le `project_id` depuis ce JSON ; `FCM_PROJECT_ID` sert de valeur de secours facultative.
 
-État de cette branche : la structure Gradle Android est préparée, mais les deux fichiers natifs Firebase et les options générées ne sont pas encore disponibles dans le dépôt. Aucune valeur Firebase n'a été inventée.
+État de cette branche : la structure Gradle Android est préparée et le fichier officiel `android/app/google-services.json` est maintenant présent. Le project ID et le package Android ont été vérifiés. Le fichier iOS `ios/Runner/GoogleService-Info.plist` et les options Flutter `lib/firebase_options.dart` restent à raccorder. Aucune valeur Firebase n'a été inventée.
 
 ## Configuration externe obligatoire
 
 Pour activer réellement FCM, le propriétaire du projet doit :
 
-1. Associer les applications Android et iOS au vrai projet Firebase, avec les identifiants de package et Bundle ID exacts.
-2. Générer les fichiers officiels `google-services.json`, `GoogleService-Info.plist` et `firebase_options.dart` depuis ce projet.
+1. Vérifier l'application Android déjà enregistrée dans `marketplace-multiservices-bf` et enregistrer l'application iOS dans ce même projet avec le Bundle ID exact.
+2. Conserver le fichier Android officiel déjà ajouté, télécharger `GoogleService-Info.plist` depuis le projet Firebase et générer `firebase_options.dart` avec FlutterFire.
 3. Configurer APNs pour iOS et activer Firebase Cloud Messaging API.
 4. Créer un compte de service dédié avec le minimum de permissions nécessaires pour envoyer les messages.
 5. Ajouter le JSON du compte de service uniquement dans Supabase Edge Function Secrets sous `FCM_SERVICE_ACCOUNT_JSON`.
@@ -78,7 +80,7 @@ Le connecteur Supabase disponible ici permet de lire et déployer des fonctions,
 
 ## Limites fonctionnelles restantes
 
-- La réception réelle sur un téléphone Android/iOS n'est pas validée tant que les fichiers natifs Firebase, APNs et le compte de service ne sont pas configurés.
+- La réception réelle sur appareil n'est pas encore validée : le fichier de configuration Android est présent mais aucun test sur téléphone n'est revendiqué ; la configuration iOS/APNs et le compte de service FCM côté serveur restent nécessaires.
 - L'état d'envoi est actuellement principalement conservé au niveau de la notification. Un suivi durable et idempotent par couple notification/appareil reste à concevoir pour pouvoir reprendre précisément les appareils en échec sans renvoyer aux appareils ayant déjà reçu le message.
 - Aucun envoi de test, envoi de masse ou workflow de build n'a été lancé dans le cadre du contrôle.
 
@@ -118,7 +120,7 @@ La relecture de `dispatch-push-notifications/index.ts` met en évidence une limi
 
 **Pourquoi cette correction n'est pas commitée dans le worker aujourd'hui :** elle nécessite une migration SQL, des RPC atomiques de claim/finalisation, des tests pgTAP sur concurrence/rejeu et un test Deno de l'orchestration. Le CLI Supabase et un projet isolé ne sont pas accessibles depuis cette session ; introduire cette migration sans exécuter sa suite locale créerait un risque de régression sur la file de notifications. Le comportement existant est donc signalé comme bloquant, sans patch incomplet.
 
-Le blocage Firebase demeure également : compte de service FCM, identifiant projet et fichiers de configuration natifs ne sont pas présents dans le dépôt. Aucun envoi de test n'a été effectué.
+Le blocage Firebase demeure également : le compte de service FCM n'est pas disponible dans les secrets serveur observés, et les configurations iOS/Flutter restent à raccorder. L'identifiant du projet Firebase est désormais connu, mais cela ne configure pas le compte de service. Aucun envoi de test n'a été effectué.
 
 ### Contrôles de code à garder
 
