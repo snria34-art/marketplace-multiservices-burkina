@@ -49,7 +49,7 @@ Les configurations clients officielles ne sont pas des clés privées :
 - iOS : `ios/Runner/GoogleService-Info.plist`, Bundle ID `com.marketplaceburkina.marketplaceMultiservicesBurkina`.
 - Flutter : générer `lib/firebase_options.dart` avec `flutterfire configure` depuis le projet Flutter et le projet Firebase existant.
 
-Le dépôt de cette branche ne contient pas encore ces trois fichiers. Ils doivent provenir du vrai projet Firebase, jamais être recréés à partir de valeurs supposées.
+Le fichier Android officiel `android/app/google-services.json` a été téléchargé depuis le projet Firebase `marketplace-multiservices-bf` et ajouté à cette branche. Son `project_id` et son package Android correspondent au projet et à l'identifiant enregistrés. Les configurations iOS `GoogleService-Info.plist` et Flutter `firebase_options.dart` restent à obtenir/générer depuis le même projet Firebase. Aucun fichier ne doit être fabriqué à partir de valeurs supposées.
 
 Le compte de service FCM est différent des configurations clients : son JSON privé va uniquement dans `FCM_SERVICE_ACCOUNT_JSON` côté Supabase Edge Functions.
 
@@ -59,7 +59,8 @@ Wave, CinetPay et les autres prestataires restent hors de cette intégration et 
 
 ## État de cette préparation
 
-- Vérification des variables Railway : les trois noms Supabase cités plus haut sont présents ; valeurs masquées.
-- Préparation du plug-in Google Services Android conditionnel dans la branche `integration/firebase-mobile-client`.
-- Aucune clé ou valeur secrète copiée, révélée, créée ou remplacée.
-- Aucun workflow GitHub, build, déploiement Railway ni modification de la base Supabase lancé.
+- Vérification des noms de variables Railway : les noms observés sont présents ; les valeurs restent masquées et leur validité n'est pas certifiée.
+- Configuration cliente Android officielle ajoutée à `android/app/google-services.json` sur `integration/firebase-mobile-client` et cohérence du project ID/package vérifiée.
+- Configuration iOS et options Flutter encore à raccorder.
+- Aucun compte de service ni secret privé ajouté au dépôt ; la clé du fichier Android est une clé cliente Firebase, non un compte de service.
+- Aucun workflow manuel, build, déploiement Railway ni changement de la base Supabase n'a été exécuté.
