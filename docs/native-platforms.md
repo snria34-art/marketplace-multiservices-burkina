@@ -68,13 +68,13 @@ Les identifiants à utiliser pour rattacher les applications clientes au projet 
 - Android : `com.marketplaceburkina.marketplace_multiservices_burkina`
 - iOS (Bundle ID) : `com.marketplaceburkina.marketplaceMultiservicesBurkina`
 
-Placer le fichier Android téléchargé depuis la console Firebase dans `android/app/google-services.json`, et le fichier Apple dans `ios/Runner/GoogleService-Info.plist` en vérifiant son appartenance à la cible Runner. Le plug-in Google Services Android est préparé pour s'activer uniquement si le fichier JSON officiel est présent.
+Le fichier Android officiel `google-services.json` est maintenant présent dans `android/app/`. Il provient du projet Firebase `marketplace-multiservices-bf` et son package correspond à `com.marketplaceburkina.marketplace_multiservices_burkina`. Le fichier Apple `GoogleService-Info.plist` devra être téléchargé depuis ce même projet, placé dans `ios/Runner/` et associé à la cible Runner dans Xcode. Le plug-in Google Services Android s'active uniquement lorsque le fichier JSON officiel est présent.
 
 Les configurations clientes Firebase ne remplacent pas le compte de service de l'Edge Function. La clé privée de ce compte reste dans les secrets Supabase sous `FCM_SERVICE_ACCOUNT_JSON`, jamais dans l'app ou dans Railway.
 
 ## Firebase natif
 
-Les fichiers `google-services.json` et `GoogleService-Info.plist` dépendent du véritable projet Firebase et ne doivent pas être fabriqués. Après création/enregistrement des applications Android et iOS, exécuter `flutterfire configure` pour générer `firebase_options.dart` et les fichiers natifs appropriés.
+Le fichier Android `google-services.json` est déjà téléchargé et ajouté à la branche d'intégration depuis le véritable projet Firebase. Le fichier iOS `GoogleService-Info.plist` reste à télécharger depuis ce projet après enregistrement de l'application iOS avec le Bundle ID exact. Ensuite, exécuter `flutterfire configure` depuis la racine Flutter pour générer `lib/firebase_options.dart` et vérifier les configurations des plateformes sélectionnées. Ne jamais fabriquer ces fichiers à partir de valeurs supposées.
 
 ## CI et déclenchement
 
