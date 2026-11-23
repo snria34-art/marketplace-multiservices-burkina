@@ -50,7 +50,7 @@ Les fichiers de configuration clients Firebase contiennent des identifiants prop
 Pour activer réellement FCM, le propriétaire du projet doit :
 
 1. Vérifier les applications Android et iOS enregistrées dans `marketplace-multiservices-bf` avec leurs identifiants exacts.
-2. Conserver les fichiers officiels Android et iOS déjà ajoutés, vérifier l'association du plist à la cible Runner, puis générer `firebase_options.dart` avec FlutterFire.
+2. Conserver les fichiers officiels Android et iOS déjà ajoutés, confirmer que le plist est inclus dans les ressources Runner, puis générer `firebase_options.dart` avec FlutterFire.
 3. Configurer APNs pour iOS et activer Firebase Cloud Messaging API.
 4. Créer un compte de service dédié avec le minimum de permissions nécessaires pour envoyer les messages.
 5. Ajouter le JSON du compte de service uniquement dans Supabase Edge Function Secrets sous `FCM_SERVICE_ACCOUNT_JSON`.
