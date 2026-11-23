@@ -43,7 +43,7 @@ Le plug-in Google Services Gradle `4.6.0` est préparé dans la configuration An
 
 Les fichiers de configuration clients Firebase contiennent des identifiants propres à l'application, pas le compte de service d'envoi. Le compte de service JSON est un secret privé : ne pas le mettre dans GitHub, Railway, Flutter ou le bundle mobile. Il doit rester dans les secrets des Supabase Edge Functions sous `FCM_SERVICE_ACCOUNT_JSON`. Le code récupère normalement le `project_id` depuis ce JSON ; `FCM_PROJECT_ID` sert de valeur de secours facultative.
 
-État de cette branche : la structure Gradle Android est préparée et les deux fichiers de configuration clients officiels sont présents : `android/app/google-services.json` et `ios/Runner/GoogleService-Info.plist`. Le project ID, le package Android et le Bundle ID iOS ont été vérifiés. L'association du plist à la cible Runner dans Xcode et la génération de `lib/firebase_options.dart` avec FlutterFire restent à effectuer. Aucune valeur Firebase n'a été inventée.
+État de cette branche : la structure Gradle Android est préparée et les deux fichiers de configuration clients officiels sont présents : `android/app/google-services.json` et `ios/Runner/GoogleService-Info.plist`. Le project ID, le package Android et le Bundle ID iOS ont été vérifiés. Le plist iOS est référencé dans `ios/Runner.xcodeproj/project.pbxproj` comme ressource de la cible Runner. La génération de `lib/firebase_options.dart` avec FlutterFire reste à effectuer. Aucune valeur Firebase n'a été inventée.
 
 ## Configuration externe obligatoire
 
