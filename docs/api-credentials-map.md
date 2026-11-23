@@ -49,7 +49,7 @@ Les configurations clients officielles ne sont pas des clés privées :
 - iOS : `ios/Runner/GoogleService-Info.plist`, Bundle ID `com.marketplaceburkina.marketplaceMultiservicesBurkina`.
 - Flutter : générer `lib/firebase_options.dart` avec `flutterfire configure` depuis le projet Flutter et le projet Firebase existant.
 
-Le fichier Android officiel `android/app/google-services.json` a été téléchargé depuis le projet Firebase `marketplace-multiservices-bf` et ajouté à cette branche. Son `project_id` et son package Android correspondent au projet et à l'identifiant enregistrés. Les configurations iOS `GoogleService-Info.plist` et Flutter `firebase_options.dart` restent à obtenir/générer depuis le même projet Firebase. Aucun fichier ne doit être fabriqué à partir de valeurs supposées.
+Les fichiers clients officiels Android et iOS ont été téléchargés depuis le projet Firebase `marketplace-multiservices-bf` et ajoutés à cette branche : `android/app/google-services.json` et `ios/Runner/GoogleService-Info.plist`. Leurs identifiants de projet et leurs identifiants d'application correspondent au projet et aux applications enregistrés. La configuration Flutter `lib/firebase_options.dart` reste à générer avec FlutterFire depuis ce même projet. Aucun fichier ne doit être fabriqué à partir de valeurs supposées.
 
 Le compte de service FCM est différent des configurations clients : son JSON privé va uniquement dans `FCM_SERVICE_ACCOUNT_JSON` côté Supabase Edge Functions.
 
@@ -61,6 +61,6 @@ Wave, CinetPay et les autres prestataires restent hors de cette intégration et 
 
 - Vérification des noms de variables Railway : les noms observés sont présents ; les valeurs restent masquées et leur validité n'est pas certifiée.
 - Configuration cliente Android officielle ajoutée à `android/app/google-services.json` sur `integration/firebase-mobile-client` et cohérence du project ID/package vérifiée.
-- Configuration iOS et options Flutter encore à raccorder.
-- Aucun compte de service ni secret privé ajouté au dépôt ; la clé du fichier Android est une clé cliente Firebase, non un compte de service.
+- Configurations clientes Android et iOS officielles ajoutées à leurs emplacements respectifs ; options Flutter `lib/firebase_options.dart` encore à générer et vérifier.
+- Aucun compte de service ni secret serveur privé ajouté au dépôt ; les fichiers de configuration Android et iOS contiennent les identifiants clients Firebase, pas le compte de service d'envoi FCM.
 - Aucun workflow manuel, build, déploiement Railway ni changement de la base Supabase n'a été exécuté.
