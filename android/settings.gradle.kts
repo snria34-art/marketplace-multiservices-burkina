@@ -22,7 +22,7 @@ plugins {
     id("dev.flutter.flutter-plugin-loader") version "1.0.0"
     id("com.android.application") version "8.11.1" apply false
     // START: FlutterFire Configuration
-    id("com.google.gms.google-services") version("4.3.15") apply false
+    id("com.google.gms.google-services") version("4.6.0") apply false
     // END: FlutterFire Configuration
     // Pin the Kotlin Gradle Plugin at the root so every Android module resolves the same version.
     id("org.jetbrains.kotlin.android") version "2.2.20" apply false
