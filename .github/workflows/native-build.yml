@@ -3,7 +3,7 @@ name: Native debug validation
 # Debug validation only. No release signing, store upload or deployment.
 on:
   push:
-    branches: ['maintenance/audit-01-07-2026-11-15']
+    branches: ['maintenance/audit-01-07-2026-11-15', 'integration/firebase-mobile-client']
     paths:
       - 'android/**'
       - 'lib/**'

@@ -210,7 +210,7 @@ class _MechanicsPageState extends ConsumerState<MechanicsPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Demande envoyée. Référence : ' + id,
+            'Demande envoyée. Référence : $id',
           ),
         ),
       );
@@ -330,13 +330,10 @@ class _MechanicsPageState extends ConsumerState<MechanicsPage> {
                         mechanic['display_name']?.toString() ?? 'Mécanicien',
                       ),
                       subtitle: Text(
-                        _availabilityLabel(
+                        '${_availabilityLabel(
                           availability?['status']?.toString(),
-                        ) +
-                            '\nRayon : ' +
-                            (mechanic['service_radius_km']?.toString() ??
-                                '-') +
-                            ' km',
+                        )}\nRayon : ${mechanic['service_radius_km']?.toString() ??
+                                '-'} km',
                       ),
                     ),
                   );
@@ -391,13 +388,7 @@ class _MechanicsPageState extends ConsumerState<MechanicsPage> {
                         mechanic['display_name']?.toString() ?? 'Mécanicien',
                       ),
                       subtitle: Text(
-                        (quote['diagnosis']?.toString() ?? '') +
-                            '\n' +
-                            (quote['amount']?.toString() ?? '0') +
-                            ' ' +
-                            (quote['currency']?.toString() ?? 'XOF') +
-                            ' • ' +
-                            (quote['status']?.toString() ?? ''),
+                        '${quote['diagnosis']?.toString() ?? ''}\n${quote['amount']?.toString() ?? '0'} ${quote['currency']?.toString() ?? 'XOF'} • ${quote['status']?.toString() ?? ''}',
                       ),
                       trailing: quote['status'] == 'PENDING'
                           ? FilledButton(

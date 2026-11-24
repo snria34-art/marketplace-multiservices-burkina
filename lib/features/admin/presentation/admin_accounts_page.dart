@@ -182,9 +182,7 @@ class _AdminAccountsPageState extends ConsumerState<AdminAccountsPage> {
                         ),
                         title: Text(name),
                         subtitle: Text(
-                          current +
-                              ' • vérification ' +
-                              (user['verification_status']?.toString() ?? '-'),
+                          '$current • vérification ${user['verification_status']?.toString() ?? '-'}',
                         ),
                         trailing: PopupMenuButton<String>(
                           onSelected: (value) => _setStatus(user, value),

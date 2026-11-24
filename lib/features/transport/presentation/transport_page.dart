@@ -85,7 +85,7 @@ class _TransportPageState extends ConsumerState<TransportPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Réservation créée : ' + booking,
+            'Réservation créée : $booking',
           ),
         ),
       );
@@ -177,17 +177,10 @@ class _TransportPageState extends ConsumerState<TransportPage> {
                         child: Icon(Icons.directions_bus_outlined),
                       ),
                       title: Text(
-                        (departure['name']?.toString() ?? '?') +
-                            ' → ' +
-                            (arrival['name']?.toString() ?? '?'),
+                        '${departure['name']?.toString() ?? '?'} → ${arrival['name']?.toString() ?? '?'}',
                       ),
                       subtitle: Text(
-                        (company['name']?.toString() ?? 'Compagnie') +
-                            '\nDépart : ' +
-                            (trip['departure_at']?.toString() ?? '') +
-                            '\nPrix : ' +
-                            (trip['price']?.toString() ?? '0') +
-                            ' XOF',
+                        '${company['name']?.toString() ?? 'Compagnie'}\nDépart : ${trip['departure_at']?.toString() ?? ''}\nPrix : ${trip['price']?.toString() ?? '0'} XOF',
                       ),
                       trailing: FilledButton(
                         onPressed: () => _reserve(trip),
@@ -241,10 +234,7 @@ class _TransportPageState extends ConsumerState<TransportPage> {
                         ticket['passenger_name']?.toString() ?? 'Passager',
                       ),
                       subtitle: Text(
-                        'Billet : ' +
-                            (ticket['id']?.toString() ?? '-') +
-                            '\nÉtat : ' +
-                            (ticket['status']?.toString() ?? '-'),
+                        'Billet : ${ticket['id']?.toString() ?? '-'}\nÉtat : ${ticket['status']?.toString() ?? '-'}',
                       ),
                     ),
                   );

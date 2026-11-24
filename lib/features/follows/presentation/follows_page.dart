@@ -167,9 +167,7 @@ class _FollowsPageState extends ConsumerState<FollowsPage> {
                               item['name']?.toString() ?? 'Produit',
                             ),
                             subtitle: Text(
-                              (item['price']?.toString() ?? '0') +
-                                  ' ' +
-                                  (item['currency']?.toString() ?? 'XOF'),
+                              '${item['price']?.toString() ?? '0'} ${item['currency']?.toString() ?? 'XOF'}',
                             ),
                             trailing: IconButton(
                               onPressed: () => _removeProduct(

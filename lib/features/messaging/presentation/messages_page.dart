@@ -283,7 +283,7 @@ class _ConversationList extends StatelessWidget {
                 subtitle: Text(
                   item['order_id'] == null
                       ? 'Conversation générale'
-                      : 'Commande : ' + item['order_id'].toString(),
+                      : 'Commande : ${item['order_id']}',
                 ),
                 onTap: () => onOpen(item['id'].toString()),
               ),

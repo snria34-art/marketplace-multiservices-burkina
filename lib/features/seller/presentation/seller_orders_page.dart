@@ -148,12 +148,7 @@ class _SellerOrdersPageState extends ConsumerState<SellerOrdersPage> {
                       shop['name']?.toString() ?? 'Boutique',
                     ),
                     subtitle: Text(
-                      'Commande : ' +
-                          (group['order_id']?.toString() ?? '-') +
-                          '\nÉtat : ' +
-                          (group['status']?.toString() ?? '-') +
-                          ' • Sous-total : ' +
-                          formatXof(num.tryParse(group['subtotal']?.toString() ?? '0') ?? 0),
+                      'Commande : ${group['order_id']?.toString() ?? '-'}\nÉtat : ${group['status']?.toString() ?? '-'} • Sous-total : ${formatXof(num.tryParse(group['subtotal']?.toString() ?? '0') ?? 0)}',
                     ),
                     children: [
                       for (final rawItem in items)
@@ -176,11 +171,7 @@ class _SellerOrdersPageState extends ConsumerState<SellerOrdersPage> {
                                     'Produit',
                               ),
                               subtitle: Text(
-                                'Qté : ' +
-                                    (item['quantity']?.toString() ?? '0') +
-                                    ' • ' +
-                                    formatXof(num.tryParse(item['unit_price']?.toString() ?? '0') ?? 0) +
-                                    (choicesLabel.isEmpty ? '' : '\nChoix : ' + choicesLabel),
+                                'Qté : ${item['quantity']?.toString() ?? '0'} • ${formatXof(num.tryParse(item['unit_price']?.toString() ?? '0') ?? 0)}${choicesLabel.isEmpty ? '' : '\nChoix : $choicesLabel'}',
                               ),
                               trailing: Text(
                                 formatXof(num.tryParse(item['total_price']?.toString() ?? '0') ?? 0),

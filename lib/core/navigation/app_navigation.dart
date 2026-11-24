@@ -18,11 +18,11 @@ String notificationRoute(Map<String, dynamic> data) {
   final type = (data['type'] ?? '').toString().toLowerCase();
 
   if (deliveryOrderId != null) {
-    return '/delivery/' + deliveryOrderId;
+    return '/delivery/$deliveryOrderId';
   }
 
   if (orderId != null) {
-    return '/orders/' + orderId;
+    return '/orders/$orderId';
   }
 
   if (type.contains('message') || type.contains('chat')) return '/messages';

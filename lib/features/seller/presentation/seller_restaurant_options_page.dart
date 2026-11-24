@@ -95,7 +95,7 @@ class _SellerRestaurantOptionsPageState
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   DropdownButtonFormField<String>(
-                    value: type,
+                    initialValue: type,
                     isExpanded: true,
                     decoration: const InputDecoration(labelText: 'Genre de restaurant'),
                     items: _restaurantTypes.map((entry) => DropdownMenuItem(
@@ -171,7 +171,7 @@ class _SellerRestaurantOptionsPageState
           builder: (context, setDialogState) => AlertDialog(
             title: const Text('Lier ce plat à un produit'),
             content: DropdownButtonFormField<String>(
-              value: selectedId,
+              initialValue: selectedId,
               isExpanded: true,
               decoration: const InputDecoration(labelText: 'Produit de votre boutique'),
               items: products.map((product) => DropdownMenuItem(
@@ -319,7 +319,7 @@ class _SellerRestaurantOptionsPageState
                 TextField(controller: name, maxLength: 80,
                   decoration: const InputDecoration(labelText: 'Nom du groupe', hintText: 'Ex. : Accompagnement')),
                 DropdownButtonFormField<String>(
-                  value: type,
+                  initialValue: type,
                   decoration: const InputDecoration(labelText: 'Type de sélection'),
                   items: const [
                     DropdownMenuItem(value: 'SINGLE', child: Text('Un seul choix')),
@@ -335,7 +335,7 @@ class _SellerRestaurantOptionsPageState
                 ),
                 if (type == 'MULTIPLE')
                   DropdownButtonFormField<int>(
-                    value: max,
+                    initialValue: max,
                     decoration: const InputDecoration(labelText: 'Nombre maximum de choix'),
                     items: List.generate(20, (i) => DropdownMenuItem(value: i + 1, child: Text('${i + 1}'))),
                     onChanged: (v) { if (v != null) setDialogState(() => max = v); },

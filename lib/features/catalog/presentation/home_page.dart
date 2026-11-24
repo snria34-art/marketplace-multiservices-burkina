@@ -502,7 +502,7 @@ class _ProductCard extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 10),
             child: Text(
-              (product['price']?.toString() ?? '0') + ' XOF',
+              '${product['price']?.toString() ?? '0'} XOF',
               style: Theme.of(context).textTheme.titleMedium,
             ),
           ),

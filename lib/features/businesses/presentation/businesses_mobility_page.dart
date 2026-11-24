@@ -200,7 +200,7 @@ class _DigitalServiceCard extends StatelessWidget {
         trailing: price == null
             ? null
             : Text(
-                '${formatXof(num.tryParse(price.toString()) ?? 0)}',
+                formatXof(num.tryParse(price.toString()) ?? 0),
                 style: Theme.of(context).textTheme.labelLarge,
               ),
         isThreeLine: item['description'] != null,

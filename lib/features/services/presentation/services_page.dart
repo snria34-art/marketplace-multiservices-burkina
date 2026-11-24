@@ -62,8 +62,7 @@ class _ServicesPageState extends ConsumerState<ServicesPage> {
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: Text(
-          'Demander ' +
-              (service['name']?.toString() ?? 'ce service'),
+          'Demander ${service['name']?.toString() ?? 'ce service'}',
         ),
         content: TextField(
           controller: controller,
@@ -102,7 +101,7 @@ class _ServicesPageState extends ConsumerState<ServicesPage> {
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Demande créée : ' + requestId)),
+        SnackBar(content: Text('Demande créée : $requestId')),
       );
     } catch (error) {
       if (!mounted) return;
@@ -229,7 +228,7 @@ class _ServicesPageState extends ConsumerState<ServicesPage> {
                                       'Prestataire') +
                                   (price == null
                                       ? ''
-                                      : ' • ' + price + ' XOF'),
+                                      : ' • $price XOF'),
                             ),
                             trailing: const Icon(Icons.chevron_right),
                             onTap: () => _requestService(service),

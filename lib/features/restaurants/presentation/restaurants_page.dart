@@ -481,7 +481,7 @@ class _MenuItemTileState extends ConsumerState<_MenuItemTile> {
                 ],
               )),
               const SizedBox(width: 12),
-              Text('${formatXof(num.tryParse((product['price'] ?? item['price'] ?? '0').toString()) ?? 0)}',
+              Text(formatXof(num.tryParse((product['price'] ?? item['price'] ?? '0').toString()) ?? 0),
                 style: Theme.of(context).textTheme.titleSmall),
             ],
           ),

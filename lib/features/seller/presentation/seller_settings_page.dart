@@ -98,7 +98,7 @@ class _SellerSettingsPageState extends ConsumerState<SellerSettingsPage> {
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Profil vendeur enregistré : ' + id.toString())),
+        SnackBar(content: Text('Profil vendeur enregistré : $id')),
       );
       setState(() => _future = _load());
     } catch (error) {

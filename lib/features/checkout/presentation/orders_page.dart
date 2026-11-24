@@ -88,17 +88,13 @@ class _OrdersPageState extends ConsumerState<OrdersPage> {
                     ),
                     title: Text(orderId),
                     subtitle: Text(
-                      status +
-                          ' • ' +
-                          (order['created_at']?.toString() ?? ''),
+                      '$status • ${order['created_at']?.toString() ?? ''}',
                     ),
                     trailing: Text(
-                      (order['total']?.toString() ?? '0') +
-                          ' ' +
-                          (order['currency']?.toString() ?? 'XOF'),
+                      '${order['total']?.toString() ?? '0'} ${order['currency']?.toString() ?? 'XOF'}',
                     ),
                     onTap: orderId.isNotEmpty
-                        ? () => context.push('/orders/' + orderId)
+                        ? () => context.push('/orders/$orderId')
                         : null,
                   ),
                 );

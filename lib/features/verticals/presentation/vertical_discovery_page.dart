@@ -162,7 +162,7 @@ class _VerticalDiscoveryPageState
             description: draft['description'].toString(),
             scheduledAt: draft['scheduled_at'] as DateTime?,
           );
-          _success('Demande de devis envoyée au professionnel : ' + id);
+          _success('Demande de devis envoyée au professionnel : $id');
           break;
         case VerticalModule.realEstate:
           final draft = await _realEstateVisitDialog();
@@ -237,8 +237,7 @@ class _VerticalDiscoveryPageState
                   label: Text(
                     preferredVisitAt == null
                         ? 'Choisir une date souhaitée (facultatif)'
-                        : 'Date : ' +
-                            preferredVisitAt!.toLocal().toString().substring(0, 16),
+                        : 'Date : ${preferredVisitAt!.toLocal().toString().substring(0, 16)}',
                   ),
                 ),
                 if (preferredVisitAt != null)
@@ -318,10 +317,7 @@ class _VerticalDiscoveryPageState
                     request['listing_title']?.toString() ?? 'Annonce immobilière',
                   ),
                   subtitle: Text(
-                    'Statut : ' + _realEstateStatus(status) +
-                    (request['city'] == null ? '' : '\nVille : ' + request['city'].toString()) +
-                    (preferred == null ? '' : '\nDate souhaitée : ' + preferred) +
-                    (message == null || message.isEmpty ? '' : '\nMessage : ' + message),
+                    'Statut : ${_realEstateStatus(status)}${request['city'] == null ? '' : '\nVille : ${request['city']}'}${preferred == null ? '' : '\nDate souhaitée : $preferred'}${message == null || message.isEmpty ? '' : '\nMessage : $message'}',
                   ),
                   isThreeLine: true,
                   trailing: status == 'REQUESTED'
@@ -338,7 +334,7 @@ class _VerticalDiscoveryPageState
                               _success('Demande immobilière annulée.');
                               await _showMyRealEstateVisitRequests();
                             } catch (error) {
-                              _info('Annulation impossible : ' + error.toString());
+                              _info('Annulation impossible : $error');
                             }
                           },
                         )
@@ -356,7 +352,7 @@ class _VerticalDiscoveryPageState
         ),
       );
     } catch (error) {
-      _info('Chargement des demandes immobilières impossible : ' + error.toString());
+      _info('Chargement des demandes immobilières impossible : $error');
     }
   }
 
@@ -394,10 +390,7 @@ class _VerticalDiscoveryPageState
                     request['listing_title']?.toString() ?? 'Annonce immobilière',
                   ),
                   subtitle: Text(
-                    'Statut : ' + _realEstateStatus(status) +
-                    (request['city'] == null ? '' : '\nVille : ' + request['city'].toString()) +
-                    (preferred == null ? '' : '\nDate souhaitée : ' + preferred) +
-                    (message == null || message.isEmpty ? '' : '\nMessage : ' + message),
+                    'Statut : ${_realEstateStatus(status)}${request['city'] == null ? '' : '\nVille : ${request['city']}'}${preferred == null ? '' : '\nDate souhaitée : $preferred'}${message == null || message.isEmpty ? '' : '\nMessage : $message'}',
                   ),
                   isThreeLine: true,
                   trailing: status == 'REQUESTED'
@@ -424,7 +417,7 @@ class _VerticalDiscoveryPageState
                                   _success('Demande immobilière refusée.');
                                   await _showProviderRealEstateVisitRequests();
                                 } catch (error) {
-                                  _info('Refus impossible : ' + error.toString());
+                                  _info('Refus impossible : $error');
                                 }
                               },
                             ),
@@ -448,7 +441,7 @@ class _VerticalDiscoveryPageState
                                   _success('Demande acceptée. Coordonnez l’heure exacte avec le demandeur.');
                                   await _showProviderRealEstateVisitRequests();
                                 } catch (error) {
-                                  _info('Acceptation impossible : ' + error.toString());
+                                  _info('Acceptation impossible : $error');
                                 }
                               },
                             ),
@@ -468,7 +461,7 @@ class _VerticalDiscoveryPageState
         ),
       );
     } catch (error) {
-      _info('Chargement des demandes reçues impossible : ' + error.toString());
+      _info('Chargement des demandes reçues impossible : $error');
     }
   }
 
@@ -538,7 +531,7 @@ class _VerticalDiscoveryPageState
                   icon: const Icon(Icons.calendar_month_outlined),
                   label: Text(scheduledAt == null
                       ? 'Date souhaitée (facultatif)'
-                      : 'Date : ' + scheduledAt!.toLocal().toString().substring(0, 16)),
+                      : 'Date : ${scheduledAt!.toLocal().toString().substring(0, 16)}'),
                   onPressed: () async {
                     final now = DateTime.now();
                     final date = await showDatePicker(
@@ -642,11 +635,11 @@ class _VerticalDiscoveryPageState
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('Stock disponible : ' + available.toString() + ' ' + unit),
+            Text('Stock disponible : $available $unit'),
             TextField(
               controller: controller,
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              decoration: InputDecoration(labelText: 'Quantité en ' + unit),
+              decoration: InputDecoration(labelText: 'Quantité en $unit'),
             ),
           ],
         ),
@@ -771,10 +764,10 @@ class _VerticalDiscoveryPageState
         unit: draft['unit'].toString(),
         quantity: draft['quantity'] as num,
       );
-      _success('Annonce agricole créée : ' + id);
+      _success('Annonce agricole créée : $id');
       await _showMyAgricultureListings();
     } catch (error) {
-      _info('Publication impossible : ' + error.toString());
+      _info('Publication impossible : $error');
     }
   }
 
@@ -802,10 +795,7 @@ class _VerticalDiscoveryPageState
                         contentPadding: EdgeInsets.zero,
                         title: Text(listing['name']?.toString() ?? 'Annonce'),
                         subtitle: Text(
-                          (listing['price']?.toString() ?? '-') + ' XOF / ' + (listing['unit']?.toString() ?? '-') +
-                          '\nStock libre : ' + (listing['available_quantity']?.toString() ?? '0') +
-                          '\nRéservé : ' + (listing['reserved_quantity']?.toString() ?? '0') +
-                          '\nStatut : ' + (listing['active'] == true ? 'Visible' : 'Masquée'),
+                          '${listing['price']?.toString() ?? '-'} XOF / ${listing['unit']?.toString() ?? '-'}\nStock libre : ${listing['available_quantity']?.toString() ?? '0'}\nRéservé : ${listing['reserved_quantity']?.toString() ?? '0'}\nStatut : ${listing['active'] == true ? 'Visible' : 'Masquée'}',
                         ),
                         trailing: IconButton(
                           tooltip: 'Modifier l’annonce',
@@ -829,7 +819,7 @@ class _VerticalDiscoveryPageState
                               _success('Annonce agricole mise à jour.');
                               await _showMyAgricultureListings();
                             } catch (error) {
-                              _info('Modification impossible : ' + error.toString());
+                              _info('Modification impossible : $error');
                             }
                           },
                         ),
@@ -851,7 +841,7 @@ class _VerticalDiscoveryPageState
         ),
       );
     } catch (error) {
-      _info('Chargement des annonces impossible : ' + error.toString());
+      _info('Chargement des annonces impossible : $error');
     }
   }
 
@@ -882,10 +872,7 @@ class _VerticalDiscoveryPageState
                   contentPadding: EdgeInsets.zero,
                   title: Text(order['listing_name']?.toString() ?? 'Produit agricole'),
                   subtitle: Text(
-                    (order['quantity']?.toString() ?? '-') + ' ' + (order['unit']?.toString() ?? '') +
-                    ' • ' + (order['total_amount']?.toString() ?? '-') + ' XOF' +
-                    '\nVendeur : ' + (order['seller_name']?.toString() ?? 'Vendeur') +
-                    '\nStatut : ' + _agricultureStatus(status),
+                    '${order['quantity']?.toString() ?? '-'} ${order['unit']?.toString() ?? ''} • ${order['total_amount']?.toString() ?? '-'} XOF\nVendeur : ${order['seller_name']?.toString() ?? 'Vendeur'}\nStatut : ${_agricultureStatus(status)}',
                   ),
                   trailing: ['REQUESTED', 'ACCEPTED'].contains(status)
                       ? IconButton(
@@ -899,7 +886,7 @@ class _VerticalDiscoveryPageState
                               _success('Commande annulée et stock libéré.');
                               await _showMyAgricultureOrderRequests();
                             } catch (error) {
-                              _info('Annulation impossible : ' + error.toString());
+                              _info('Annulation impossible : $error');
                             }
                           },
                         )
@@ -914,7 +901,7 @@ class _VerticalDiscoveryPageState
         ),
       );
     } catch (error) {
-      _info('Chargement des commandes impossible : ' + error.toString());
+      _info('Chargement des commandes impossible : $error');
     }
   }
 
@@ -945,9 +932,7 @@ class _VerticalDiscoveryPageState
                   contentPadding: EdgeInsets.zero,
                   title: Text(order['listing_name']?.toString() ?? 'Produit agricole'),
                   subtitle: Text(
-                    (order['quantity']?.toString() ?? '-') + ' ' + (order['unit']?.toString() ?? '') +
-                    ' • ' + (order['total_amount']?.toString() ?? '-') + ' XOF' +
-                    '\nÉtat : ' + _agricultureStatus(status),
+                    '${order['quantity']?.toString() ?? '-'} ${order['unit']?.toString() ?? ''} • ${order['total_amount']?.toString() ?? '-'} XOF\nÉtat : ${_agricultureStatus(status)}',
                   ),
                   trailing: status == 'REQUESTED'
                       ? Wrap(
@@ -967,7 +952,7 @@ class _VerticalDiscoveryPageState
                                   _success('Commande refusée ; stock libéré.');
                                   await _showSellerAgricultureOrderRequests();
                                 } catch (error) {
-                                  _info('Refus impossible : ' + error.toString());
+                                  _info('Refus impossible : $error');
                                 }
                               },
                             ),
@@ -985,7 +970,7 @@ class _VerticalDiscoveryPageState
                                   _success('Commande acceptée. Le stock reste réservé.');
                                   await _showSellerAgricultureOrderRequests();
                                 } catch (error) {
-                                  _info('Acceptation impossible : ' + error.toString());
+                                  _info('Acceptation impossible : $error');
                                 }
                               },
                             ),
@@ -1003,7 +988,7 @@ class _VerticalDiscoveryPageState
                                   _success('Commande clôturée ; stock vendu déduit.');
                                   await _showSellerAgricultureOrderRequests();
                                 } catch (error) {
-                                  _info('Clôture impossible : ' + error.toString());
+                                  _info('Clôture impossible : $error');
                                 }
                               },
                             )
@@ -1018,7 +1003,7 @@ class _VerticalDiscoveryPageState
         ),
       );
     } catch (error) {
-      _info('Chargement des commandes reçues impossible : ' + error.toString());
+      _info('Chargement des commandes reçues impossible : $error');
     }
   }
 
@@ -1042,9 +1027,9 @@ class _VerticalDiscoveryPageState
         listingId: item['id'].toString(),
         quantity: requested,
       );
-      _success('Stock réservé. En attente de la réponse du vendeur : ' + id);
+      _success('Stock réservé. En attente de la réponse du vendeur : $id');
     } catch (error) {
-      _info('Réservation impossible : ' + error.toString());
+      _info('Réservation impossible : $error');
     }
   }
 
@@ -1077,7 +1062,7 @@ class _VerticalDiscoveryPageState
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Stock disponible : ' + available.toString()),
+                Text('Stock disponible : $available'),
                 const SizedBox(height: 8),
                 TextField(
                   controller: quantityController,
@@ -1225,12 +1210,12 @@ class _VerticalDiscoveryPageState
       );
       _success(
         item['requires_prescription'] == true
-            ? 'Demande envoyée. La pharmacie doit examiner l’ordonnance avant toute délivrance : ' + id
-            : 'Demande envoyée à la pharmacie : ' + id,
+            ? 'Demande envoyée. La pharmacie doit examiner l’ordonnance avant toute délivrance : $id'
+            : 'Demande envoyée à la pharmacie : $id',
       );
       await _showMyHealthOrders();
     } catch (error) {
-      _info('Demande de santé impossible : ' + error.toString());
+      _info('Demande de santé impossible : $error');
     }
   }
 
@@ -1269,14 +1254,10 @@ class _VerticalDiscoveryPageState
                     order['product_name']?.toString() ?? 'Produit de santé',
                   ),
                   subtitle: Text(
-                    (order['provider_name']?.toString() ?? 'Pharmacie') +
-                    '\nQuantité : ' + (order['quantity']?.toString() ?? '-') +
-                    '\nTotal : ' + (order['total_amount']?.toString() ?? '-') + ' XOF' +
-                    '\nStatut : ' + _healthOrderStatus(status) +
-                    (order['review_note'] == null ||
+                    '${order['provider_name']?.toString() ?? 'Pharmacie'}\nQuantité : ${order['quantity']?.toString() ?? '-'}\nTotal : ${order['total_amount']?.toString() ?? '-'} XOF\nStatut : ${_healthOrderStatus(status)}${order['review_note'] == null ||
                             order['review_note'].toString().isEmpty
                         ? ''
-                        : '\nNote pharmacie : ' + order['review_note'].toString()),
+                        : '\nNote pharmacie : ${order['review_note']}'}',
                   ),
                   isThreeLine: true,
                   trailing: canCancel
@@ -1293,7 +1274,7 @@ class _VerticalDiscoveryPageState
                               _success('Demande annulée ; le stock réservé a été libéré.');
                               await _showMyHealthOrders();
                             } catch (error) {
-                              _info('Annulation impossible : ' + error.toString());
+                              _info('Annulation impossible : $error');
                             }
                           },
                         )
@@ -1311,7 +1292,7 @@ class _VerticalDiscoveryPageState
         ),
       );
     } catch (error) {
-      _info('Chargement des demandes de santé impossible : ' + error.toString());
+      _info('Chargement des demandes de santé impossible : $error');
     }
   }
 
@@ -1415,7 +1396,7 @@ class _VerticalDiscoveryPageState
       );
       await _showPharmacyHealthOrders();
     } catch (error) {
-      _info('Décision impossible : ' + error.toString());
+      _info('Décision impossible : $error');
     }
   }
 
@@ -1430,7 +1411,7 @@ class _VerticalDiscoveryPageState
       );
       if (!opened) _info('Impossible d’ouvrir l’ordonnance.');
     } catch (error) {
-      _info('Accès à l’ordonnance refusé ou indisponible : ' + error.toString());
+      _info('Accès à l’ordonnance refusé ou indisponible : $error');
     }
   }
 
@@ -1471,13 +1452,9 @@ class _VerticalDiscoveryPageState
                       contentPadding: EdgeInsets.zero,
                       title: Text(order['product_name']?.toString() ?? 'Produit de santé'),
                       subtitle: Text(
-                        (order['quantity']?.toString() ?? '-') +
-                        ' unité(s) • ' +
-                        (order['total_amount']?.toString() ?? '-') + ' XOF' +
-                        '\nStatut : ' + _healthOrderStatus(status) +
-                        (requiresPrescription
+                        '${order['quantity']?.toString() ?? '-'} unité(s) • ${order['total_amount']?.toString() ?? '-'} XOF\nStatut : ${_healthOrderStatus(status)}${requiresPrescription
                             ? '\nOrdonnance obligatoire'
-                            : '\nSans ordonnance'),
+                            : '\nSans ordonnance'}',
                       ),
                     ),
                     if (path != null && path.isNotEmpty)
@@ -1547,7 +1524,7 @@ class _VerticalDiscoveryPageState
                               _success('Remise enregistrée ; stock déduit.');
                               await _showPharmacyHealthOrders();
                             } catch (error) {
-                              _info('Clôture impossible : ' + error.toString());
+                              _info('Clôture impossible : $error');
                             }
                           },
                           icon: const Icon(Icons.inventory_2_outlined),
@@ -1568,7 +1545,7 @@ class _VerticalDiscoveryPageState
         ),
       );
     } catch (error) {
-      _info('Chargement des demandes pharmacie impossible : ' + error.toString());
+      _info('Chargement des demandes pharmacie impossible : $error');
     }
   }
 
@@ -1716,12 +1693,11 @@ class _VerticalDiscoveryPageState
         requiresPrescription: draft['requires_prescription'] == true,
         stockQuantity: draft['stock_quantity'] as int,
       );
-      _success('Produit de santé ajouté : ' + id);
+      _success('Produit de santé ajouté : $id');
       await _showMyHealthProducts();
     } catch (error) {
       _info(
-        'Publication impossible. La gestion est réservée aux pharmacies vérifiées et actives : ' +
-            error.toString(),
+        'Publication impossible. La gestion est réservée aux pharmacies vérifiées et actives : $error',
       );
     }
   }
@@ -1752,15 +1728,7 @@ class _VerticalDiscoveryPageState
                         contentPadding: EdgeInsets.zero,
                         title: Text(product['name']?.toString() ?? 'Produit'),
                         subtitle: Text(
-                          (product['price']?.toString() ?? '-') + ' XOF' +
-                          '\nStock libre : ' +
-                              (product['available_quantity']?.toString() ?? '0') +
-                          '\nRéservé : ' +
-                              (product['reserved_quantity']?.toString() ?? '0') +
-                          '\nPrescription : ' +
-                              (product['requires_prescription'] == true ? 'Oui' : 'Non') +
-                          '\nStatut : ' +
-                              (product['active'] == true ? 'Visible' : 'Masqué'),
+                          '${product['price']?.toString() ?? '-'} XOF\nStock libre : ${product['available_quantity']?.toString() ?? '0'}\nRéservé : ${product['reserved_quantity']?.toString() ?? '0'}\nPrescription : ${product['requires_prescription'] == true ? 'Oui' : 'Non'}\nStatut : ${product['active'] == true ? 'Visible' : 'Masqué'}',
                         ),
                         trailing: IconButton(
                           tooltip: 'Modifier le produit',
@@ -1786,7 +1754,7 @@ class _VerticalDiscoveryPageState
                               _success('Produit de santé mis à jour.');
                               await _showMyHealthProducts();
                             } catch (error) {
-                              _info('Modification impossible : ' + error.toString());
+                              _info('Modification impossible : $error');
                             }
                           },
                         ),
@@ -1811,7 +1779,7 @@ class _VerticalDiscoveryPageState
         ),
       );
     } catch (error) {
-      _info('Chargement du catalogue pharmacie impossible : ' + error.toString());
+      _info('Chargement du catalogue pharmacie impossible : $error');
     }
   }
 
@@ -1839,10 +1807,7 @@ class _VerticalDiscoveryPageState
                     contentPadding: EdgeInsets.zero,
                     title: Text(request['profession']?.toString() ?? 'Professionnel'),
                     subtitle: Text(
-                      (request['provider_name']?.toString() ?? 'Prestataire') +
-                      '\nStatut : ' + _professionalStatus(request['status']?.toString() ?? '-') +
-                      (request['scheduled_at'] == null ? '' : '\nDate : ' + request['scheduled_at'].toString()) +
-                      '\nBesoin : ' + (request['description']?.toString() ?? '-'),
+                      '${request['provider_name']?.toString() ?? 'Prestataire'}\nStatut : ${_professionalStatus(request['status']?.toString() ?? '-')}${request['scheduled_at'] == null ? '' : '\nDate : ${request['scheduled_at']}'}\nBesoin : ${request['description']?.toString() ?? '-'}',
                     ),
                     trailing: ['REQUESTED', 'QUOTED'].contains(request['status'])
                         ? IconButton(
@@ -1856,7 +1821,7 @@ class _VerticalDiscoveryPageState
                                 _success('Demande annulée.');
                                 await _showMyProfessionalRequests();
                               } catch (error) {
-                                _info('Annulation impossible : ' + error.toString());
+                                _info('Annulation impossible : $error');
                               }
                             },
                           )
@@ -1871,11 +1836,10 @@ class _VerticalDiscoveryPageState
                           return Card(
                             margin: const EdgeInsets.only(left: 8, bottom: 8),
                             child: ListTile(
-                              title: Text('Devis : ' + (quote['amount']?.toString() ?? '-') +
-                                  ' ' + (quote['currency']?.toString() ?? 'XOF')),
+                              title: Text('Devis : ${quote['amount']?.toString() ?? '-'} ${quote['currency']?.toString() ?? 'XOF'}'),
                               subtitle: Text(
                                 _professionalStatus(quote['status']?.toString() ?? '-') +
-                                (quote['message'] == null ? '' : '\n' + quote['message'].toString()),
+                                (quote['message'] == null ? '' : '\n${quote['message']}'),
                               ),
                               trailing: proposed
                                   ? Wrap(
@@ -1894,7 +1858,7 @@ class _VerticalDiscoveryPageState
                                               _success('Devis refusé.');
                                               await _showMyProfessionalRequests();
                                             } catch (error) {
-                                              _info('Refus impossible : ' + error.toString());
+                                              _info('Refus impossible : $error');
                                             }
                                           },
                                         ),
@@ -1924,7 +1888,7 @@ class _VerticalDiscoveryPageState
                                               _success('Devis accepté. Organisez maintenant la prestation avec le professionnel.');
                                               await _showMyProfessionalRequests();
                                             } catch (error) {
-                                              _info('Acceptation impossible : ' + error.toString());
+                                              _info('Acceptation impossible : $error');
                                             }
                                           },
                                         ),
@@ -1945,7 +1909,7 @@ class _VerticalDiscoveryPageState
         ),
       );
     } catch (error) {
-      _info('Chargement des demandes impossible : ' + error.toString());
+      _info('Chargement des demandes impossible : $error');
     }
   }
 
@@ -1977,13 +1941,7 @@ class _VerticalDiscoveryPageState
                   contentPadding: EdgeInsets.zero,
                   title: Text(request['profession']?.toString() ?? 'Prestation'),
                   subtitle: Text(
-                    'Statut : ' + _professionalStatus(status) +
-                    (request['scheduled_at'] == null ? '' : '\nDate souhaitée : ' + request['scheduled_at'].toString()) +
-                    '\nBesoin : ' + (request['description']?.toString() ?? '-') +
-                    (quoteStatus == null ? '' : '\nVotre devis : ' +
-                      (request['quote_amount']?.toString() ?? '-') + ' ' +
-                      (request['quote_currency']?.toString() ?? 'XOF') +
-                      ' (' + _professionalStatus(quoteStatus) + ')'),
+                    'Statut : ${_professionalStatus(status)}${request['scheduled_at'] == null ? '' : '\nDate souhaitée : ${request['scheduled_at']}'}\nBesoin : ${request['description']?.toString() ?? '-'}${quoteStatus == null ? '' : '\nVotre devis : ${request['quote_amount']?.toString() ?? '-'} ${request['quote_currency']?.toString() ?? 'XOF'} (${_professionalStatus(quoteStatus)})'}',
                   ),
                   isThreeLine: true,
                   trailing: status == 'REQUESTED'
@@ -2001,10 +1959,10 @@ class _VerticalDiscoveryPageState
                               );
                               if (!mounted || !dialogContext.mounted) return;
                               Navigator.pop(dialogContext);
-                              _success('Devis envoyé : ' + quoteId);
+                              _success('Devis envoyé : $quoteId');
                               await _showProviderProfessionalRequests();
                             } catch (error) {
-                              _info('Envoi du devis impossible : ' + error.toString());
+                              _info('Envoi du devis impossible : $error');
                             }
                           },
                         )
@@ -2019,7 +1977,7 @@ class _VerticalDiscoveryPageState
         ),
       );
     } catch (error) {
-      _info('Chargement des demandes reçues impossible : ' + error.toString());
+      _info('Chargement des demandes reçues impossible : $error');
     }
   }
 
@@ -2325,14 +2283,13 @@ class _VerticalDiscoveryPageState
         context: context,
         builder: (dialogContext) => AlertDialog(
           title: Text(
-            'Colis ' + (tracking['tracking_code']?.toString() ?? code),
+            'Colis ${tracking['tracking_code']?.toString() ?? code}',
           ),
           content: SizedBox(
             width: 460,
             child: events.isEmpty
                 ? Text(
-                    'Statut actuel : ' +
-                        (tracking['status']?.toString() ?? '-'),
+                    'Statut actuel : ${tracking['status']?.toString() ?? '-'}',
                   )
                 : ListView(
                     shrinkWrap: true,
@@ -2367,7 +2324,7 @@ class _VerticalDiscoveryPageState
         ),
       );
     } catch (error) {
-      _info('Suivi impossible : ' + error.toString());
+      _info('Suivi impossible : $error');
     }
   }
 
@@ -2756,10 +2713,7 @@ class _VerticalDiscoveryPageState
                   Align(
                     alignment: Alignment.centerLeft,
                     child: Text(
-                      'Sélection : ' +
-                          selected.latitude.toStringAsFixed(6) +
-                          ', ' +
-                          selected.longitude.toStringAsFixed(6),
+                      'Sélection : ${selected.latitude.toStringAsFixed(6)}, ${selected.longitude.toStringAsFixed(6)}',
                     ),
                   ),
                 ],
@@ -2856,9 +2810,7 @@ class _VerticalDiscoveryPageState
             child: ListTile(
               title: Text(unit['name']?.toString() ?? 'Unité'),
               subtitle: Text(
-                (unit['price_per_night']?.toString() ?? '0') +
-                    ' XOF / nuit • capacité ' +
-                    (unit['capacity']?.toString() ?? '0'),
+                '${unit['price_per_night']?.toString() ?? '0'} XOF / nuit • capacité ${unit['capacity']?.toString() ?? '0'}',
               ),
             ),
           );
@@ -2995,15 +2947,12 @@ class _VerticalDiscoveryPageState
       if (item['vehicle_type'] != null) item['vehicle_type'].toString(),
       if (widget.module == VerticalModule.agriculture)
         if (item['unit'] != null && item['available_quantity'] is num)
-          'Stock disponible : ' +
-              (item['available_quantity'] as num).toString() +
-              ' ' +
-              item['unit'].toString(),
+          'Stock disponible : ${item['available_quantity'] as num} ${item['unit']}',
       if (widget.module == VerticalModule.health && item['available_quantity'] is num)
-        'Stock disponible : ' + item['available_quantity'].toString(),
+        'Stock disponible : ${item['available_quantity']}',
       if (widget.module == VerticalModule.health && item['requires_prescription'] == true)
         'Ordonnance requise',
-      if (price != null) price.toString() + ' XOF',
+      if (price != null) '$price XOF',
     ];
 
     if (widget.module == VerticalModule.agriculture &&

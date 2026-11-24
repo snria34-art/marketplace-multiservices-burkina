@@ -164,17 +164,13 @@ class _DeliveryTrackingPageState
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Boutique : ' +
-                            (package['shop_name']?.toString() ??
-                                'Boutique'),
+                        'Boutique : ${package['shop_name']?.toString() ??
+                                'Boutique'}',
                         style: Theme.of(context).textTheme.titleMedium,
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Colis : ' +
-                            (package['id']?.toString() ?? '-') +
-                            '\nÉtat : ' +
-                            (package['status']?.toString() ?? '-'),
+                        'Colis : ${package['id']?.toString() ?? '-'}\nÉtat : ${package['status']?.toString() ?? '-'}',
                       ),
                       const SizedBox(height: 10),
                       LinearProgressIndicator(
@@ -183,8 +179,7 @@ class _DeliveryTrackingPageState
                       const SizedBox(height: 10),
                       if (assignment != null)
                         Text(
-                          'Affectation : ' +
-                              (assignment['status']?.toString() ?? '-'),
+                          'Affectation : ${assignment['status']?.toString() ?? '-'}',
                         ),
                       if (location != null) ...[
                         const SizedBox(height: 10),
@@ -192,13 +187,8 @@ class _DeliveryTrackingPageState
                         const Text('Dernière position du livreur'),
                         const SizedBox(height: 4),
                         Text(
-                          'Position : ' +
-                              (location['location']?.toString() ?? '-') +
-                              '\nPrécision : ' +
-                              (location['accuracy_m']?.toString() ??
-                                  '-') +
-                              ' m\nMise à jour : ' +
-                              (location['recorded_at']?.toString() ?? '-'),
+                          'Position : ${location['location']?.toString() ?? '-'}\nPrécision : ${location['accuracy_m']?.toString() ??
+                                  '-'} m\nMise à jour : ${location['recorded_at']?.toString() ?? '-'}',
                         ),
                         if (point != null) ...[
                           const SizedBox(height: 10),

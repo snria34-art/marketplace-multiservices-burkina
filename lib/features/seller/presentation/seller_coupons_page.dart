@@ -77,7 +77,7 @@ class _SellerCouponsPageState extends ConsumerState<SellerCouponsPage> {
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Coupon créé : ' + id.toString())),
+        SnackBar(content: Text('Coupon créé : $id')),
       );
       setState(() => _future = _load());
     } catch (error) {
@@ -155,15 +155,7 @@ class _SellerCouponsPageState extends ConsumerState<SellerCouponsPage> {
                 child: SwitchListTile(
                   title: Text(coupon['code']?.toString() ?? 'COUPON'),
                   subtitle: Text(
-                    type +
-                        ' ' +
-                        value +
-                        ' • utilisations ' +
-                        used +
-                        '/' +
-                        max +
-                        '\nExpire : ' +
-                        (coupon['ends_at']?.toString() ?? '-'),
+                    '$type $value • utilisations $used/$max\nExpire : ${coupon['ends_at']?.toString() ?? '-'}',
                   ),
                   value: coupon['active'] == true,
                   onChanged: (value) => _toggle(coupon, value),

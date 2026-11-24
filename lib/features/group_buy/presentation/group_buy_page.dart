@@ -110,9 +110,7 @@ class _GroupBuyPageState extends ConsumerState<GroupBuyPage> {
                       group['title']?.toString() ?? 'Achat groupé',
                     ),
                     subtitle: Text(
-                      '$current / $target unités • ' +
-                          (group['group_price']?.toString() ?? '0') +
-                          ' XOF',
+                      '$current / $target unités • ${group['group_price']?.toString() ?? '0'} XOF',
                     ),
                     trailing: FilledButton(
                       onPressed: () => _join(group),
