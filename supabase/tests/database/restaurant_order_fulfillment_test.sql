@@ -1,5 +1,5 @@
 begin;
-select plan(14);
+select plan(15);
 
 select ok(
   has_column('public', 'restaurant_profiles', 'pickup_available'),
@@ -72,6 +72,13 @@ select ok(
   position('restaurant_order_received' in pg_get_functiondef('public.capture_restaurant_order_event()'::regprocedure)) > 0
   and position('public.notifications' in pg_get_functiondef('public.capture_restaurant_order_event()'::regprocedure)) > 0,
   'the restaurant owner receives an in-app/push notification for a paid order'
+);
+
+select ok(
+  has_function_privilege('authenticated', 'public.get_seller_restaurant_order_fulfillment_details()', 'EXECUTE')
+  and not has_function_privilege('anon', 'public.get_seller_restaurant_order_fulfillment_details()', 'EXECUTE')
+  and position('se.user_id = auth.uid()' in pg_get_functiondef('public.get_seller_restaurant_order_fulfillment_details()'::regprocedure)) > 0,
+  'restaurants can read only their own customer delivery destinations'
 );
 
 select ok(
