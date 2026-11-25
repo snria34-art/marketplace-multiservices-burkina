@@ -18,6 +18,7 @@ class HomePage extends ConsumerStatefulWidget {
 
 class _HomePageState extends ConsumerState<HomePage> {
   final _scrollController = ScrollController();
+  final _searchController = TextEditingController();
 
   late Future<_CatalogMetadata> _metadataFuture;
   List<Map<String, dynamic>> _products = [];
@@ -28,6 +29,7 @@ class _HomePageState extends ConsumerState<HomePage> {
   bool _hasMore = true;
   int _productRequestId = 0;
   String? _productsError;
+  String _searchTerm = '';
 
   @override
   void initState() {
@@ -41,6 +43,7 @@ class _HomePageState extends ConsumerState<HomePage> {
     _scrollController
       ..removeListener(_onScroll)
       ..dispose();
+    _searchController.dispose();
     super.dispose();
   }
 
@@ -90,6 +93,7 @@ class _HomePageState extends ConsumerState<HomePage> {
     try {
       final rows = await repo.products(
         categoryId: _selectedCategoryId,
+        searchQuery: _searchTerm,
         offset: _page * 24,
         limit: 24,
       );
@@ -132,6 +136,13 @@ class _HomePageState extends ConsumerState<HomePage> {
 
   void _selectCategory(String? categoryId) {
     setState(() => _selectedCategoryId = categoryId);
+    _loadProducts(reset: true);
+  }
+
+  void _submitSearch(String value) {
+    final term = value.trim();
+    if (term == _searchTerm) return;
+    setState(() => _searchTerm = term);
     _loadProducts(reset: true);
   }
 
@@ -226,6 +237,8 @@ class _HomePageState extends ConsumerState<HomePage> {
               SliverPersistentHeader(
                 pinned: true,
                 delegate: _CatalogHeaderDelegate(
+                  searchController: _searchController,
+                  onSearchSubmitted: _submitSearch,
                   types: metadata.types,
                   categories: categories,
                   selectedTypeId: _selectedTypeId,
@@ -240,8 +253,42 @@ class _HomePageState extends ConsumerState<HomePage> {
                   onCategorySelected: _selectCategory,
                 ),
               ),
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
+                  child: _HomePromotionBanner(
+                    onTap: () => context.push('/promotions'),
+                  ),
+                ),
+              ),
               const ServiceModuleSliver(),
               const FutureCapabilitiesSliver(),
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 20, 16, 10),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _searchTerm.isEmpty ? 'À découvrir' : 'Résultats de recherche',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: -0.4,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        _searchTerm.isEmpty
+                            ? 'Des produits sélectionnés pour votre quotidien'
+                            : 'Recherche : « $_searchTerm »',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
               if (_productsError != null && _products.isEmpty)
                 SliverFillRemaining(
                   hasScrollBody: false,
@@ -336,15 +383,104 @@ class _HomePageState extends ConsumerState<HomePage> {
   }
 }
 
+class _HomePromotionBanner extends StatelessWidget {
+  const _HomePromotionBanner({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
+    return Material(
+      color: colors.primary,
+      borderRadius: BorderRadius.circular(22),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 136),
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                colors.primary,
+                Color.alphaBlend(colors.tertiary.withValues(alpha: 0.42), colors.primary),
+              ],
+            ),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      'Vos achats,\nplus simplement',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        color: colors.onPrimary,
+                        fontWeight: FontWeight.w900,
+                        height: 1.12,
+                        letterSpacing: -0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Produits, services et boutiques près de vous',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: colors.onPrimary.withValues(alpha: 0.9),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                      decoration: BoxDecoration(
+                        color: colors.onPrimary,
+                        borderRadius: BorderRadius.circular(24),
+                      ),
+                      child: Text(
+                        'Découvrir les offres  ›',
+                        style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                          color: colors.primary,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Icon(
+                Icons.shopping_bag_rounded,
+                size: 68,
+                color: colors.onPrimary.withValues(alpha: 0.88),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _CatalogMetadata {
   const _CatalogMetadata({required this.types, required this.categories});
 
+  final TextEditingController searchController;
+  final ValueChanged<String> onSearchSubmitted;
   final List<Map<String, dynamic>> types;
   final List<Map<String, dynamic>> categories;
 }
 
 class _CatalogHeaderDelegate extends SliverPersistentHeaderDelegate {
   _CatalogHeaderDelegate({
+    required this.searchController,
+    required this.onSearchSubmitted,
     required this.types,
     required this.categories,
     required this.selectedTypeId,
@@ -361,10 +497,10 @@ class _CatalogHeaderDelegate extends SliverPersistentHeaderDelegate {
   final ValueChanged<String?> onCategorySelected;
 
   @override
-  double get minExtent => 152;
+  double get minExtent => 204;
 
   @override
-  double get maxExtent => 152;
+  double get maxExtent => 204;
 
   @override
   Widget build(
@@ -376,11 +512,39 @@ class _CatalogHeaderDelegate extends SliverPersistentHeaderDelegate {
       elevation: overlapsContent ? 2 : 0,
       color: Theme.of(context).scaffoldBackgroundColor,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(12, 8, 12, 6),
+        padding: const EdgeInsets.fromLTRB(14, 8, 14, 6),
         child: Column(
           children: [
             SizedBox(
-              height: 42,
+              height: 46,
+              child: TextField(
+                controller: searchController,
+                textInputAction: TextInputAction.search,
+                onSubmitted: onSearchSubmitted,
+                decoration: InputDecoration(
+                  hintText: 'Rechercher un produit…',
+                  prefixIcon: const Icon(Icons.search_rounded),
+                  suffixIcon: IconButton(
+                    tooltip: 'Effacer la recherche',
+                    onPressed: () {
+                      searchController.clear();
+                      onSearchSubmitted('');
+                    },
+                    icon: const Icon(Icons.close_rounded),
+                  ),
+                  filled: true,
+                  fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 7),
+            SizedBox(
+              height: 38,
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
                 itemCount: types.length,
@@ -445,7 +609,9 @@ class _CatalogHeaderDelegate extends SliverPersistentHeaderDelegate {
 
   @override
   bool shouldRebuild(covariant _CatalogHeaderDelegate oldDelegate) {
-    return oldDelegate.types != types ||
+    return oldDelegate.searchController != searchController ||
+        oldDelegate.onSearchSubmitted != onSearchSubmitted ||
+        oldDelegate.types != types ||
         oldDelegate.categories != categories ||
         oldDelegate.selectedTypeId != selectedTypeId ||
         oldDelegate.selectedCategoryId != selectedCategoryId;
@@ -470,25 +636,56 @@ class _ProductCard extends StatelessWidget {
         ? Map<String, dynamic>.from(rawShop)
         : const <String, dynamic>{};
 
+    final colors = Theme.of(context).colorScheme;
     return Card(
+      elevation: 1.5,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(18),
+        side: BorderSide(color: colors.outlineVariant.withValues(alpha: 0.45)),
+      ),
       clipBehavior: Clip.antiAlias,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Expanded(
-            child: FutureBuilder<String?>(
-              future: imageUrl,
-              builder: (context, snapshot) {
-                final url = snapshot.data;
-                if (url == null || url.isEmpty) {
-                  return const _ProductImagePlaceholder();
-                }
-                return Image.network(
-                  url,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, _, _) => const _ProductImagePlaceholder(),
-                );
-              },
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                FutureBuilder<String?>(
+                  future: imageUrl,
+                  builder: (context, snapshot) {
+                    final url = snapshot.data;
+                    if (url == null || url.isEmpty) {
+                      return const _ProductImagePlaceholder();
+                    }
+                    return Image.network(
+                      url,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, _, _) => const _ProductImagePlaceholder(),
+                    );
+                  },
+                ),
+                Positioned(
+                  top: 9,
+                  left: 9,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: colors.surface.withValues(alpha: 0.94),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+                      child: Text(
+                        'Marketplace',
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: colors.primary,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
           Padding(
@@ -497,14 +694,20 @@ class _ProductCard extends StatelessWidget {
               product['name']?.toString() ?? 'Produit',
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontWeight: FontWeight.w600),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+                height: 1.25,
+              ),
             ),
           ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 10),
             child: Text(
               '${product['price']?.toString() ?? '0'} XOF',
-              style: Theme.of(context).textTheme.titleMedium,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                color: colors.primary,
+                fontWeight: FontWeight.w800,
+              ),
             ),
           ),
           Padding(
@@ -519,7 +722,7 @@ class _ProductCard extends StatelessWidget {
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                 ),
-                IconButton(
+                IconButton.filledTonal(
                   tooltip: 'Ajouter au panier',
                   onPressed: onAdd,
                   icon: const Icon(Icons.add_shopping_cart_outlined),
@@ -538,6 +741,17 @@ class _ProductImagePlaceholder extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(child: Icon(Icons.image_outlined, size: 54));
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+      ),
+      child: Center(
+        child: Icon(
+          Icons.inventory_2_outlined,
+          size: 48,
+          color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.55),
+        ),
+      ),
+    );
   }
 }
