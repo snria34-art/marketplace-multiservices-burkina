@@ -35,7 +35,8 @@ select ok(
   has_function_privilege('authenticated', 'public.set_restaurant_cart_fulfillment(uuid,text,text)', 'EXECUTE')
   and not has_function_privilege('anon', 'public.set_restaurant_cart_fulfillment(uuid,text,text)', 'EXECUTE')
   and position('cart_must_contain_one_restaurant_only' in pg_get_functiondef('public.set_restaurant_cart_fulfillment(uuid,text,text)'::regprocedure)) > 0
-  and position('restaurant_pickup_unavailable' in pg_get_functiondef('public.set_restaurant_cart_fulfillment(uuid,text,text)'::regprocedure)) > 0,
+  and position('restaurant_pickup_unavailable' in pg_get_functiondef('public.set_restaurant_cart_fulfillment(uuid,text,text)'::regprocedure)) > 0
+  and position('restaurant_fulfillment_method = ''DELIVERY''' in pg_get_functiondef('public.set_restaurant_cart_fulfillment(uuid,text,text)'::regprocedure)) > 0,
   'customers can configure only an eligible single-restaurant cart'
 );
 
@@ -47,7 +48,8 @@ select ok(
 );
 
 select ok(
-  position('fulfillment_method' in pg_get_functiondef('public.checkout_cart(uuid,jsonb,numeric,text,text)'::regprocedure)) > 0
+  position('fulfillment_method, fulfillment_instructions, pickup_location' in pg_get_functiondef('public.checkout_cart(uuid,jsonb,numeric,text,text)'::regprocedure)) > 0
+  and position('order_group_id, status, fulfillment_method' in pg_get_functiondef('public.checkout_cart(uuid,jsonb,numeric,text,text)'::regprocedure)) > 0
   and position('v_fulfillment_method' in pg_get_functiondef('public.checkout_cart(uuid,jsonb,numeric,text,text)'::regprocedure)) > 0,
   'checkout stores the fulfilment method on its package and order group'
 );
@@ -77,7 +79,8 @@ select ok(
 select ok(
   has_function_privilege('authenticated', 'public.get_seller_restaurant_order_fulfillment_details()', 'EXECUTE')
   and not has_function_privilege('anon', 'public.get_seller_restaurant_order_fulfillment_details()', 'EXECUTE')
-  and position('se.user_id = auth.uid()' in pg_get_functiondef('public.get_seller_restaurant_order_fulfillment_details()'::regprocedure)) > 0,
+  and position('se.user_id = auth.uid()' in pg_get_functiondef('public.get_seller_restaurant_order_fulfillment_details()'::regprocedure)) > 0
+  and (select prosecdef from pg_proc where oid = 'public.get_seller_restaurant_order_fulfillment_details()'::regprocedure),
   'restaurants can read only their own customer delivery destinations'
 );
 
