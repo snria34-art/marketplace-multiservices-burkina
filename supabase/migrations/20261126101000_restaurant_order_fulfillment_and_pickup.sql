@@ -139,8 +139,23 @@ begin
 
   v_context := public.get_restaurant_cart_context(p_cart_id);
   if coalesce((v_context ->> 'is_restaurant_cart')::boolean, false) is not true then
-    raise exception 'cart_must_contain_one_restaurant_only'
-      using errcode = '22023';
+    if v_method = 'PICKUP' then
+      raise exception 'cart_must_contain_one_restaurant_only'
+        using errcode = '22023';
+    end if;
+
+    update public.carts
+    set restaurant_fulfillment_method = 'DELIVERY',
+        restaurant_customer_instructions = null,
+        updated_at = now()
+    where id = p_cart_id
+      and customer_id = auth.uid()
+      and status = 'ACTIVE';
+
+    return jsonb_build_object(
+      'is_restaurant_cart', false,
+      'fulfillment_method', 'DELIVERY'
+    );
   end if;
 
   if v_method = 'PICKUP'
