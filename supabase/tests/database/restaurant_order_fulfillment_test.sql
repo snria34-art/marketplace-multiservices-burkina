@@ -72,7 +72,8 @@ select ok(
   has_function_privilege('authenticated', 'public.transition_restaurant_order_group_status(uuid,public.order_status,text)', 'EXECUTE')
   and not has_function_privilege('anon', 'public.transition_restaurant_order_group_status(uuid,public.order_status,text)', 'EXECUTE')
   and position('se.user_id = v_user' in pg_get_functiondef('public.transition_restaurant_order_group_status(uuid,public.order_status,text)'::regprocedure)) > 0
-  and position('invalid_restaurant_order_transition' in pg_get_functiondef('public.transition_restaurant_order_group_status(uuid,public.order_status,text)'::regprocedure)) > 0,
+  and position('invalid_restaurant_order_transition' in pg_get_functiondef('public.transition_restaurant_order_group_status(uuid,public.order_status,text)'::regprocedure)) > 0
+  and position('sync_parent_order_status' in pg_get_functiondef('public.transition_restaurant_order_group_status(uuid,public.order_status,text)'::regprocedure)) > 0,
   'only the owning restaurant can advance its order through the allowed statuses'
 );
 
