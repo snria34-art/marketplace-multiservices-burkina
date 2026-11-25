@@ -84,11 +84,17 @@ jobs:
             adb install -r build/app/outputs/flutter-apk/app-debug.apk
             adb shell am force-stop com.marketplaceburkina.marketplace_multiservices_burkina
             adb shell monkey -p com.marketplaceburkina.marketplace_multiservices_burkina 1
+            app_pid="$(adb shell pidof com.marketplaceburkina.marketplace_multiservices_burkina | tr -d '\r')"
+            test -n "$app_pid" || { echo "Android smoke test: app process did not start." >&2; exit 1; }
             sleep 25
-            adb shell pidof com.marketplaceburkina.marketplace_multiservices_burkina
-            adb logcat -d -t 5000 > /tmp/marketplace-android-logcat.txt
+            adb logcat --pid="$app_pid" -d -t 5000 > /tmp/marketplace-android-logcat.txt
             grep -E 'FATAL EXCEPTION|Fatal signal|Process: com\.marketplaceburkina\.marketplace_multiservices_burkina.*has died' /tmp/marketplace-android-logcat.txt > /tmp/marketplace-crash-matches.txt || test "$?" -eq 1
-            test ! -s /tmp/marketplace-crash-matches.txt || { echo "Android smoke test detected an application crash." >&2; exit 1; }
+            if test -s /tmp/marketplace-crash-matches.txt; then
+              echo "Android smoke test detected a crash in the Marketplace app process (PID $app_pid):" >&2
+              cat /tmp/marketplace-crash-matches.txt >&2
+              exit 1
+            fi
+            adb shell pidof com.marketplaceburkina.marketplace_multiservices_burkina >/dev/null || { echo "Android smoke test: Marketplace app process exited during startup." >&2; exit 1; }
 
   ios-simulator-debug:
     name: Build iOS simulator debug app (unsigned)
