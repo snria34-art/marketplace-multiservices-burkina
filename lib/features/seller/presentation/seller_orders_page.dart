@@ -133,15 +133,33 @@ class _SellerOrdersPageState extends ConsumerState<SellerOrdersPage> {
     final groups = await client
         .from('order_groups')
         .select(
-          'id,order_id,shop_id,status,subtotal,created_at,fulfillment_method,fulfillment_instructions,pickup_location,shops(name,restaurant_profiles(id)),orders(delivery_address),order_items(product_name,quantity,unit_price,total_price,restaurant_customizations)',
+          'id,order_id,shop_id,status,subtotal,created_at,fulfillment_method,fulfillment_instructions,pickup_location,shops(name),order_items(product_name,quantity,unit_price,total_price,restaurant_customizations)',
         )
         .inFilter('shop_id', shopIds)
         .order('created_at', ascending: false)
         .limit(200);
 
-    return (groups as List)
-        .map((row) => Map<String, dynamic>.from(row as Map))
-        .toList();
+    final rawFulfillmentDetails =
+        await client.rpc('get_seller_restaurant_order_fulfillment_details');
+    final fulfillmentDetails = <String, Map<String, dynamic>>{};
+    if (rawFulfillmentDetails is List) {
+      for (final raw in rawFulfillmentDetails) {
+        if (raw is Map) {
+          final detail = Map<String, dynamic>.from(raw);
+          final groupId = detail['order_group_id']?.toString();
+          if (groupId != null && groupId.isNotEmpty) {
+            fulfillmentDetails[groupId] = detail;
+          }
+        }
+      }
+    }
+
+    return (groups as List).map((row) {
+      final group = Map<String, dynamic>.from(row as Map);
+      final detail = fulfillmentDetails[group['id']?.toString()];
+      group['restaurant_fulfillment'] = detail;
+      return group;
+    }).toList();
   }
 
   @override
@@ -221,19 +239,17 @@ class _SellerOrdersPageState extends ConsumerState<SellerOrdersPage> {
                 final shop = group['shops'] is Map
                     ? Map<String, dynamic>.from(group['shops'] as Map)
                     : const <String, dynamic>{};
-                final restaurantProfile = shop['restaurant_profiles'];
-                final isRestaurant = restaurantProfile is Map ||
-                    (restaurantProfile is List && restaurantProfile.isNotEmpty);
+                final restaurantFulfillment = group['restaurant_fulfillment'];
+                final isRestaurant = restaurantFulfillment is Map;
                 final status = group['status']?.toString() ?? '';
                 final rawPickup = group['pickup_location'];
                 final pickup = rawPickup is Map
                     ? Map<String, dynamic>.from(rawPickup)
                     : const <String, dynamic>{};
-                final rawOrder = group['orders'];
-                final order = rawOrder is Map
-                    ? Map<String, dynamic>.from(rawOrder)
+                final restaurantDetails = restaurantFulfillment is Map
+                    ? Map<String, dynamic>.from(restaurantFulfillment)
                     : const <String, dynamic>{};
-                final rawDeliveryAddress = order['delivery_address'];
+                final rawDeliveryAddress = restaurantDetails['delivery_address'];
                 final deliveryAddress = rawDeliveryAddress is Map
                     ? Map<String, dynamic>.from(rawDeliveryAddress)
                     : const <String, dynamic>{};
