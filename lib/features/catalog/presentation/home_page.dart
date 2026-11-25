@@ -471,8 +471,6 @@ class _HomePromotionBanner extends StatelessWidget {
 class _CatalogMetadata {
   const _CatalogMetadata({required this.types, required this.categories});
 
-  final TextEditingController searchController;
-  final ValueChanged<String> onSearchSubmitted;
   final List<Map<String, dynamic>> types;
   final List<Map<String, dynamic>> categories;
 }
@@ -489,6 +487,8 @@ class _CatalogHeaderDelegate extends SliverPersistentHeaderDelegate {
     required this.onCategorySelected,
   });
 
+  final TextEditingController searchController;
+  final ValueChanged<String> onSearchSubmitted;
   final List<Map<String, dynamic>> types;
   final List<Map<String, dynamic>> categories;
   final String? selectedTypeId;
