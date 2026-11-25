@@ -80,14 +80,14 @@ jobs:
           arch: x86_64
           profile: pixel_2
           script: |
-            set -euo pipefail
+            set -eu
             adb install -r build/app/outputs/flutter-apk/app-debug.apk
             adb shell am force-stop com.marketplaceburkina.marketplace_multiservices_burkina
             adb shell monkey -p com.marketplaceburkina.marketplace_multiservices_burkina 1
             sleep 25
             adb shell pidof com.marketplaceburkina.marketplace_multiservices_burkina
             adb logcat -d -t 5000 > /tmp/marketplace-android-logcat.txt
-            if grep -E 'FATAL EXCEPTION|Fatal signal|Process: com\.marketplaceburkina\.marketplace_multiservices_burkina.*has died' /tmp/marketplace-android-logcat.txt; then
+            if grep -E 'FATAL EXCEPTION|Fatal signal|Process: com\\.marketplaceburkina\\.marketplace_multiservices_burkina.*has died' /tmp/marketplace-android-logcat.txt; then
               echo "Android smoke test detected an application crash."
               exit 1
             fi
