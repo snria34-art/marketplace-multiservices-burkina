@@ -95,7 +95,7 @@ class _AdminReturnsPageState extends ConsumerState<AdminReturnsPage> {
       controller.dispose();
       if (!mounted || chosen == null) return;
       resolution = chosen;
-      if (target == 'CLOSED' && (note?.isEmpty ?? true)) {
+      if (target == 'CLOSED' && (note.isEmpty)) {
         _message('Une confirmation est requise pour clôturer le retour.');
         return;
       }
