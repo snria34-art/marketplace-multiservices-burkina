@@ -426,6 +426,31 @@ for each row
 when (old.status is distinct from new.status)
 execute function public.capture_restaurant_order_event();
 
+create or replace function public.get_seller_restaurant_order_fulfillment_details()
+returns table (
+  order_group_id uuid,
+  delivery_address jsonb
+)
+language sql
+stable
+security definer
+set search_path = ''
+as $
+  select og.id, o.delivery_address
+  from public.order_groups og
+  join public.orders o on o.id = og.order_id
+  join public.shops sh on sh.id = og.shop_id
+  join public.sellers se on se.id = sh.seller_id
+  join public.restaurant_profiles rp on rp.shop_id = sh.id
+  where se.user_id = auth.uid()
+  order by og.created_at desc;
+$;
+
+revoke all on function public.get_seller_restaurant_order_fulfillment_details()
+  from public, anon, authenticated;
+grant execute on function public.get_seller_restaurant_order_fulfillment_details()
+  to authenticated;
+
 create or replace function public.transition_restaurant_order_group_status(
   p_order_group_id uuid,
   p_next_status public.order_status,
