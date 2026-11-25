@@ -446,11 +446,13 @@ returns table (
   order_group_id uuid,
   delivery_address jsonb
 )
-language sql
-stable
+language plpgsql
 security definer
 set search_path = ''
-as $
+as $$
+begin
+  perform private.require_active_account();
+  return query
   select og.id, o.delivery_address
   from public.order_groups og
   join public.orders o on o.id = og.order_id
@@ -459,7 +461,8 @@ as $
   join public.restaurant_profiles rp on rp.shop_id = sh.id
   where se.user_id = auth.uid()
   order by og.created_at desc;
-$;
+end;
+$$;
 
 revoke all on function public.get_seller_restaurant_order_fulfillment_details()
   from public, anon, authenticated;
