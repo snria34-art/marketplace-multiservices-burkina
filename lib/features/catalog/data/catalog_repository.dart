@@ -78,10 +78,8 @@ class CatalogRepository {
 
     final term = searchQuery?.trim();
     if (term != null && term.isNotEmpty) {
-      // Escape SQL LIKE wildcards so the search behaves like literal text.
-      final escaped = term.replaceAll(r'\\', r'\\\\')
-          .replaceAll('%', r'\\%')
-          .replaceAll('_', r'\\_');
+      // Escape LIKE wildcards so user input is treated as literal text.
+      final escaped = term.replaceAll('%', r'\%').replaceAll('_', r'\_');
       query = query.ilike('name', '%$escaped%');
     }
 
