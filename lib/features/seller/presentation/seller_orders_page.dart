@@ -36,6 +36,8 @@ class _SellerOrdersPageState extends ConsumerState<SellerOrdersPage> {
         return 'Commencer la préparation';
       case 'PREPARING':
         return 'Marquer la commande prête';
+      case 'READY_FOR_PICKUP':
+        return 'Confirmer le retrait par le client';
       default:
         return 'Statut mis à jour';
     }
@@ -45,24 +47,41 @@ class _SellerOrdersPageState extends ConsumerState<SellerOrdersPage> {
     final client = ref.read(marketplaceSellerClientProvider);
     final groupId = group['id']?.toString();
     final status = group['status']?.toString() ?? '';
+    final fulfillment = group['fulfillment_method']?.toString() ?? 'DELIVERY';
+    final confirmPickup =
+        status == 'READY_FOR_PICKUP' && fulfillment == 'PICKUP';
     final nextStatus = _nextRestaurantStatus(status);
-    if (client == null || groupId == null || nextStatus == null || _updatingGroupId != null) {
+    if (client == null ||
+        groupId == null ||
+        (!confirmPickup && nextStatus == null) ||
+        _updatingGroupId != null) {
       return;
     }
 
     setState(() => _updatingGroupId = groupId);
     try {
-      await client.rpc(
-        'transition_restaurant_order_group_status',
-        params: {
-          'p_order_group_id': groupId,
-          'p_next_status': nextStatus,
-          'p_note': null,
-        },
-      );
+      if (confirmPickup) {
+        await client.rpc(
+          'confirm_restaurant_customer_pickup',
+          params: {'p_order_group_id': groupId},
+        );
+      } else {
+        await client.rpc(
+          'transition_restaurant_order_group_status',
+          params: {
+            'p_order_group_id': groupId,
+            'p_next_status': nextStatus,
+            'p_note': null,
+          },
+        );
+      }
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(_restaurantActionLabel(status))),
+        SnackBar(
+          content: Text(
+            confirmPickup ? 'Retrait client confirmé.' : _restaurantActionLabel(status),
+          ),
+        ),
       );
       setState(() => _future = _load());
     } catch (_) {
@@ -206,12 +225,15 @@ class _SellerOrdersPageState extends ConsumerState<SellerOrdersPage> {
                 final isRestaurant = restaurantProfile is Map ||
                     (restaurantProfile is List && restaurantProfile.isNotEmpty);
                 final status = group['status']?.toString() ?? '';
-                final nextStatus = isRestaurant ? _nextRestaurantStatus(status) : null;
                 final rawPickup = group['pickup_location'];
                 final pickup = rawPickup is Map
                     ? Map<String, dynamic>.from(rawPickup)
                     : const <String, dynamic>{};
                 final fulfillment = group['fulfillment_method']?.toString() ?? 'DELIVERY';
+                final nextStatus = isRestaurant ? _nextRestaurantStatus(status) : null;
+                final canConfirmPickup = isRestaurant &&
+                    fulfillment == 'PICKUP' &&
+                    status == 'READY_FOR_PICKUP';
                 final instructions = group['fulfillment_instructions']?.toString().trim() ?? '';
                 final updating = _updatingGroupId == group['id']?.toString();
                 final rawItems = group['order_items'];
@@ -253,7 +275,7 @@ class _SellerOrdersPageState extends ConsumerState<SellerOrdersPage> {
                           title: const Text('Instructions du client'),
                           subtitle: Text(instructions),
                         ),
-                      if (nextStatus != null)
+                      if (nextStatus != null || canConfirmPickup)
                         Padding(
                           padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
                           child: SizedBox(
