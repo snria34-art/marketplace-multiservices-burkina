@@ -450,6 +450,9 @@ begin
   set status = p_next_status
   where id = p_order_group_id;
 
+  -- Keep the parent order and its customer notifications in sync with the restaurant.
+  perform public.sync_parent_order_status(v_order_id);
+
   insert into public.order_events(order_id, actor_id, status, metadata)
   values (
     v_order_id,
