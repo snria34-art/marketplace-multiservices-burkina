@@ -61,7 +61,7 @@ class _OrderDetailsPageState extends ConsumerState<OrderDetailsPage> {
 
     try {
       var channel = client
-          .channel('order-payment-' + widget.orderId)
+          .channel('order-payment-${widget.orderId}')
           .onPostgresChanges(
             event: PostgresChangeEvent.all,
             schema: 'public',
@@ -442,7 +442,7 @@ class _OrderDetailsPageState extends ConsumerState<OrderDetailsPage> {
       );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Litige créé : ' + id.toString())),
+        SnackBar(content: Text('Litige créé : $id')),
       );
       setState(() => _future = _load());
     } catch (error) {
@@ -498,7 +498,7 @@ class _OrderDetailsPageState extends ConsumerState<OrderDetailsPage> {
       );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Retour demandé : ' + id.toString())),
+        SnackBar(content: Text('Retour demandé : $id')),
       );
       setState(() => _future = _load());
     } catch (error) {
@@ -598,8 +598,7 @@ class _OrderDetailsPageState extends ConsumerState<OrderDetailsPage> {
         UploadMediaValidator.requireMimeType(mediaBytes, mime);
         final extension = extensionByMime[mime]!;
         uploadedPath =
-            user.id + '/reviews/' + createdReviewId.toString() + '_' +
-            DateTime.now().microsecondsSinceEpoch.toString() + '.' + extension;
+            '${user.id}/reviews/${createdReviewId}_${DateTime.now().microsecondsSinceEpoch}.$extension';
         await client.storage.from('order-feedback-media').uploadBinary(
           uploadedPath,
           mediaBytes,
@@ -617,8 +616,7 @@ class _OrderDetailsPageState extends ConsumerState<OrderDetailsPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Avis envoyé pour modération' +
-                (form.media == null ? '.' : ' avec média.'),
+            'Avis envoyé pour modération${form.media == null ? '.' : ' avec média.'}',
           ),
         ),
       );
@@ -721,7 +719,7 @@ class _OrderDetailsPageState extends ConsumerState<OrderDetailsPage> {
                   ),
                   title: Text(widget.orderId),
                   subtitle: Text(
-                    displayStatus + ' • ' + (order['created_at']?.toString() ?? ''),
+                    '$displayStatus • ${order['created_at']?.toString() ?? ''}',
                   ),
                   trailing: Text(
                     formatXof(num.tryParse(order['total']?.toString() ?? '0') ?? 0),
@@ -734,9 +732,7 @@ class _OrderDetailsPageState extends ConsumerState<OrderDetailsPage> {
                     leading: const Icon(Icons.payment_outlined),
                     title: const Text('Paiement'),
                     subtitle: Text(
-                      (data.payment!['provider']?.toString() ?? '-') +
-                          ' • ' +
-                          (data.payment!['status']?.toString() ?? '-'),
+                      '${data.payment!['provider']?.toString() ?? '-'} • ${data.payment!['status']?.toString() ?? '-'}',
                     ),
                     trailing: Text(
                       formatXof(num.tryParse(data.payment!['amount']?.toString() ?? '0') ?? 0),
@@ -769,8 +765,7 @@ class _OrderDetailsPageState extends ConsumerState<OrderDetailsPage> {
                           : 'Boutique',
                     ),
                     subtitle: Text(
-                      _statusLabel(group['status']?.toString()) +
-                          ' • ' + formatXof(num.tryParse(group['subtotal']?.toString() ?? '0') ?? 0),
+                      '${_statusLabel(group['status']?.toString())} • ${formatXof(num.tryParse(group['subtotal']?.toString() ?? '0') ?? 0)}',
                     ),
                     children: [
                       ..._items(
@@ -790,7 +785,7 @@ class _OrderDetailsPageState extends ConsumerState<OrderDetailsPage> {
                   status != 'PENDING_PAYMENT')
                 OutlinedButton.icon(
                   onPressed: () =>
-                      context.push('/delivery/' + widget.orderId),
+                      context.push('/delivery/${widget.orderId}'),
                   icon: const Icon(Icons.local_shipping_outlined),
                   label: const Text('Suivre la livraison'),
                 ),
@@ -880,14 +875,10 @@ class _OrderDetailsPageState extends ConsumerState<OrderDetailsPage> {
                   (row) => ListTile(
                     leading: const Icon(Icons.currency_exchange_outlined),
                     title: Text(
-                      (row['amount']?.toString() ?? '0') +
-                          ' ' +
-                          (row['currency']?.toString() ?? 'XOF'),
+                      '${row['amount']?.toString() ?? '0'} ${row['currency']?.toString() ?? 'XOF'}',
                     ),
                     subtitle: Text(
-                      (row['status']?.toString() ?? '-') +
-                          ' • ' +
-                          (row['reason']?.toString() ?? ''),
+                      '${row['status']?.toString() ?? '-'} • ${row['reason']?.toString() ?? ''}',
                     ),
                   ),
                 ),
@@ -944,11 +935,7 @@ class _OrderDetailsPageState extends ConsumerState<OrderDetailsPage> {
       return ListTile(
         title: Text(item['product_name']?.toString() ?? 'Article'),
         subtitle: Text(
-          'Quantité : ' +
-              (item['quantity']?.toString() ?? '0') +
-              ' • ' +
-              formatXof(num.tryParse(item['total_price']?.toString() ?? '0') ?? 0) +
-              (choicesLabel.isEmpty ? '' : '\nChoix : ' + choicesLabel),
+          'Quantité : ${item['quantity']?.toString() ?? '0'} • ${formatXof(num.tryParse(item['total_price']?.toString() ?? '0') ?? 0)}${choicesLabel.isEmpty ? '' : '\nChoix : $choicesLabel'}',
         ),
         trailing: delivered
             ? Wrap(

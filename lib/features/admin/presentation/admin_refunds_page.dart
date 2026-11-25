@@ -31,9 +31,7 @@ class _AdminRefundsPageState extends ConsumerState<AdminRefundsPage> {
 
     final rows = await client.rpc('get_admin_refunds');
     if (rows is! List) return const [];
-    return rows
-        .map((row) => Map<String, dynamic>.from(row as Map))
-        .toList();
+    return rows.map((row) => Map<String, dynamic>.from(row as Map)).toList();
   }
 
   Future<void> _refresh() async {
@@ -42,17 +40,14 @@ class _AdminRefundsPageState extends ConsumerState<AdminRefundsPage> {
   }
 
   Future<void> _approve(String refundId) async {
-    await _runAction(
-      () async {
-        final client = ref.read(marketplaceAdminClientProvider);
-        if (client == null) throw StateError('Connexion Supabase indisponible.');
-        return await client.rpc(
-          'admin_approve_refund',
-          params: {'p_refund_id': refundId},
-        );
-      },
-      'Demande approuvée.',
-    );
+    await _runAction(() async {
+      final client = ref.read(marketplaceAdminClientProvider);
+      if (client == null) throw StateError('Connexion Supabase indisponible.');
+      return await client.rpc(
+        'admin_approve_refund',
+        params: {'p_refund_id': refundId},
+      );
+    }, 'Demande approuvée.');
   }
 
   Future<void> _reject(String refundId) async {
@@ -72,7 +67,8 @@ class _AdminRefundsPageState extends ConsumerState<AdminRefundsPage> {
             child: const Text('Annuler'),
           ),
           FilledButton(
-            onPressed: () => Navigator.pop(dialogContext, controller.text.trim()),
+            onPressed: () =>
+                Navigator.pop(dialogContext, controller.text.trim()),
             child: const Text('Refuser'),
           ),
         ],
@@ -81,20 +77,17 @@ class _AdminRefundsPageState extends ConsumerState<AdminRefundsPage> {
     controller.dispose();
     if (!mounted || reason == null) return;
 
-    await _runAction(
-      () async {
-        final client = ref.read(marketplaceAdminClientProvider);
-        if (client == null) throw StateError('Connexion Supabase indisponible.');
-        return await client.rpc(
-          'admin_reject_refund',
-          params: {
-            'p_refund_id': refundId,
-            'p_reason': reason.isEmpty ? null : reason,
-          },
-        );
-      },
-      'Demande refusée.',
-    );
+    await _runAction(() async {
+      final client = ref.read(marketplaceAdminClientProvider);
+      if (client == null) throw StateError('Connexion Supabase indisponible.');
+      return await client.rpc(
+        'admin_reject_refund',
+        params: {
+          'p_refund_id': refundId,
+          'p_reason': reason.isEmpty ? null : reason,
+        },
+      );
+    }, 'Demande refusée.');
   }
 
   Future<void> _ensureAllocation(String refundId) async {
@@ -112,20 +105,33 @@ class _AdminRefundsPageState extends ConsumerState<AdminRefundsPage> {
       params: {'p_refund_id': refundId},
     );
     final rows = candidates is List
-        ? candidates.map((row) => Map<String, dynamic>.from(row as Map)).toList()
+        ? candidates
+              .map((row) => Map<String, dynamic>.from(row as Map))
+              .toList()
         : <Map<String, dynamic>>[];
-    final template = rows.map((row) => <String, dynamic>{
-      'allocation_type': 'ITEM',
-      'order_item_id': row['order_item_id'],
-      'quantity': 1,
-      'customer_amount': 0,
-      'seller_net_debit': 0,
-      'commission_reversal_amount': 0,
-      'platform_funded_amount': 0,
-    }).toList();
+    final template = rows
+        .map(
+          (row) => <String, dynamic>{
+            'allocation_type': 'ITEM',
+            'order_item_id': row['order_item_id'],
+            'quantity': 1,
+            'customer_amount': 0,
+            'seller_net_debit': 0,
+            'commission_reversal_amount': 0,
+            'platform_funded_amount': 0,
+          },
+        )
+        .toList();
     final controller = TextEditingController(
       text: const JsonEncoder.withIndent('  ').convert(template),
     );
+
+    if (!mounted) {
+      controller.dispose();
+      throw StateError(
+        'Écran fermé avant la validation de la ventilation comptable.',
+      );
+    }
 
     final payload = await showDialog<String>(
       context: context,
@@ -144,14 +150,16 @@ class _AdminRefundsPageState extends ConsumerState<AdminRefundsPage> {
                 ),
                 const SizedBox(height: 12),
                 const Text('Articles de la commande :'),
-                ...rows.map((row) => Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: SelectableText(
-                    'Article: ${row['order_item_id']}\n'
-                    'Groupe: ${row['order_group_id']} • Vendeur: ${row['seller_id']}\n'
-                    'Quantité commandée: ${row['ordered_quantity']} • Total ligne: ${row['line_total']} XOF',
+                ...rows.map(
+                  (row) => Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: SelectableText(
+                      'Article: ${row['order_item_id']}\n'
+                      'Groupe: ${row['order_group_id']} • Vendeur: ${row['seller_id']}\n'
+                      'Quantité commandée: ${row['ordered_quantity']} • Total ligne: ${row['line_total']} XOF',
+                    ),
                   ),
-                )),
+                ),
                 const SizedBox(height: 8),
                 TextField(
                   controller: controller,
@@ -174,7 +182,8 @@ class _AdminRefundsPageState extends ConsumerState<AdminRefundsPage> {
             child: const Text('Annuler'),
           ),
           FilledButton(
-            onPressed: () => Navigator.pop(dialogContext, controller.text.trim()),
+            onPressed: () =>
+                Navigator.pop(dialogContext, controller.text.trim()),
             child: const Text('Valider la ventilation'),
           ),
         ],
@@ -187,14 +196,13 @@ class _AdminRefundsPageState extends ConsumerState<AdminRefundsPage> {
 
     final decoded = jsonDecode(payload);
     if (decoded is! List || decoded.isEmpty) {
-      throw FormatException('Les allocations doivent être un tableau JSON non vide.');
+      throw FormatException(
+        'Les allocations doivent être un tableau JSON non vide.',
+      );
     }
     await client.rpc(
       'set_refund_allocations',
-      params: {
-        'p_refund_id': refundId,
-        'p_allocations': decoded,
-      },
+      params: {'p_refund_id': refundId, 'p_allocations': decoded},
     );
   }
 
@@ -217,7 +225,8 @@ class _AdminRefundsPageState extends ConsumerState<AdminRefundsPage> {
             child: const Text('Annuler'),
           ),
           FilledButton(
-            onPressed: () => Navigator.pop(dialogContext, controller.text.trim()),
+            onPressed: () =>
+                Navigator.pop(dialogContext, controller.text.trim()),
             child: const Text('Confirmer'),
           ),
         ],
@@ -226,34 +235,26 @@ class _AdminRefundsPageState extends ConsumerState<AdminRefundsPage> {
     controller.dispose();
     if (!mounted || reference == null || reference.isEmpty) return;
 
-    await _runAction(
-      () async {
-        final client = ref.read(marketplaceAdminClientProvider);
-        if (client == null) throw StateError('Connexion Supabase indisponible.');
-        await _ensureAllocation(refundId);
-        return await client.rpc(
-          'admin_complete_manual_refund',
-          params: {
-            'p_refund_id': refundId,
-            'p_provider_reference': reference,
-          },
-        );
-      },
-      'Remboursement fournisseur confirmé.',
-    );
+    await _runAction(() async {
+      final client = ref.read(marketplaceAdminClientProvider);
+      if (client == null) throw StateError('Connexion Supabase indisponible.');
+      await _ensureAllocation(refundId);
+      return await client.rpc(
+        'admin_complete_manual_refund',
+        params: {'p_refund_id': refundId, 'p_provider_reference': reference},
+      );
+    }, 'Remboursement fournisseur confirmé.');
   }
+
   Future<void> _reconcile(String refundId) async {
-    await _runAction(
-      () async {
-        final client = ref.read(marketplaceAdminClientProvider);
-        if (client == null) throw StateError('Connexion Supabase indisponible.');
-        return await client.rpc(
-          'reconcile_refund_accounting',
-          params: {'p_refund_id': refundId},
-        );
-      },
-      'Rapprochement comptable terminé.',
-    );
+    await _runAction(() async {
+      final client = ref.read(marketplaceAdminClientProvider);
+      if (client == null) throw StateError('Connexion Supabase indisponible.');
+      return await client.rpc(
+        'reconcile_refund_accounting',
+        params: {'p_refund_id': refundId},
+      );
+    }, 'Rapprochement comptable terminé.');
   }
 
   Future<void> _recoverWaveConfirmation(String refundId) async {
@@ -274,7 +275,8 @@ class _AdminRefundsPageState extends ConsumerState<AdminRefundsPage> {
             child: const Text('Annuler'),
           ),
           FilledButton(
-            onPressed: () => Navigator.pop(dialogContext, controller.text.trim()),
+            onPressed: () =>
+                Navigator.pop(dialogContext, controller.text.trim()),
             child: const Text('Confirmer'),
           ),
         ],
@@ -283,25 +285,19 @@ class _AdminRefundsPageState extends ConsumerState<AdminRefundsPage> {
     controller.dispose();
     if (!mounted || reference == null || reference.isEmpty) return;
 
-    await _runAction(
-      () async {
-        final client = ref.read(marketplaceAdminClientProvider);
-        if (client == null) throw StateError('Connexion Supabase indisponible.');
-        await _ensureAllocation(refundId);
-        await client.rpc(
-          'record_provider_refund_confirmation',
-          params: {
-            'p_refund_id': refundId,
-            'p_provider_reference': reference,
-          },
-        );
-        return await client.rpc(
-          'reconcile_refund_accounting',
-          params: {'p_refund_id': refundId},
-        );
-      },
-      'Confirmation Wave et rapprochement comptable enregistrés.',
-    );
+    await _runAction(() async {
+      final client = ref.read(marketplaceAdminClientProvider);
+      if (client == null) throw StateError('Connexion Supabase indisponible.');
+      await _ensureAllocation(refundId);
+      await client.rpc(
+        'record_provider_refund_confirmation',
+        params: {'p_refund_id': refundId, 'p_provider_reference': reference},
+      );
+      return await client.rpc(
+        'reconcile_refund_accounting',
+        params: {'p_refund_id': refundId},
+      );
+    }, 'Confirmation Wave et rapprochement comptable enregistrés.');
   }
 
   Future<void> _execute(String refundId) async {
@@ -328,14 +324,20 @@ class _AdminRefundsPageState extends ConsumerState<AdminRefundsPage> {
     try {
       await action();
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(success)),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(success)));
       setState(() => _future = _load());
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(safeBackendErrorMessage(error, fallback: 'Opération de remboursement refusée. Vérifiez les droits, le statut et le rapprochement comptable.'))),
+        SnackBar(
+          content: Text(
+            safeBackendErrorMessage(
+              error,
+              fallback: 'Opération de remboursement refusée. Vérifiez les droits, le statut et le rapprochement comptable.',
+            ),
+          ),
+        ),
       );
     } finally {
       if (mounted) setState(() => _working = false);
@@ -361,12 +363,18 @@ class _AdminRefundsPageState extends ConsumerState<AdminRefundsPage> {
             return const Center(child: CircularProgressIndicator());
           }
           if (snapshot.hasError) {
-            return Center(child: Text('Impossible de charger les remboursements. Réessayez.'));
+            return Center(
+              child: Text(
+                'Impossible de charger les remboursements. Réessayez.',
+              ),
+            );
           }
 
           final items = snapshot.data ?? const <Map<String, dynamic>>[];
           if (items.isEmpty) {
-            return const Center(child: Text('Aucune demande de remboursement.'));
+            return const Center(
+              child: Text('Aucune demande de remboursement.'),
+            );
           }
 
           return ListView.separated(
@@ -391,33 +399,15 @@ class _AdminRefundsPageState extends ConsumerState<AdminRefundsPage> {
                       accountingStatus == 'PENDING_ALLOCATION'
                           ? Icons.pending_actions_outlined
                           : status == 'COMPLETED'
-                              ? Icons.check_circle_outline
-                              : Icons.currency_exchange_outlined,
+                          ? Icons.check_circle_outline
+                          : Icons.currency_exchange_outlined,
                     ),
                   ),
                   title: Text(
-                    (row['customer_name']?.toString() ?? 'Client') +
-                        ' • ' +
-                        amount +
-                        ' ' +
-                        (row['currency']?.toString() ?? 'XOF'),
+                    '${row['customer_name']?.toString() ?? 'Client'} • $amount ${row['currency']?.toString() ?? 'XOF'}',
                   ),
                   subtitle: Text(
-                    'Statut : ' +
-                        status +
-                        ' • Fournisseur : ' +
-                        provider +
-                        (accountingStatus == 'PENDING_ALLOCATION'
-                            ? '\nRapprochement comptable requis'
-                            : '') +
-                        ((status == 'FAILED' || status == 'PROCESSING')
-                            ? '\nRelance automatique bloquée : vérifier le statut chez le fournisseur.'
-                            : '') +
-                        '\n' +
-                        reason +
-                        (accountingNote.isNotEmpty
-                            ? '\n' + accountingNote
-                            : ''),
+                    'Statut : $status • Fournisseur : $provider${accountingStatus == 'PENDING_ALLOCATION' ? '\nRapprochement comptable requis' : ''}${(status == 'FAILED' || status == 'PROCESSING') ? '\nRelance automatique bloquée : vérifier le statut chez le fournisseur.' : ''}\n$reason${accountingNote.isNotEmpty ? '\n$accountingNote' : ''}',
                   ),
                   trailing: PopupMenuButton<String>(
                     enabled: !_working && id.isNotEmpty,
@@ -457,8 +447,7 @@ class _AdminRefundsPageState extends ConsumerState<AdminRefundsPage> {
                           child: Text('Reprendre le rapprochement comptable'),
                         ),
                       if (provider == 'CINETPAY' &&
-                          (status == 'APPROVED' ||
-                              status == 'PROCESSING'))
+                          (status == 'APPROVED' || status == 'PROCESSING'))
                         const PopupMenuItem(
                           value: 'manual_complete',
                           child: Text('Confirmer remboursement manuel'),

@@ -179,7 +179,7 @@ class _CartPageState extends ConsumerState<CartPage> {
                       return FilledButton.icon(
                         onPressed: hasInvalidCustomization
                             ? null
-                            : () => context.push('/checkout/' + cart!['id'].toString()),
+                            : () => context.push('/checkout/${cart!['id']}'),
                         icon: const Icon(Icons.lock_outline),
                         label: Text(hasInvalidCustomization
                             ? 'Retirez les choix devenus indisponibles'
@@ -211,12 +211,12 @@ class _CartPageState extends ConsumerState<CartPage> {
                         subtitle: Text(
                           [
                             if (variantName != null && variantName.isNotEmpty)
-                              'Variante : ' + variantName,
+                              'Variante : $variantName',
                             if (customizationLabels.isNotEmpty)
-                              'Choix : ' + customizationLabels.join(' • '),
+                              'Choix : ${customizationLabels.join(' • ')}',
                             if (customizationInvalid)
                               'Personnalisation modifiée par le restaurant : retirez cet article et ajoutez-le à nouveau.',
-                            formatXof(num.tryParse((item['restaurant_unit_total'] ?? item['unit_price'] ?? '0').toString()) ?? 0) + ' / unité',
+                            '${formatXof(num.tryParse((item['restaurant_unit_total'] ?? item['unit_price'] ?? '0').toString()) ?? 0)} / unité',
                           ].join('\n'),
                         ),
                         trailing: SizedBox(

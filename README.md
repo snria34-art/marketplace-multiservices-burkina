@@ -1,5 +1,13 @@
 # Marketplace Multiservices Burkina
 
+<!-- CI badges -->
+[![Flutter CI — main](https://github.com/snria34-art/marketplace-multiservices-burkina/actions/workflows/flutter-ci.yml/badge.svg?branch=main)](https://github.com/snria34-art/marketplace-multiservices-burkina/actions/workflows/flutter-ci.yml)
+[![Flutter CI — maintenance](https://github.com/snria34-art/marketplace-multiservices-burkina/actions/workflows/flutter-ci.yml/badge.svg?branch=maintenance%2Faudit-01-07-2026-11-15)](https://github.com/snria34-art/marketplace-multiservices-burkina/actions/workflows/flutter-ci.yml)
+[![Supabase Edge Functions CI — main](https://github.com/snria34-art/marketplace-multiservices-burkina/actions/workflows/supabase-functions-ci.yml/badge.svg?branch=main)](https://github.com/snria34-art/marketplace-multiservices-burkina/actions/workflows/supabase-functions-ci.yml)
+[![Supabase Edge Functions CI — maintenance](https://github.com/snria34-art/marketplace-multiservices-burkina/actions/workflows/supabase-functions-ci.yml/badge.svg?branch=maintenance%2Faudit-01-07-2026-11-15)](https://github.com/snria34-art/marketplace-multiservices-burkina/actions/workflows/supabase-functions-ci.yml)
+[![Native debug validation](https://github.com/snria34-art/marketplace-multiservices-burkina/actions/workflows/native-build.yml/badge.svg?branch=maintenance%2Faudit-01-07-2026-11-15)](https://github.com/snria34-art/marketplace-multiservices-burkina/actions/workflows/native-build.yml)
+
+
 **Dépôt de référence :** [`snria34-art/marketplace-multiservices-burkina`](https://github.com/snria34-art/marketplace-multiservices-burkina).  
 **Phase actuelle :** maintenance et corrections uniquement. Aucun déploiement Vercel, aucune publication GitHub, aucun build de release ni promotion de production ne doit être lancé avant autorisation explicite.
 

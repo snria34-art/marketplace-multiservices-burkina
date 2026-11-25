@@ -71,7 +71,7 @@ class _SellerStatsPageState extends ConsumerState<SellerStatsPage> {
               _Metric(title: 'Produits actifs', value: products.toString()),
               _Metric(title: 'Commandes en cours', value: pending.toString()),
               _Metric(title: 'Commandes livrées', value: delivered.toString()),
-              _Metric(title: 'Ventes livrées', value: sales.toStringAsFixed(0) + ' XOF'),
+              _Metric(title: 'Ventes livrées', value: '${sales.toStringAsFixed(0)} XOF'),
             ],
           );
         },

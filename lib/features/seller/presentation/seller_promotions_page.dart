@@ -106,7 +106,7 @@ class _SellerPromotionsPageState
         },
       );
       if (!mounted) return;
-      _show('Promotion créée : ' + id.toString());
+      _show('Promotion créée : $id');
       setState(() => _future = _load());
     } catch (error) {
       _show(safeBackendErrorMessage(error, fallback: 'Création de la promotion refusée. Vérifiez votre compte et réessayez.'));
@@ -192,13 +192,7 @@ class _SellerPromotionsPageState
                   onChanged: (value) => _toggle(p, value),
                   title: Text(p['name']?.toString() ?? 'Promotion'),
                   subtitle: Text(
-                    (p['promotion_type']?.toString() ?? '-') +
-                        ' • ' +
-                        (p['value']?.toString() ?? '0') +
-                        '\nDu ' +
-                        (p['starts_at']?.toString() ?? '-') +
-                        ' au ' +
-                        (p['ends_at']?.toString() ?? '-'),
+                    '${p['promotion_type']?.toString() ?? '-'} • ${p['value']?.toString() ?? '0'}\nDu ${p['starts_at']?.toString() ?? '-'} au ${p['ends_at']?.toString() ?? '-'}',
                   ),
                 ),
               );

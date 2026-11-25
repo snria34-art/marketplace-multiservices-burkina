@@ -8,6 +8,14 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+// Firebase's public Android configuration is optional during development.
+// Once the official file is added at android/app/google-services.json,
+// the Google Services plugin generates the resources consumed by FCM.
+// Keeping this conditional preserves builds before the owner supplies the file.
+if (file("google-services.json").isFile) {
+    apply(plugin = "com.google.gms.google-services")
+}
+
 val keystoreProperties = Properties()
 val keystorePropertiesFile = rootProject.file("key.properties")
 if (keystorePropertiesFile.exists()) {

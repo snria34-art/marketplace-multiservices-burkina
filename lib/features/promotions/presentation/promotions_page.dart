@@ -87,8 +87,7 @@ class _PromotionsPageState extends ConsumerState<PromotionsPage> {
                   ),
                   title: Text(item['name']?.toString() ?? 'Promotion'),
                   subtitle: Text(
-                    type + ' • ' + value + ' • jusqu’au ' +
-                        (item['ends_at']?.toString() ?? '-'),
+                    '$type • $value • jusqu’au ${item['ends_at']?.toString() ?? '-'}',
                   ),
                 ),
               );

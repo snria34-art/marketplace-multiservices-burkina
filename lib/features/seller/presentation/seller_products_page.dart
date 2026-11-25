@@ -503,14 +503,8 @@ class _SellerProductsPageState
                       product['name']?.toString() ?? 'Produit',
                     ),
                     subtitle: Text(
-                      (shop['name']?.toString() ?? 'Boutique') +
-                          '\nStatut : ' +
-                          (product['status']?.toString() ?? '-') +
-                          '\nStock : ' +
-                          (inventory['quantity']?.toString() ?? '0') +
-                          ' • Réservé : ' +
-                          (inventory['reserved_quantity']?.toString() ??
-                              '0'),
+                      '${shop['name']?.toString() ?? 'Boutique'}\nStatut : ${product['status']?.toString() ?? '-'}\nStock : ${inventory['quantity']?.toString() ?? '0'} • Réservé : ${inventory['reserved_quantity']?.toString() ??
+                              '0'}',
                     ),
                     trailing: Wrap(
                       spacing: 2,

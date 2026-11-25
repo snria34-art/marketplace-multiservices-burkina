@@ -9,6 +9,7 @@ import 'core/auth/auth_recovery_state.dart';
 import 'core/config/supabase_config.dart';
 import 'core/notifications/push_notification_service.dart';
 import 'core/providers/repository_providers.dart';
+import 'core/settings/app_settings.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -23,6 +24,7 @@ Future<void> main() async {
     ),
   );
 
+  unawaited(container.read(appSettingsProvider.notifier).load());
   unawaited(_initializeBackend(container));
 }
 
@@ -37,7 +39,7 @@ Future<void> _initializeBackend(ProviderContainer container) async {
     // Push setup is non-critical and must not block backend availability.
     try {
       final engine = container.read(marketplaceEngineProvider);
-    await PushNotificationService.instance.initialize(engine);
+      await PushNotificationService.instance.initialize(engine);
     } catch (error, stackTrace) {
       if (kDebugMode) {
         debugPrint('Initialisation push indisponible: $error');

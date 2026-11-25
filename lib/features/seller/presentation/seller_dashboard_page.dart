@@ -83,7 +83,7 @@ class _SellerDashboardPageState
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Demande de paiement créée : ' + payoutId,
+            'Demande de paiement créée : $payoutId',
           ),
         ),
       );
@@ -143,7 +143,7 @@ class _SellerDashboardPageState
                   ),
                   title: const Text('Solde vendeur disponible'),
                   subtitle: Text(
-                    balance.toStringAsFixed(0) + ' XOF',
+                    '${balance.toStringAsFixed(0)} XOF',
                   ),
                   trailing: FilledButton.tonal(
                     onPressed: _requestPayout,
@@ -209,9 +209,8 @@ class _SellerDashboardPageState
                               ),
                               _Metric(
                                 label: 'Ventes',
-                                value: (shop['gross_sales']?.toString() ??
-                                        '0') +
-                                    ' XOF',
+                                value: '${shop['gross_sales']?.toString() ??
+                                        '0'} XOF',
                               ),
                             ],
                           ),

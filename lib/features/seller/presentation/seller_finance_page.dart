@@ -50,7 +50,7 @@ class _SellerFinancePageState extends ConsumerState<SellerFinancePage> {
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
-                  value: provider,
+                  initialValue: provider,
                   decoration: const InputDecoration(
                     labelText: 'Moyen de paiement',
                   ),
@@ -242,7 +242,7 @@ class _SellerFinancePageState extends ConsumerState<SellerFinancePage> {
                   leading: const Icon(Icons.account_balance_wallet_outlined),
                   title: const Text('Solde'),
                   trailing: Text(
-                    data.balance.toString() + ' XOF',
+                    '${data.balance} XOF',
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                 ),
@@ -267,14 +267,10 @@ class _SellerFinancePageState extends ConsumerState<SellerFinancePage> {
                     child: ListTile(
                       leading: const Icon(Icons.payments_outlined),
                       title: Text(
-                        (row['amount']?.toString() ?? '0') +
-                            ' ' +
-                            (row['currency']?.toString() ?? 'XOF'),
+                        '${row['amount']?.toString() ?? '0'} ${row['currency']?.toString() ?? 'XOF'}',
                       ),
                       subtitle: Text(
-                        (row['provider']?.toString() ?? '-') +
-                            ' • ' +
-                            (row['status']?.toString() ?? '-'),
+                        '${row['provider']?.toString() ?? '-'} • ${row['status']?.toString() ?? '-'}',
                       ),
                     ),
                   ),
@@ -291,9 +287,7 @@ class _SellerFinancePageState extends ConsumerState<SellerFinancePage> {
                   title: Text(row['entry_type']?.toString() ?? '-'),
                   subtitle: Text(row['created_at']?.toString() ?? '-'),
                   trailing: Text(
-                    (row['amount']?.toString() ?? '0') +
-                        ' ' +
-                        (row['currency']?.toString() ?? 'XOF'),
+                    '${row['amount']?.toString() ?? '0'} ${row['currency']?.toString() ?? 'XOF'}',
                   ),
                 ),
               ),

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "947738063718",
+    "project_id": "marketplace-multiservices-bf",
+    "storage_bucket": "marketplace-multiservices-bf.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:947738063718:android:c596e97b8ec1d2b7454ea7",
+        "android_client_info": {
+          "package_name": "com.marketplaceburkina.marketplace_multiservices_burkina"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDoOaycvrTG1SJeGVyZydpqflwLBwD966k"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

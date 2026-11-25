@@ -618,11 +618,7 @@ class VerticalRepository {
       }
       UploadMediaValidator.requireMimeType(prescriptionBytes, mimeType);
       final extension = mimeType == 'image/png' ? 'png' : 'jpg';
-      prescriptionPath = user.id +
-          '/' +
-          DateTime.now().microsecondsSinceEpoch.toString() +
-          '.' +
-          extension;
+      prescriptionPath = '${user.id}/${DateTime.now().microsecondsSinceEpoch}.$extension';
 
       await client.storage.from('health-prescriptions').uploadBinary(
             prescriptionPath,

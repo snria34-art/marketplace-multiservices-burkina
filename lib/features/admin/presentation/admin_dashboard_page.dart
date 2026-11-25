@@ -107,7 +107,7 @@ class _AdminDashboardPageState
       ));
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Notification de test créée : ' + id.toString())),
+        SnackBar(content: Text('Notification de test créée : $id')),
       );
     } catch (error) {
       if (!mounted) return;
@@ -187,10 +187,7 @@ class _AdminDashboardPageState
                       return DropdownMenuItem<String>(
                         value: row['id'].toString(),
                         child: Text(
-                          row['name'].toString() +
-                              ' • ' +
-                              row['nominal_value'].toString() +
-                              ' XOF',
+                          '${row['name']} • ${row['nominal_value']} XOF',
                         ),
                       );
                     }).toList(),
@@ -297,7 +294,7 @@ class _AdminDashboardPageState
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Associé activé : ' + holdingId.toString())),
+        SnackBar(content: Text('Associé activé : $holdingId')),
       );
       setState(() => _future = _load());
     } catch (error) {
@@ -436,6 +433,12 @@ class _AdminDashboardPageState
                 onPressed: () => context.push('/admin/accounts'),
                 icon: const Icon(Icons.manage_accounts_outlined),
                 label: const Text('Gérer les comptes utilisateurs'),
+              ),
+              const SizedBox(height: 8),
+              FilledButton.icon(
+                onPressed: () => context.push('/admin/returns'),
+                icon: const Icon(Icons.assignment_return_outlined),
+                label: const Text('Traiter les dossiers de retour'),
               ),
               const SizedBox(height: 8),
               FilledButton.icon(

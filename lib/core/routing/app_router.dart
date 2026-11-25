@@ -28,6 +28,7 @@ import '../../features/mechanics/presentation/mechanics_page.dart';
 import '../../features/messaging/presentation/messages_page.dart';
 import '../../features/notifications/presentation/notification_preferences_page.dart';
 import '../../features/notifications/presentation/notifications_page.dart';
+import '../../features/settings/presentation/app_settings_page.dart';
 import '../../features/restaurants/presentation/restaurants_page.dart';
 import '../../features/seller/presentation/seller_dashboard_page.dart';
 import '../../features/seller/presentation/seller_orders_page.dart';
@@ -51,6 +52,7 @@ import '../../features/verticals/presentation/vertical_discovery_page.dart';
 import '../../features/admin/presentation/admin_dashboard_page.dart';
 import '../../features/admin/presentation/admin_assistant_page.dart';
 import '../../features/admin/presentation/admin_return_policies_page.dart';
+import '../../features/admin/presentation/admin_returns_page.dart';
 import '../../features/admin/presentation/admin_catalog_moderation_page.dart';
 import '../../features/admin/presentation/admin_platform_health_page.dart';
 import '../../features/admin/presentation/admin_review_moderation_page.dart';
@@ -96,10 +98,7 @@ String _loginLocation(GoRouterState state) {
   ).toString();
 }
 
-Future<String?> _guardRoute(
-  SupabaseClient? client,
-  GoRouterState state,
-) async {
+Future<String?> _guardRoute(SupabaseClient? client, GoRouterState state) async {
   final path = state.matchedLocation;
 
   if (path == '/access-status') return null;
@@ -112,7 +111,9 @@ Future<String?> _guardRoute(
   }
 
   if (client == null) {
-    return requiresAuth ? '/access-status?reason=verification_unavailable' : null;
+    return requiresAuth
+        ? '/access-status?reason=verification_unavailable'
+        : null;
   }
 
   // Public catalogue pages remain browseable without extra profile requests.
@@ -151,8 +152,7 @@ Future<String?> _guardRoute(
             .from('user_roles')
             .select('role')
             .eq('user_id', user.id);
-        final hasModeratorRole =
-            rows.any((row) => row['role'] == 'MODERATOR');
+        final hasModeratorRole = rows.any((row) => row['role'] == 'MODERATOR');
 
         if (!hasModeratorRole) {
           return '/access-status?reason=moderator_required';
@@ -208,7 +208,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     initialLocation: '/',
     routes: [
       GoRoute(path: '/', builder: (_, _) => const HomePage()),
-      GoRoute(path: '/whatsapp', builder: (_, _) => const WhatsAppAssistantPage()),
+      GoRoute(
+        path: '/whatsapp',
+        builder: (_, _) => const WhatsAppAssistantPage(),
+      ),
       GoRoute(path: '/wallet', builder: (_, _) => const CustomerWalletPage()),
       GoRoute(path: '/auth', builder: (_, _) => const SignInPage()),
       GoRoute(
@@ -221,15 +224,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       // Some platform deep-link handlers expose only the URI path (/recovery)
       // and omit the custom-scheme host (auth). Keep this equivalent route.
-      GoRoute(
-        path: '/recovery',
-        builder: (_, _) => const AuthRecoveryPage(),
-      ),
+      GoRoute(path: '/recovery', builder: (_, _) => const AuthRecoveryPage()),
       GoRoute(
         path: '/access-status',
-        builder: (_, state) => AccessStatusPage(
-          reason: state.uri.queryParameters['reason'],
-        ),
+        builder: (_, state) =>
+            AccessStatusPage(reason: state.uri.queryParameters['reason']),
       ),
       GoRoute(path: '/cart', builder: (_, _) => const CartPage()),
       GoRoute(
@@ -277,42 +276,18 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         },
       ),
       GoRoute(path: '/courier', builder: (_, _) => const CourierPage()),
-      GoRoute(
-        path: '/restaurants',
-        builder: (_, _) => const RestaurantsPage(),
-      ),
-      GoRoute(
-        path: '/transport',
-        builder: (_, _) => const TransportPage(),
-      ),
-      GoRoute(
-        path: '/mechanics',
-        builder: (_, _) => const MechanicsPage(),
-      ),
-      GoRoute(
-        path: '/expiry',
-        builder: (_, _) => const ExpiryPage(),
-      ),
-      GoRoute(
-        path: '/follows',
-        builder: (_, _) => const FollowsPage(),
-      ),
-      GoRoute(
-        path: '/group-buy',
-        builder: (_, _) => const GroupBuyPage(),
-      ),
-      GoRoute(
-        path: '/services',
-        builder: (_, _) => const ServicesPage(),
-      ),
+      GoRoute(path: '/restaurants', builder: (_, _) => const RestaurantsPage()),
+      GoRoute(path: '/transport', builder: (_, _) => const TransportPage()),
+      GoRoute(path: '/mechanics', builder: (_, _) => const MechanicsPage()),
+      GoRoute(path: '/expiry', builder: (_, _) => const ExpiryPage()),
+      GoRoute(path: '/follows', builder: (_, _) => const FollowsPage()),
+      GoRoute(path: '/group-buy', builder: (_, _) => const GroupBuyPage()),
+      GoRoute(path: '/services', builder: (_, _) => const ServicesPage()),
       GoRoute(
         path: '/businesses-mobility',
         builder: (_, _) => const BusinessesMobilityPage(),
       ),
-      GoRoute(
-        path: '/messages',
-        builder: (_, _) => const MessagesPage(),
-      ),
+      GoRoute(path: '/messages', builder: (_, _) => const MessagesPage()),
       GoRoute(
         path: '/notifications',
         builder: (_, _) => const NotificationsPage(),
@@ -321,17 +296,19 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: '/notifications/preferences',
         builder: (_, _) => const NotificationPreferencesPage(),
       ),
+      GoRoute(path: '/settings', builder: (_, _) => const AppSettingsPage()),
       GoRoute(
         path: '/admin/partner-network',
         builder: (_, _) => const AdminPartnerNetworkPage(),
       ),
-      GoRoute(
-        path: '/admin',
-        builder: (_, _) => const AdminDashboardPage(),
-      ),
+      GoRoute(path: '/admin', builder: (_, _) => const AdminDashboardPage()),
       GoRoute(
         path: '/admin/catalog-moderation',
         builder: (_, _) => const AdminCatalogModerationPage(),
+      ),
+      GoRoute(
+        path: '/admin/returns',
+        builder: (_, _) => const AdminReturnsPage(),
       ),
       GoRoute(
         path: '/admin/return-policies',
@@ -361,10 +338,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: '/admin/refunds',
         builder: (_, _) => const AdminRefundsPage(),
       ),
-      GoRoute(
-        path: '/seller',
-        builder: (_, _) => const SellerToolsPage(),
-      ),
+      GoRoute(path: '/seller', builder: (_, _) => const SellerToolsPage()),
       GoRoute(
         path: '/seller/moderation',
         builder: (_, _) => const SellerModerationPage(),
@@ -387,12 +361,30 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(path: '/promotions', builder: (_, _) => const PromotionsPage()),
       GoRoute(path: '/seller/shop', builder: (_, _) => const SellerShopPage()),
-      GoRoute(path: '/seller/coupons', builder: (_, _) => const SellerCouponsPage()),
-      GoRoute(path: '/seller/promotions', builder: (_, _) => const SellerPromotionsPage()),
-      GoRoute(path: '/seller/clients', builder: (_, _) => const SellerClientsPage()),
-      GoRoute(path: '/seller/reviews', builder: (_, _) => const SellerReviewsPage()),
-      GoRoute(path: '/seller/stats', builder: (_, _) => const SellerStatsPage()),
-      GoRoute(path: '/seller/finance', builder: (_, _) => const SellerFinancePage()),
+      GoRoute(
+        path: '/seller/coupons',
+        builder: (_, _) => const SellerCouponsPage(),
+      ),
+      GoRoute(
+        path: '/seller/promotions',
+        builder: (_, _) => const SellerPromotionsPage(),
+      ),
+      GoRoute(
+        path: '/seller/clients',
+        builder: (_, _) => const SellerClientsPage(),
+      ),
+      GoRoute(
+        path: '/seller/reviews',
+        builder: (_, _) => const SellerReviewsPage(),
+      ),
+      GoRoute(
+        path: '/seller/stats',
+        builder: (_, _) => const SellerStatsPage(),
+      ),
+      GoRoute(
+        path: '/seller/finance',
+        builder: (_, _) => const SellerFinancePage(),
+      ),
       for (final item in const <({String path, VerticalModule module})>[
         (path: '/rides', module: VerticalModule.rides),
         (path: '/rentals', module: VerticalModule.rentals),
@@ -415,10 +407,22 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           path: item.path,
           builder: (_, _) => VerticalDiscoveryPage(module: item.module),
         ),
-      GoRoute(path: '/seller/stock', builder: (_, _) => const SellerProductsPage()),
-      GoRoute(path: '/seller/payouts', builder: (_, _) => const SellerFinancePage()),
-      GoRoute(path: '/seller/commissions', builder: (_, _) => const SellerFinancePage()),
-      GoRoute(path: '/seller/settings', builder: (_, _) => const SellerSettingsPage()),
+      GoRoute(
+        path: '/seller/stock',
+        builder: (_, _) => const SellerProductsPage(),
+      ),
+      GoRoute(
+        path: '/seller/payouts',
+        builder: (_, _) => const SellerFinancePage(),
+      ),
+      GoRoute(
+        path: '/seller/commissions',
+        builder: (_, _) => const SellerFinancePage(),
+      ),
+      GoRoute(
+        path: '/seller/settings',
+        builder: (_, _) => const SellerSettingsPage(),
+      ),
     ],
   );
 
@@ -431,4 +435,3 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 
   return router;
 });
-

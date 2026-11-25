@@ -3,10 +3,11 @@ name: Native debug validation
 # Debug validation only. No release signing, store upload or deployment.
 on:
   push:
-    branches: ['maintenance/audit-01-07-2026-11-15']
+    branches: ['maintenance/audit-01-07-2026-11-15', 'integration/firebase-mobile-client']
     paths:
       - 'android/**'
       - 'lib/**'
+      - 'test/**'
       - 'pubspec.yaml'
       - 'pubspec.lock'
       - 'scripts/prepare-android-gradle.sh'
@@ -22,9 +23,9 @@ concurrency:
 
 jobs:
   android-debug:
-    name: Build Android debug APK (unsigned)
+    name: Validate and build Android debug APK
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -50,11 +51,40 @@ jobs:
       - name: Resolve locked dependencies
         run: flutter pub get --enforce-lockfile
 
+      - name: Analyze Dart and Flutter code
+        run: flutter analyze --no-pub
+
+      - name: Run Flutter tests
+        run: flutter test --no-pub
+
       - name: Configure repositories for Flutter included Gradle build
         run: bash scripts/prepare-android-gradle.sh
 
       - name: Build Android debug APK
         run: flutter build apk --debug
+
+      - name: Preserve Android debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: marketplace-burkina-android-debug
+          path: build/app/outputs/flutter-apk/app-debug.apk
+          if-no-files-found: error
+          # Public repository artifact retention is capped at 90 days.
+          # This affects the downloadable CI APK only, not installed app lifetime.
+          retention-days: 90
+
+      - name: Install and launch APK on Android emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        env:
+          ANDROID_I_WANT_MY_TCG: "yes"
+        with:
+          api-level: 35
+          arch: x86_64
+          profile: pixel_2
+          emulator-boot-timeout: 900
+          emulator-options: -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect
+          disable-animations: true
+          script: bash scripts/android-emulator-smoke.sh
 
   ios-simulator-debug:
     name: Build iOS simulator debug app (unsigned)

@@ -44,8 +44,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
   void initState() {
     super.initState();
     _idempotencyKey =
-        'checkout-' +
-        DateTime.now().toUtc().microsecondsSinceEpoch.toString();
+        'checkout-${DateTime.now().toUtc().microsecondsSinceEpoch}';
 
     _addressesFuture = _loadAddresses();
   }
@@ -278,7 +277,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
           ),
         ),
       );
-      context.go('/orders/' + orderId);
+      context.go('/orders/$orderId');
     } catch (error) {
       if (!mounted) return;
 
@@ -368,12 +367,9 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
                                   'Adresse',
                             ),
                             subtitle: Text(
-                              (item['recipient_name']?.toString() ?? '') +
-                                  '\n' +
-                                  (item['address_line']?.toString() ?? '') +
-                                  (item['city']?.toString().isEmpty == true
+                              '${item['recipient_name']?.toString() ?? ''}\n${item['address_line']?.toString() ?? ''}${item['city']?.toString().isEmpty == true
                                       ? ''
-                                      : ' — ' + (item['city']?.toString() ?? '')),
+                                      : ' — ${item['city']?.toString() ?? ''}'}',
                             ),
                           ),
                         ),
@@ -395,11 +391,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
                   subtitle: Text(
                     distance == null
                         ? 'Sélectionnez une adresse'
-                        : 'Distance : ' +
-                            distance +
-                            ' km • ' +
-                            (stops ?? '1') +
-                            ' point(s)',
+                        : 'Distance : $distance km • ${stops ?? '1'} point(s)',
                   ),
                   trailing: _quoteLoading
                       ? const SizedBox(

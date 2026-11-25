@@ -60,9 +60,21 @@ Pour recevoir FCM sur iPhone, activer Push Notifications et Background Modes dan
 
 Le job iOS du workflow de validation s'exécute uniquement lors d'un déclenchement manuel (`workflow_dispatch`) ; il n'est pas lancé par les pushes de maintenance. Il exécute `flutter build ios --simulator --debug`. C’est une compilation de simulateur en debug, **pas** un IPA release et **pas** une archive de publication. Ce job n'est pas une étape de déploiement.
 
+
+## Identifiants d'applications Firebase
+
+Les identifiants à utiliser pour rattacher les applications clientes au projet Firebase existant sont :
+
+- Android : `com.marketplaceburkina.marketplace_multiservices_burkina`
+- iOS (Bundle ID) : `com.marketplaceburkina.marketplaceMultiservicesBurkina`
+
+Les fichiers Android et iOS officiels sont maintenant présents dans `android/app/google-services.json` et `ios/Runner/GoogleService-Info.plist`. Ils proviennent du projet Firebase `marketplace-multiservices-bf` et correspondent respectivement aux identifiants `com.marketplaceburkina.marketplace_multiservices_burkina` et `com.marketplaceburkina.marketplaceMultiservicesBurkina`. Le fichier iOS est référencé dans `ios/Runner.xcodeproj/project.pbxproj` et ajouté aux ressources de la cible Runner. Le plug-in Google Services Android s'active uniquement lorsque le fichier JSON officiel est présent.
+
+Les configurations clientes Firebase ne remplacent pas le compte de service de l'Edge Function. La clé privée de ce compte reste dans les secrets Supabase sous `FCM_SERVICE_ACCOUNT_JSON`, jamais dans l'app ou dans Railway.
+
 ## Firebase natif
 
-Les fichiers `google-services.json` et `GoogleService-Info.plist` dépendent du véritable projet Firebase et ne doivent pas être fabriqués. Après création/enregistrement des applications Android et iOS, exécuter `flutterfire configure` pour générer `firebase_options.dart` et les fichiers natifs appropriés.
+Les fichiers Android `google-services.json` et iOS `GoogleService-Info.plist` sont téléchargés depuis le véritable projet Firebase `marketplace-multiservices-bf` et ajoutés à la branche d'intégration. Leurs identifiants d'application ont été contrôlés. Vérifier l'association du fichier iOS à la cible Runner dans Xcode, puis exécuter `flutterfire configure` depuis la racine Flutter pour générer `lib/firebase_options.dart` et vérifier les plateformes sélectionnées. Ne jamais fabriquer ces fichiers à partir de valeurs supposées.
 
 ## CI et déclenchement
 

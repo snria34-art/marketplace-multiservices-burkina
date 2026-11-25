@@ -516,7 +516,7 @@ class _CourierPageState extends ConsumerState<CourierPage>
           ? const Center(child: CircularProgressIndicator())
           : _assignmentsError != null && _assignments == null
               ? Center(
-                  child: Text('Erreur : ' + _assignmentsError.toString()),
+                  child: Text('Erreur : $_assignmentsError'),
                 )
               : _buildAssignments(_assignments ?? const []),
     );
@@ -626,13 +626,10 @@ class _CourierPageState extends ConsumerState<CourierPage>
           children: [
             ListTile(
               title: Text(
-                'Colis ' + (item['package_id']?.toString() ?? '-'),
+                'Colis ${item['package_id']?.toString() ?? '-'}',
               ),
               subtitle: Text(
-                'État : ' +
-                    (status ?? '-') +
-                    '\nAffecté le : ' +
-                    (item['assigned_at']?.toString() ?? '-'),
+                'État : ${status ?? '-'}\nAffecté le : ${item['assigned_at']?.toString() ?? '-'}',
               ),
               trailing: _actions(item, status),
             ),
@@ -643,9 +640,9 @@ class _CourierPageState extends ConsumerState<CourierPage>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     if (shopAddress.isNotEmpty) ...[
-                      Text('Retrait : ' + shopAddress),
+                      Text('Retrait : $shopAddress'),
                       if (shopPhone.isNotEmpty)
-                        Text('Téléphone boutique : ' + shopPhone),
+                        Text('Téléphone boutique : $shopPhone'),
                       Align(
                         alignment: Alignment.centerLeft,
                         child: TextButton.icon(
@@ -659,15 +656,14 @@ class _CourierPageState extends ConsumerState<CourierPage>
                     ],
                     if (hasDeliveryDestination) ...[
                       Text(
-                        'Livraison : ' +
-                            (deliveryAddress.isEmpty
+                        'Livraison : ${deliveryAddress.isEmpty
                                 ? 'Position GPS disponible'
-                                : deliveryAddress),
+                                : deliveryAddress}',
                       ),
                       if (recipientName.isNotEmpty)
-                        Text('Destinataire : ' + recipientName),
+                        Text('Destinataire : $recipientName'),
                       if (recipientPhone.isNotEmpty)
-                        Text('Téléphone : ' + recipientPhone),
+                        Text('Téléphone : $recipientPhone'),
                       Align(
                         alignment: Alignment.centerLeft,
                         child: TextButton.icon(

@@ -92,7 +92,7 @@ class _SellerShopPageState extends ConsumerState<SellerShopPage> {
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Boutique enregistrée : ' + result.toString())),
+        SnackBar(content: Text('Boutique enregistrée : $result')),
       );
       setState(() => _future = _load());
     } catch (error) {
@@ -154,10 +154,7 @@ class _SellerShopPageState extends ConsumerState<SellerShopPage> {
                   ),
                   title: Text(shop['name']?.toString() ?? 'Boutique'),
                   subtitle: Text(
-                    'Statut : ' +
-                        (shop['status']?.toString() ?? '-') +
-                        '\nValidation : ' +
-                        (shop['verification_status']?.toString() ?? '-'),
+                    'Statut : ${shop['status']?.toString() ?? '-'}\nValidation : ${shop['verification_status']?.toString() ?? '-'}',
                   ),
                 ),
               ),

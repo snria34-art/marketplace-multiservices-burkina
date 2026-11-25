@@ -35,7 +35,7 @@ class _NotificationsPageState
 
     try {
       _notificationsChannel = client
-          .channel('notifications-' + user.id)
+          .channel('notifications-${user.id}')
           .onPostgresChanges(
             event: PostgresChangeEvent.all,
             schema: 'public',
@@ -196,9 +196,7 @@ class _NotificationsPageState
                     ),
                   ),
                   subtitle: Text(
-                    (item['body']?.toString() ?? '') +
-                        '\n' +
-                        (item['created_at']?.toString() ?? ''),
+                    '${item['body']?.toString() ?? ''}\n${item['created_at']?.toString() ?? ''}',
                   ),
                   onTap: unread
                       ? () => _markRead(item['id'].toString())
