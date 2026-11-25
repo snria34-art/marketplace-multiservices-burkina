@@ -463,7 +463,7 @@ begin
   order by og.created_at desc
   limit 200;
 end;
-$;
+$$;
 
 revoke all on function public.get_seller_restaurant_order_fulfillment_details()
   from public, anon, authenticated;
