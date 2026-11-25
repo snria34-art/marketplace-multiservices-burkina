@@ -179,7 +179,7 @@ class _OrderDetailsPageState extends ConsumerState<OrderDetailsPage> {
     final groups = await client
         .from('order_groups')
         .select(
-          'id,shop_id,status,subtotal,shops(name),order_items(id,product_id,product_name,quantity,unit_price,total_price,restaurant_customizations)',
+          'id,shop_id,status,subtotal,fulfillment_method,fulfillment_instructions,pickup_location,shops(name),order_items(id,product_id,product_name,quantity,unit_price,total_price,restaurant_customizations)',
         )
         .eq('order_id', widget.orderId)
         .order('created_at');
@@ -708,6 +708,28 @@ class _OrderDetailsPageState extends ConsumerState<OrderDetailsPage> {
           final reviewDeadline = DateTime.tryParse(order['review_deadline_at']?.toString() ?? '');
           final reviewOpen = delivered && reviewDeadline != null && DateTime.now().isBefore(reviewDeadline);
           final displayStatus = order['completed_at'] != null ? 'Commande terminée' : _statusLabel(status);
+          final rawDeliveryAddress = order['delivery_address'];
+          final deliveryDetails = rawDeliveryAddress is Map
+              ? Map<String, dynamic>.from(rawDeliveryAddress)
+              : const <String, dynamic>{};
+          final isPickup = deliveryDetails['fulfillment_method'] == 'PICKUP';
+          final receiptDetails = [
+            if (isPickup) deliveryDetails['restaurant_name']?.toString(),
+            if ((deliveryDetails['address']?.toString() ?? '').isNotEmpty)
+              deliveryDetails['address'].toString(),
+            if ((deliveryDetails['recipient_name']?.toString() ?? '').isNotEmpty)
+              deliveryDetails['recipient_name'].toString(),
+            if ((deliveryDetails['phone']?.toString() ?? '').isNotEmpty)
+              'Téléphone : ${deliveryDetails['phone']}',
+            if (deliveryDetails['preparation_time_min'] != null)
+              'Préparation estimée : ${deliveryDetails['preparation_time_min']} min',
+            if ((deliveryDetails['address_line']?.toString() ?? '').isNotEmpty)
+              deliveryDetails['address_line'].toString(),
+            if ((deliveryDetails['city']?.toString() ?? '').isNotEmpty)
+              deliveryDetails['city'].toString(),
+            if ((deliveryDetails['instructions']?.toString() ?? '').isNotEmpty)
+              'Consignes : ${deliveryDetails['instructions']}',
+          ].whereType<String>().where((value) => value.trim().isNotEmpty).toList();
 
           return ListView(
             padding: const EdgeInsets.all(12),
@@ -747,12 +769,22 @@ class _OrderDetailsPageState extends ConsumerState<OrderDetailsPage> {
                   label: const Text('Reprendre le paiement'),
                 ),
               ],
-              if ((order['delivery_address'] as dynamic) != null)
+              if (rawDeliveryAddress != null)
                 Card(
                   child: ListTile(
-                    leading: const Icon(Icons.location_on_outlined),
-                    title: const Text('Adresse de livraison'),
-                    subtitle: Text(order['delivery_address'].toString()),
+                    leading: Icon(
+                      isPickup
+                          ? Icons.storefront_outlined
+                          : Icons.location_on_outlined,
+                    ),
+                    title: Text(
+                      isPickup ? 'Retrait au restaurant' : 'Adresse de livraison',
+                    ),
+                    subtitle: Text(
+                      receiptDetails.isEmpty
+                          ? rawDeliveryAddress.toString()
+                          : receiptDetails.join('\\n'),
+                    ),
                   ),
                 ),
               for (final group in data.groups) ...[
@@ -768,6 +800,12 @@ class _OrderDetailsPageState extends ConsumerState<OrderDetailsPage> {
                       '${_statusLabel(group['status']?.toString())} • ${formatXof(num.tryParse(group['subtotal']?.toString() ?? '0') ?? 0)}',
                     ),
                     children: [
+                      if ((group['fulfillment_instructions']?.toString() ?? '').trim().isNotEmpty)
+                        ListTile(
+                          leading: const Icon(Icons.notes_outlined),
+                          title: const Text('Instructions transmises au restaurant'),
+                          subtitle: Text(group['fulfillment_instructions'].toString()),
+                        ),
                       ..._items(
                         group: group,
                         delivered: group['status']?.toString() == 'DELIVERED',
