@@ -276,14 +276,13 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
     setState(() => _loading = true);
 
     try {
-      if (_restaurantContext != null) {
-        await repo.setRestaurantCartFulfillment(
-          cartId: widget.cartId,
-          method: _fulfillmentMethod,
-          customerInstructions:
-              _restaurantInstructionsController.text.trim(),
-        );
-      }
+      await repo.setRestaurantCartFulfillment(
+        cartId: widget.cartId,
+        method: _restaurantContext == null ? 'DELIVERY' : _fulfillmentMethod,
+        customerInstructions: _restaurantContext == null
+            ? null
+            : _restaurantInstructionsController.text.trim(),
+      );
 
       final fee = isPickup
           ? 0
