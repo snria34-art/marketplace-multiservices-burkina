@@ -314,21 +314,21 @@ begin
     || E'        case when v_fulfillment_method = ''PICKUP'' then v_pickup_location else null end\n'
     || E'      )');
 
-  v_package_block := E'      insert into public.order_packages(\\n'
-    || E'        order_group_id,\\n'
-    || E'        status\\n'
-    || E'      )\\n'
-    || E'      values(\\n'
-    || E'        v_group_id,\\n'
-    || E'        ''CREATED''\\n'
-    || E'      )\\n'
+  v_package_block := E'      insert into public.order_packages(\n'
+    || E'        order_group_id,\n'
+    || E'        status\n'
+    || E'      )\n'
+    || E'      values(\n'
+    || E'        v_group_id,\n'
+    || E'        ''CREATED''\n'
+    || E'      )\n'
     || E'      returning id into v_package_id;';
   if position(v_package_block in v_def) = 0 then
     raise exception 'restaurant_checkout_package_anchor_missing';
   end if;
   v_def := replace(v_def, v_package_block,
-    E'      if v_fulfillment_method <> ''PICKUP'' then\\n'
-    || v_package_block || E'\\n'
+    E'      if v_fulfillment_method <> ''PICKUP'' then\n'
+    || v_package_block || E'\n'
     || E'      end if;');
 
   if position('v_fulfillment_method' in v_def) = 0
