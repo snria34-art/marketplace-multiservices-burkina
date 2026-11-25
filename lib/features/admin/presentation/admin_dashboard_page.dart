@@ -436,6 +436,12 @@ class _AdminDashboardPageState
               ),
               const SizedBox(height: 8),
               FilledButton.icon(
+                onPressed: () => context.push('/admin/returns'),
+                icon: const Icon(Icons.assignment_return_outlined),
+                label: const Text('Traiter les dossiers de retour'),
+              ),
+              const SizedBox(height: 8),
+              FilledButton.icon(
                 onPressed: () => context.push('/admin/refunds'),
                 icon: const Icon(Icons.currency_exchange_outlined),
                 label: const Text('Gérer les remboursements'),
