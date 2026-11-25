@@ -53,6 +53,7 @@ class CatalogRepository {
 
   Future<List<Map<String, dynamic>>> products({
     String? categoryId,
+    String? searchQuery,
     int offset = 0,
     int limit = 24,
   }) async {
@@ -73,6 +74,15 @@ class CatalogRepository {
 
     if (categoryId != null && categoryId.isNotEmpty) {
       query = query.eq('category_id', categoryId);
+    }
+
+    final term = searchQuery?.trim();
+    if (term != null && term.isNotEmpty) {
+      // Escape SQL LIKE wildcards so the search behaves like literal text.
+      final escaped = term.replaceAll(r'\\', r'\\\\')
+          .replaceAll('%', r'\\%')
+          .replaceAll('_', r'\\_');
+      query = query.ilike('name', '%$escaped%');
     }
 
     final rows = await _resilience.run(
