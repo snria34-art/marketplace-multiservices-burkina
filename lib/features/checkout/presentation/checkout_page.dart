@@ -451,7 +451,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
                         'Téléphone : ${restaurant['restaurant_phone']}',
                       if (restaurant['preparation_time_min'] != null)
                         'Préparation estimée : ${restaurant['preparation_time_min']} min',
-                    ].join('\\n')),
+                    ].join('\n')),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -504,7 +504,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
                                     'Adresse',
                               ),
                               subtitle: Text(
-                                '${item['recipient_name']?.toString() ?? ''}\\n${item['address_line']?.toString() ?? ''}${item['city']?.toString().isEmpty == true
+                                '${item['recipient_name']?.toString() ?? ''}\n${item['address_line']?.toString() ?? ''}${item['city']?.toString().isEmpty == true
                                         ? ''
                                         : ' — ${item['city']?.toString() ?? ''}'}',
                               ),
