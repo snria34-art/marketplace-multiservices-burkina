@@ -159,6 +159,7 @@ declare
   v_note text := nullif(trim(coalesce(p_note, '')), '');
   v_refund_order_id uuid;
   v_refund_status text;
+  v_previous_status text;
 begin
   if auth.uid() is null or not private.is_admin() then
     raise exception 'admin_access_required' using errcode = '42501';
@@ -179,6 +180,7 @@ begin
   for update;
   if not found then raise exception 'return_not_found'; end if;
 
+  v_previous_status := v_return.status;
   v_resolution := coalesce(p_resolution, v_return.resolution);
 
   if not (
@@ -264,7 +266,7 @@ begin
     auth.uid(),
     p_new_status,
     jsonb_build_object(
-      'previous_status', (select old_status from (values (v_return.status)) as t(old_status)),
+      'previous_status', v_previous_status,
       'resolution', v_resolution,
       'refund_id', v_return.refund_id,
       'note', v_note
