@@ -89,7 +89,10 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
     final rows = await repo.addresses();
 
     if (rows.isNotEmpty && (_selectedAddressId == null || _quote == null)) {
-      final first = rows.first;
+      final first = rows.firstWhere(
+        (item) => item['id']?.toString() == _selectedAddressId,
+        orElse: () => rows.first,
+      );
       final addressId = first['id']?.toString();
       final requestId = ++_quoteRequestId;
       _selectedAddressId = addressId;
