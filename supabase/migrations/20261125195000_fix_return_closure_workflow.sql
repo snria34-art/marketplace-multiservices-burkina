@@ -198,7 +198,7 @@ begin
   end if;
 
   if p_new_status = 'CLOSED' then
-    if v_resolution not in ('REPLACEMENT','CREDIT') and v_return.status <> 'REFUNDED' then
+    if (v_resolution is null or v_resolution not in ('REPLACEMENT','CREDIT')) and v_return.status <> 'REFUNDED' then
       raise exception 'closure_requires_replacement_credit_or_completed_refund';
     end if;
     if v_return.status = 'RECEIVED' and v_note is null then
@@ -242,6 +242,7 @@ begin
       select 1
       from public.refund_allocations ra
       where ra.refund_id = v_return.refund_id
+        and ra.allocation_type = 'ITEM'
         and ra.customer_amount > 0
     ) then
       raise exception 'refund_allocation_required';
