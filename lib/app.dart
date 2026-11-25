@@ -24,31 +24,19 @@ class MarketplaceApp extends ConsumerWidget {
         centerTitle: false,
         elevation: 0,
         scrolledUnderElevation: 1,
-        titleTextStyle: TextStyle(
-          color: scheme.onSurface,
+        titleTextStyle: const TextStyle(
           fontSize: 20,
           fontWeight: FontWeight.w800,
           letterSpacing: -0.3,
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
-        filled: true,
-        fillColor: scheme.surfaceContainerHighest.withValues(alpha: 0.58),
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 16,
           vertical: 14,
         ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide(color: scheme.outlineVariant),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide(color: scheme.outlineVariant),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide(color: scheme.primary, width: 1.8),
         ),
       ),
       filledButtonTheme: FilledButtonThemeData(
@@ -68,28 +56,21 @@ class MarketplaceApp extends ConsumerWidget {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
           ),
-          side: BorderSide(color: scheme.outlineVariant),
           textStyle: const TextStyle(fontWeight: FontWeight.w700),
         ),
       ),
       chipTheme: ChipThemeData(
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(14),
-          side: BorderSide(color: scheme.outlineVariant),
         ),
-        selectedColor: scheme.primaryContainer,
-        labelStyle: TextStyle(
-          color: scheme.onSurface,
-          fontWeight: FontWeight.w600,
-        ),
-        secondaryLabelStyle: TextStyle(color: scheme.onPrimaryContainer),
+        labelStyle: const TextStyle(fontWeight: FontWeight.w600),
+        secondaryLabelStyle: const TextStyle(fontWeight: FontWeight.w600),
       ),
       cardTheme: CardThemeData(
         margin: EdgeInsets.zero,
         elevation: 1,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(18),
-          side: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.45)),
         ),
       ),
     );
