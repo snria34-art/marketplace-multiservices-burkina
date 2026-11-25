@@ -358,7 +358,20 @@ set search_path = ''
 as $$
 declare
   v_event_status text;
+  v_seller_user uuid;
+  v_order_id uuid;
 begin
+  select se.user_id, og.order_id
+    into v_seller_user, v_order_id
+  from public.shops sh
+  join public.sellers se on se.id = sh.seller_id
+  join public.order_groups og on og.shop_id = sh.id
+  where sh.id = new.shop_id
+    and og.id = new.id;
+
+  if v_seller_user is null then
+    return new;
+  end if;
   if not exists (
     select 1 from public.restaurant_profiles rp
     where rp.shop_id = new.shop_id
@@ -381,6 +394,23 @@ begin
     insert into public.restaurant_order_events(order_group_id, status)
     values (new.id, v_event_status);
   end if;
+
+  if new.status::text = 'PAID' then
+    insert into public.notifications(user_id, type, title, body, data)
+    values (
+      v_seller_user,
+      'restaurant_order_received',
+      'Nouvelle commande restaurant',
+      'Une nouvelle commande payée attend votre confirmation.',
+      jsonb_build_object(
+        'order_id', v_order_id::text,
+        'order_group_id', new.id::text,
+        'fulfillment_method', new.fulfillment_method,
+        'type', 'restaurant_order_received'
+      )
+    );
+  end if;
+
   return new;
 end;
 $$;
