@@ -1,5 +1,5 @@
 begin;
-select plan(11);
+select plan(13);
 
 select ok(
   has_column('public', 'restaurant_profiles', 'pickup_available'),
