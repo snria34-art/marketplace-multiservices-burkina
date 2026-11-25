@@ -1,5 +1,5 @@
 begin;
-select plan(13);
+select plan(14);
 
 select ok(
   has_column('public', 'restaurant_profiles', 'pickup_available'),
@@ -66,6 +66,12 @@ select ok(
   )
   and position('when ''PAID'' then ''RECEIVED''' in pg_get_functiondef('public.capture_restaurant_order_event()'::regprocedure)) > 0,
   'restaurant order status changes are written to the restaurant event timeline'
+);
+
+select ok(
+  position('restaurant_order_received' in pg_get_functiondef('public.capture_restaurant_order_event()'::regprocedure)) > 0
+  and position('public.notifications' in pg_get_functiondef('public.capture_restaurant_order_event()'::regprocedure)) > 0,
+  'the restaurant owner receives an in-app/push notification for a paid order'
 );
 
 select ok(
