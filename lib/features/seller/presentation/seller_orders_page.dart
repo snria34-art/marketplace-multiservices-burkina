@@ -291,7 +291,7 @@ class _SellerOrdersPageState extends ConsumerState<SellerOrdersPage> {
                                       pickup['address'].toString(),
                                     if ((pickup['phone']?.toString() ?? '').isNotEmpty)
                                       'Téléphone : ${pickup['phone']}',
-                                  ].join('\\n')
+                                  ].join('\n')
                                 : [
                                     if ((deliveryAddress['recipient_name']?.toString() ?? '').isNotEmpty)
                                       deliveryAddress['recipient_name'].toString(),
@@ -301,7 +301,7 @@ class _SellerOrdersPageState extends ConsumerState<SellerOrdersPage> {
                                       deliveryAddress['address_line'].toString(),
                                     if ((deliveryAddress['city']?.toString() ?? '').isNotEmpty)
                                       deliveryAddress['city'].toString(),
-                                  ].join('\\n'),
+                                  ].join('\n'),
                           ),
                         ),
                       if (isRestaurant && instructions.isNotEmpty)
