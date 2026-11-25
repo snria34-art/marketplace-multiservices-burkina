@@ -478,7 +478,7 @@ create or replace function public.confirm_restaurant_customer_pickup(
 language plpgsql
 security definer
 set search_path = ''
-as $
+as $$
 declare
   v_user uuid := auth.uid();
   v_order_id uuid;
@@ -546,7 +546,7 @@ begin
 
   return true;
 end;
-$;
+$$;
 
 revoke all on function public.confirm_restaurant_customer_pickup(uuid)
   from public, anon, authenticated;
@@ -558,7 +558,7 @@ returns trigger
 language plpgsql
 security definer
 set search_path = ''
-as $
+as $$
 begin
   if exists (
     select 1
@@ -571,7 +571,7 @@ begin
   end if;
   return new;
 end;
-$;
+$$;
 
 revoke all on function public.guard_restaurant_pickup_assignment()
   from public, anon, authenticated;
