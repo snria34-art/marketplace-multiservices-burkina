@@ -22,11 +22,17 @@ class CheckoutPage extends ConsumerStatefulWidget {
 
 class _CheckoutPageState extends ConsumerState<CheckoutPage> {
   late Future<List<Map<String, dynamic>>> _addressesFuture;
+  late Future<Map<String, dynamic>?> _restaurantContextFuture;
+  Map<String, dynamic>? _restaurantContext;
+  bool _fulfillmentInitialized = false;
+  String _fulfillmentMethod = 'DELIVERY';
   String? _selectedAddressId;
   Map<String, dynamic>? _selectedAddress;
   Map<String, dynamic>? _quote;
   String _paymentProvider = 'CINETPAY';
   final TextEditingController _couponController = TextEditingController();
+  final TextEditingController _restaurantInstructionsController =
+      TextEditingController();
   bool _loading = false;
   bool _quoteLoading = false;
   bool _quoteError = false;
@@ -37,6 +43,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
   @override
   void dispose() {
     _couponController.dispose();
+    _restaurantInstructionsController.dispose();
     super.dispose();
   }
 
@@ -46,6 +53,10 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
     _idempotencyKey =
         'checkout-${DateTime.now().toUtc().microsecondsSinceEpoch}';
 
+    final repo = ref.read(checkoutRepositoryProvider);
+    _restaurantContextFuture = repo == null
+        ? Future<Map<String, dynamic>?>.value(null)
+        : repo.restaurantCartContext(cartId: widget.cartId);
     _addressesFuture = _loadAddresses();
   }
 
@@ -53,9 +64,31 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
     final repo = ref.read(checkoutRepositoryProvider);
     if (repo == null) return const [];
 
+    _restaurantContext ??= await _restaurantContextFuture;
+    if (!_fulfillmentInitialized && _restaurantContext != null) {
+      final canDeliver = _restaurantContext!['delivery_available'] == true;
+      final canPickup = _restaurantContext!['pickup_available'] == true;
+      final storedMethod =
+          _restaurantContext!['fulfillment_method']?.toString().toUpperCase();
+      _fulfillmentMethod = storedMethod == 'PICKUP' && canPickup
+          ? 'PICKUP'
+          : canDeliver
+              ? 'DELIVERY'
+              : canPickup
+                  ? 'PICKUP'
+                  : 'DELIVERY';
+      _restaurantInstructionsController.text =
+          _restaurantContext!['customer_instructions']?.toString() ?? '';
+      _fulfillmentInitialized = true;
+    }
+
+    if (_restaurantContext != null && _fulfillmentMethod == 'PICKUP') {
+      return const [];
+    }
+
     final rows = await repo.addresses();
 
-    if (rows.isNotEmpty && _selectedAddressId == null) {
+    if (rows.isNotEmpty && (_selectedAddressId == null || _quote == null)) {
       final first = rows.first;
       final addressId = first['id']?.toString();
       final requestId = ++_quoteRequestId;
@@ -143,6 +176,20 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
     }
   }
 
+  Future<void> _changeFulfillmentMethod(String method) async {
+    if (_loading || method == _fulfillmentMethod) return;
+    ++_quoteRequestId;
+    setState(() {
+      _fulfillmentMethod = method;
+      _quote = null;
+      _quoteLoading = false;
+      _quoteError = false;
+      _addressesFuture = method == 'PICKUP'
+          ? Future.value(const <Map<String, dynamic>>[])
+          : _loadAddresses();
+    });
+  }
+
   Future<void> _retryQuote() async {
     final address = _selectedAddress;
     if (address == null || _quoteLoading || _loading) return;
@@ -203,13 +250,20 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
 
   Future<void> _checkout() async {
     final repo = ref.read(checkoutRepositoryProvider);
+    final isPickup =
+        _restaurantContext != null && _fulfillmentMethod == 'PICKUP';
     final addressId = _selectedAddressId;
+    final canPickup = _restaurantContext?['pickup_available'] == true;
 
-    if (repo == null || addressId == null || _quote == null) {
+    if (repo == null ||
+        (isPickup && !canPickup) ||
+        (!isPickup && (addressId == null || _quote == null))) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
+        SnackBar(
           content: Text(
-            'Sélectionnez une adresse et calculez la livraison.',
+            isPickup
+                ? 'Le retrait au restaurant n’est pas disponible.'
+                : 'Sélectionnez une adresse et calculez la livraison.',
           ),
         ),
       );
@@ -219,11 +273,21 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
     setState(() => _loading = true);
 
     try {
-      final fee =
-          num.tryParse(_quote!['customer_fee']?.toString() ?? '') ?? 0;
+      if (_restaurantContext != null) {
+        await repo.setRestaurantCartFulfillment(
+          cartId: widget.cartId,
+          method: _fulfillmentMethod,
+          customerInstructions:
+              _restaurantInstructionsController.text.trim(),
+        );
+      }
 
-      // Do not create an order or reserve inventory until the chosen provider
-      // has all server-side credentials needed for payment and webhooks.
+      final fee = isPickup
+          ? 0
+          : num.tryParse(_quote!['customer_fee']?.toString() ?? '') ?? 0;
+
+      // Do not create an order or reserve inventory until the configured
+      // payment service has passed its server-side availability check.
       await repo.ensurePaymentProviderConfigured(
         provider: _paymentProvider,
       );
@@ -231,8 +295,9 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
 
       final orderId = await repo.checkout(
         cartId: widget.cartId,
-        addressId: addressId,
+        addressId: isPickup ? null : addressId,
         deliveryFee: fee,
+        fulfillmentMethod: isPickup ? 'PICKUP' : 'DELIVERY',
         couponCode: _couponController.text.trim().isEmpty
             ? null
             : _couponController.text.trim(),
@@ -316,109 +381,203 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
 
           final addresses =
               snapshot.data ?? const <Map<String, dynamic>>[];
+          final restaurant = _restaurantContext;
+          final canDeliver = restaurant?['delivery_available'] == true;
+          final canPickup = restaurant?['pickup_available'] == true;
+          final isPickup = restaurant != null && _fulfillmentMethod == 'PICKUP';
+          final canSubmit = restaurant == null
+              ? address != null && _quote != null
+              : isPickup
+                  ? canPickup
+                  : canDeliver && address != null && _quote != null;
 
           return ListView(
             padding: const EdgeInsets.all(12),
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Adresse de livraison',
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                  TextButton.icon(
-                    onPressed: _addAddress,
-                    icon: const Icon(Icons.add),
-                    label: const Text('Ajouter'),
-                  ),
-                ],
-              ),
-              if (addresses.isEmpty)
-                const Card(
-                  child: Padding(
-                    padding: EdgeInsets.all(16),
-                    child: Text(
-                      'Aucune adresse enregistrée. Ajoutez une adresse pour continuer.',
+              if (restaurant != null) ...[
+                Text(
+                  'Comment recevoir votre commande ?',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+                const SizedBox(height: 8),
+                if (canDeliver || canPickup)
+                  SegmentedButton<String>(
+                    segments: [
+                      if (canDeliver)
+                        const ButtonSegment<String>(
+                          value: 'DELIVERY',
+                          icon: Icon(Icons.delivery_dining_outlined),
+                          label: Text('Livraison'),
+                        ),
+                      if (canPickup)
+                        const ButtonSegment<String>(
+                          value: 'PICKUP',
+                          icon: Icon(Icons.storefront_outlined),
+                          label: Text('Retrait'),
+                        ),
+                    ],
+                    selected: {_fulfillmentMethod},
+                    onSelectionChanged: _loading
+                        ? null
+                        : (selection) {
+                            if (selection.isNotEmpty) {
+                              _changeFulfillmentMethod(selection.first);
+                            }
+                          },
+                  )
+                else
+                  const Card(
+                    child: ListTile(
+                      leading: Icon(Icons.info_outline),
+                      title: Text('Aucun mode de réception disponible'),
+                      subtitle: Text(
+                        'Ce restaurant ne propose actuellement ni livraison ni retrait.',
+                      ),
                     ),
                   ),
-                )
-              else
-                RadioGroup<String>(
-                  groupValue: _selectedAddressId,
-                  onChanged: (value) {
-                    if (value == null) return;
-                    for (final item in addresses) {
-                      if (item['id'].toString() == value) {
-                        _selectAddress(item);
-                        break;
+                const SizedBox(height: 12),
+              ],
+              if (isPickup) ...[
+                Card(
+                  child: ListTile(
+                    leading: const Icon(Icons.storefront_outlined),
+                    title: Text(
+                      restaurant['restaurant_name']?.toString() ?? 'Retrait au restaurant',
+                    ),
+                    subtitle: Text([
+                      if ((restaurant['pickup_address']?.toString() ?? '').isNotEmpty)
+                        restaurant['pickup_address'].toString(),
+                      if ((restaurant['restaurant_phone']?.toString() ?? '').isNotEmpty)
+                        'Téléphone : ${restaurant['restaurant_phone']}',
+                      if (restaurant['preparation_time_min'] != null)
+                        'Préparation estimée : ${restaurant['preparation_time_min']} min',
+                    ].join('\\n')),
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
+              if (!isPickup) ...[
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Adresse de livraison',
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                    TextButton.icon(
+                      onPressed: _addAddress,
+                      icon: const Icon(Icons.add),
+                      label: const Text('Ajouter'),
+                    ),
+                  ],
+                ),
+                if (addresses.isEmpty)
+                  const Card(
+                    child: Padding(
+                      padding: EdgeInsets.all(16),
+                      child: Text(
+                        'Aucune adresse enregistrée. Ajoutez une adresse pour continuer.',
+                      ),
+                    ),
+                  )
+                else
+                  RadioGroup<String>(
+                    groupValue: _selectedAddressId,
+                    onChanged: (value) {
+                      if (value == null) return;
+                      for (final item in addresses) {
+                        if (item['id'].toString() == value) {
+                          _selectAddress(item);
+                          break;
+                        }
                       }
-                    }
-                  },
-                  child: Column(
-                    children: [
-                      ...addresses.map(
-                        (item) => Card(
-                          child: RadioListTile<String>(
-                            value: item['id'].toString(),
-                            title: Text(
-                              item['label']?.toString() ??
-                                  item['recipient_name']?.toString() ??
-                                  'Adresse',
-                            ),
-                            subtitle: Text(
-                              '${item['recipient_name']?.toString() ?? ''}\n${item['address_line']?.toString() ?? ''}${item['city']?.toString().isEmpty == true
-                                      ? ''
-                                      : ' — ${item['city']?.toString() ?? ''}'}',
+                    },
+                    child: Column(
+                      children: [
+                        ...addresses.map(
+                          (item) => Card(
+                            child: RadioListTile<String>(
+                              value: item['id'].toString(),
+                              title: Text(
+                                item['label']?.toString() ??
+                                    item['recipient_name']?.toString() ??
+                                    'Adresse',
+                              ),
+                              subtitle: Text(
+                                '${item['recipient_name']?.toString() ?? ''}\\n${item['address_line']?.toString() ?? ''}${item['city']?.toString().isEmpty == true
+                                        ? ''
+                                        : ' — ${item['city']?.toString() ?? ''}'}',
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-                ),
-              const SizedBox(height: 18),
-              Text(
-                'Livraison',
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-              const SizedBox(height: 8),
-              Card(
-                child: ListTile(
-                  title: Text(
-                    fee == null ? 'Devis non calculé' : formatXof(num.tryParse(fee) ?? 0),
-                  ),
-                  subtitle: Text(
-                    distance == null
-                        ? 'Sélectionnez une adresse'
-                        : 'Distance : $distance km • ${stops ?? '1'} point(s)',
-                  ),
-                  trailing: _quoteLoading
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : _quote == null
-                          ? const Icon(Icons.calculate_outlined)
-                          : const Icon(Icons.check_circle_outline),
-                ),
-              ),
-              if (address != null && _quote == null)
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: TextButton.icon(
-                    onPressed: _quoteLoading || _loading ? null : _retryQuote,
-                    icon: const Icon(Icons.refresh),
-                    label: Text(
-                      _quoteLoading
-                          ? 'Calcul du devis…'
-                          : _quoteError
-                              ? 'Réessayer le calcul de livraison'
-                              : 'Calculer la livraison',
+                      ],
                     ),
                   ),
+                const SizedBox(height: 18),
+                Text(
+                  'Livraison',
+                  style: Theme.of(context).textTheme.titleLarge,
                 ),
+                const SizedBox(height: 8),
+                Card(
+                  child: ListTile(
+                    title: Text(
+                      fee == null
+                          ? 'Devis non calculé'
+                          : formatXof(num.tryParse(fee) ?? 0),
+                    ),
+                    subtitle: Text(
+                      distance == null
+                          ? 'Sélectionnez une adresse'
+                          : 'Distance : $distance km • ${stops ?? '1'} point(s)',
+                    ),
+                    trailing: _quoteLoading
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : _quote == null
+                            ? const Icon(Icons.calculate_outlined)
+                            : const Icon(Icons.check_circle_outline),
+                  ),
+                ),
+                if (address != null && _quote == null)
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton.icon(
+                      onPressed: _quoteLoading || _loading ? null : _retryQuote,
+                      icon: const Icon(Icons.refresh),
+                      label: Text(
+                        _quoteLoading
+                            ? 'Calcul du devis…'
+                            : _quoteError
+                                ? 'Réessayer le calcul de livraison'
+                                : 'Calculer la livraison',
+                      ),
+                    ),
+                  ),
+                const SizedBox(height: 18),
+              ],
+              if (restaurant != null) ...[
+                Text(
+                  'Instructions pour le restaurant (facultatif)',
+                  style: Theme.of(context).textTheme.titleSmall,
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: _restaurantInstructionsController,
+                  enabled: !_loading,
+                  maxLength: 500,
+                  maxLines: 3,
+                  decoration: const InputDecoration(
+                    hintText: 'Précisions pour préparer ou remettre votre commande',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
               const SizedBox(height: 18),
               Text(
                 'Code promotionnel',
@@ -466,10 +625,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
               ),
               const SizedBox(height: 18),
               FilledButton.icon(
-                onPressed:
-                    _loading || address == null || _quote == null
-                        ? null
-                        : _checkout,
+                onPressed: _loading || !canSubmit ? null : _checkout,
                 icon: const Icon(Icons.lock_outline),
                 label: Text(
                   _loading
