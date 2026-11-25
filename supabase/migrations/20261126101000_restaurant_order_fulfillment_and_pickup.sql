@@ -15,6 +15,10 @@ alter table public.order_groups
   add column if not exists fulfillment_instructions text,
   add column if not exists pickup_location jsonb;
 
+alter table public.order_packages
+  add column if not exists fulfillment_method text not null default 'DELIVERY'
+    check (fulfillment_method in ('DELIVERY', 'PICKUP'));
+
 comment on column public.carts.restaurant_fulfillment_method is
   'Customer choice for a single-restaurant cart: delivery or pickup.';
 comment on column public.order_groups.fulfillment_method is
@@ -327,9 +331,13 @@ begin
     raise exception 'restaurant_checkout_package_anchor_missing';
   end if;
   v_def := replace(v_def, v_package_block,
-    E'      if v_fulfillment_method <> ''PICKUP'' then\n'
-    || v_package_block || E'\n'
-    || E'      end if;');
+    E'      insert into public.order_packages(\n'
+    || E'        order_group_id, status, fulfillment_method\n'
+    || E'      )\n'
+    || E'      values(\n'
+    || E'        v_group_id, ''CREATED'', v_fulfillment_method\n'
+    || E'      )\n'
+    || E'      returning id into v_package_id;');
 
   if position('v_fulfillment_method' in v_def) = 0
      or position('reserve_variant_inventory' in v_def) = 0
@@ -462,5 +470,117 @@ revoke all on function public.transition_restaurant_order_group_status(uuid, pub
   from public, anon, authenticated;
 grant execute on function public.transition_restaurant_order_group_status(uuid, public.order_status, text)
   to authenticated;
+
+
+create or replace function public.confirm_restaurant_customer_pickup(
+  p_order_group_id uuid
+) returns boolean
+language plpgsql
+security definer
+set search_path = ''
+as $
+declare
+  v_user uuid := auth.uid();
+  v_order_id uuid;
+  v_group_status text;
+  v_fulfillment_method text;
+  v_package_id uuid;
+begin
+  perform private.require_active_account();
+  if v_user is null then
+    raise exception 'not_authenticated' using errcode = '42501';
+  end if;
+
+  select og.order_id, og.status::text, og.fulfillment_method
+    into v_order_id, v_group_status, v_fulfillment_method
+  from public.order_groups og
+  join public.shops sh on sh.id = og.shop_id
+  join public.sellers se on se.id = sh.seller_id
+  join public.restaurant_profiles rp on rp.shop_id = sh.id
+  where og.id = p_order_group_id
+    and se.user_id = v_user
+  for update of og;
+
+  if not found then
+    raise exception 'restaurant_order_not_found_or_not_owned'
+      using errcode = '42501';
+  end if;
+  if v_fulfillment_method <> 'PICKUP' then
+    raise exception 'customer_pickup_not_applicable'
+      using errcode = '22023';
+  end if;
+  if v_group_status <> 'READY_FOR_PICKUP' then
+    raise exception 'restaurant_order_not_ready_for_pickup'
+      using errcode = '22023';
+  end if;
+
+  select op.id into v_package_id
+  from public.order_packages op
+  where op.order_group_id = p_order_group_id
+    and op.fulfillment_method = 'PICKUP'
+    and op.status = 'CREATED'
+  for update;
+
+  if v_package_id is null then
+    raise exception 'restaurant_pickup_record_not_found'
+      using errcode = 'P0002';
+  end if;
+
+  update public.order_packages
+  set status = 'DELIVERED',
+      delivered_at = coalesce(delivered_at, now()),
+      updated_at = now()
+  where id = v_package_id;
+
+  insert into public.order_events(order_id, actor_id, status, metadata)
+  values (
+    v_order_id,
+    v_user,
+    'DELIVERED',
+    jsonb_build_object(
+      'scope', 'restaurant_customer_pickup',
+      'order_group_id', p_order_group_id,
+      'package_id', v_package_id
+    )
+  );
+
+  return true;
+end;
+$;
+
+revoke all on function public.confirm_restaurant_customer_pickup(uuid)
+  from public, anon, authenticated;
+grant execute on function public.confirm_restaurant_customer_pickup(uuid)
+  to authenticated;
+
+create or replace function public.guard_restaurant_pickup_assignment()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $
+begin
+  if exists (
+    select 1
+    from public.order_packages op
+    where op.id = new.package_id
+      and op.fulfillment_method = 'PICKUP'
+  ) then
+    raise exception 'restaurant_pickup_cannot_be_courier_assigned'
+      using errcode = '22023';
+  end if;
+  return new;
+end;
+$;
+
+revoke all on function public.guard_restaurant_pickup_assignment()
+  from public, anon, authenticated;
+
+drop trigger if exists trg_guard_restaurant_pickup_assignment
+  on public.delivery_assignments;
+create trigger trg_guard_restaurant_pickup_assignment
+before insert or update of package_id on public.delivery_assignments
+for each row
+execute function public.guard_restaurant_pickup_assignment();
 
 commit;
