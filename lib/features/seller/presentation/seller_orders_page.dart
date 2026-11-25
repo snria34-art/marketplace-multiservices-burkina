@@ -65,7 +65,7 @@ class _SellerOrdersPageState extends ConsumerState<SellerOrdersPage> {
         SnackBar(content: Text(_restaurantActionLabel(status))),
       );
       setState(() => _future = _load());
-    } catch (error) {
+    } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -244,7 +244,7 @@ class _SellerOrdersPageState extends ConsumerState<SellerOrdersPage> {
                                     pickup['address'].toString(),
                                   if ((pickup['phone']?.toString() ?? '').isNotEmpty)
                                     'Téléphone : ${pickup['phone']}',
-                                ].join('\\n'))
+                                ].join('\n'))
                               : null,
                         ),
                       if (isRestaurant && instructions.isNotEmpty)
