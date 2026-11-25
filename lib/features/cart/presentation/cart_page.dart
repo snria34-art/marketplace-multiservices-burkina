@@ -183,7 +183,7 @@ class _CartPageState extends ConsumerState<CartPage> {
                         icon: const Icon(Icons.lock_outline),
                         label: Text(hasInvalidCustomization
                             ? 'Retirez les choix devenus indisponibles'
-                            : 'Choisir la livraison et payer'),
+                            : 'Finaliser la commande'),
                       );
                     }
 
