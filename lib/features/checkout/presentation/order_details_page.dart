@@ -783,7 +783,7 @@ class _OrderDetailsPageState extends ConsumerState<OrderDetailsPage> {
                     subtitle: Text(
                       receiptDetails.isEmpty
                           ? rawDeliveryAddress.toString()
-                          : receiptDetails.join('\\n'),
+                          : receiptDetails.join('\n'),
                     ),
                   ),
                 ),
