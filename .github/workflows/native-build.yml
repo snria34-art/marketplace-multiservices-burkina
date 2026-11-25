@@ -7,6 +7,7 @@ on:
     paths:
       - 'android/**'
       - 'lib/**'
+      - 'test/**'
       - 'pubspec.yaml'
       - 'pubspec.lock'
       - 'scripts/prepare-android-gradle.sh'
@@ -22,9 +23,9 @@ concurrency:
 
 jobs:
   android-debug:
-    name: Build Android debug APK (unsigned)
+    name: Validate and build Android debug APK
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -50,11 +51,44 @@ jobs:
       - name: Resolve locked dependencies
         run: flutter pub get --enforce-lockfile
 
+      - name: Analyze Dart and Flutter code
+        run: flutter analyze --no-pub
+
+      - name: Run Flutter tests
+        run: flutter test --no-pub
+
       - name: Configure repositories for Flutter included Gradle build
         run: bash scripts/prepare-android-gradle.sh
 
       - name: Build Android debug APK
         run: flutter build apk --debug
+
+      - name: Preserve Android debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: marketplace-burkina-android-debug
+          path: build/app/outputs/flutter-apk/app-debug.apk
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Install and launch APK on Android emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          profile: pixel_2
+          script: |
+            set -euo pipefail
+            adb install -r build/app/outputs/flutter-apk/app-debug.apk
+            adb shell am force-stop com.marketplaceburkina.marketplace_multiservices_burkina
+            adb shell monkey -p com.marketplaceburkina.marketplace_multiservices_burkina 1
+            sleep 25
+            adb shell pidof com.marketplaceburkina.marketplace_multiservices_burkina
+            adb logcat -d -t 5000 > /tmp/marketplace-android-logcat.txt
+            if grep -E 'FATAL EXCEPTION|Fatal signal|Process: com\.marketplaceburkina\.marketplace_multiservices_burkina.*has died' /tmp/marketplace-android-logcat.txt; then
+              echo "Android smoke test detected an application crash."
+              exit 1
+            fi
 
   ios-simulator-debug:
     name: Build iOS simulator debug app (unsigned)
