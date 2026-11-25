@@ -460,9 +460,10 @@ begin
   join public.sellers se on se.id = sh.seller_id
   join public.restaurant_profiles rp on rp.shop_id = sh.id
   where se.user_id = auth.uid()
-  order by og.created_at desc;
+  order by og.created_at desc
+  limit 200;
 end;
-$$;
+$;
 
 revoke all on function public.get_seller_restaurant_order_fulfillment_details()
   from public, anon, authenticated;
