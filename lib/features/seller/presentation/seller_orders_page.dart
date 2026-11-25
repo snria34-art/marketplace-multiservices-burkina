@@ -133,7 +133,7 @@ class _SellerOrdersPageState extends ConsumerState<SellerOrdersPage> {
     final groups = await client
         .from('order_groups')
         .select(
-          'id,order_id,shop_id,status,subtotal,created_at,fulfillment_method,fulfillment_instructions,pickup_location,shops(name,restaurant_profiles(id)),order_items(product_name,quantity,unit_price,total_price,restaurant_customizations)',
+          'id,order_id,shop_id,status,subtotal,created_at,fulfillment_method,fulfillment_instructions,pickup_location,shops(name,restaurant_profiles(id)),orders(delivery_address),order_items(product_name,quantity,unit_price,total_price,restaurant_customizations)',
         )
         .inFilter('shop_id', shopIds)
         .order('created_at', ascending: false)
@@ -229,6 +229,14 @@ class _SellerOrdersPageState extends ConsumerState<SellerOrdersPage> {
                 final pickup = rawPickup is Map
                     ? Map<String, dynamic>.from(rawPickup)
                     : const <String, dynamic>{};
+                final rawOrder = group['orders'];
+                final order = rawOrder is Map
+                    ? Map<String, dynamic>.from(rawOrder)
+                    : const <String, dynamic>{};
+                final rawDeliveryAddress = order['delivery_address'];
+                final deliveryAddress = rawDeliveryAddress is Map
+                    ? Map<String, dynamic>.from(rawDeliveryAddress)
+                    : const <String, dynamic>{};
                 final fulfillment = group['fulfillment_method']?.toString() ?? 'DELIVERY';
                 final nextStatus = isRestaurant ? _nextRestaurantStatus(status) : null;
                 final canConfirmPickup = isRestaurant &&
@@ -260,14 +268,25 @@ class _SellerOrdersPageState extends ConsumerState<SellerOrdersPage> {
                                 ? 'Retrait au restaurant'
                                 : 'Livraison au client',
                           ),
-                          subtitle: fulfillment == 'PICKUP'
-                              ? Text([
-                                  if ((pickup['address']?.toString() ?? '').isNotEmpty)
-                                    pickup['address'].toString(),
-                                  if ((pickup['phone']?.toString() ?? '').isNotEmpty)
-                                    'Téléphone : ${pickup['phone']}',
-                                ].join('\n'))
-                              : null,
+                          subtitle: Text(
+                            fulfillment == 'PICKUP'
+                                ? [
+                                    if ((pickup['address']?.toString() ?? '').isNotEmpty)
+                                      pickup['address'].toString(),
+                                    if ((pickup['phone']?.toString() ?? '').isNotEmpty)
+                                      'Téléphone : ${pickup['phone']}',
+                                  ].join('\\n')
+                                : [
+                                    if ((deliveryAddress['recipient_name']?.toString() ?? '').isNotEmpty)
+                                      deliveryAddress['recipient_name'].toString(),
+                                    if ((deliveryAddress['phone']?.toString() ?? '').isNotEmpty)
+                                      'Téléphone : ${deliveryAddress['phone']}',
+                                    if ((deliveryAddress['address_line']?.toString() ?? '').isNotEmpty)
+                                      deliveryAddress['address_line'].toString(),
+                                    if ((deliveryAddress['city']?.toString() ?? '').isNotEmpty)
+                                      deliveryAddress['city'].toString(),
+                                  ].join('\\n'),
+                          ),
                         ),
                       if (isRestaurant && instructions.isNotEmpty)
                         ListTile(
