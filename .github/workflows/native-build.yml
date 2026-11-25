@@ -69,7 +69,9 @@ jobs:
           name: marketplace-burkina-android-debug
           path: build/app/outputs/flutter-apk/app-debug.apk
           if-no-files-found: error
-          retention-days: 7
+          # Public repository artifact retention is capped at 90 days.
+          # This affects the downloadable CI APK only, not installed app lifetime.
+          retention-days: 90
 
       - name: Install and launch APK on Android emulator
         uses: reactivecircus/android-emulator-runner@v2
