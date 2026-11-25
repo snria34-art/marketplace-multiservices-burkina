@@ -14,6 +14,37 @@ class CheckoutRepository {
 
   Future<T> _read<T>(Future<T> Function() operation) => _retry.read(operation);
 
+  Future<Map<String, dynamic>?> restaurantCartContext({
+    required String cartId,
+  }) async {
+    final raw = await _read(() => client.rpc(
+      'get_restaurant_cart_context',
+      params: {'p_cart_id': cartId},
+    ));
+    if (raw is! Map) return null;
+    final context = Map<String, dynamic>.from(raw);
+    return context['is_restaurant_cart'] == true ? context : null;
+  }
+
+  Future<Map<String, dynamic>> setRestaurantCartFulfillment({
+    required String cartId,
+    required String method,
+    String? customerInstructions,
+  }) async {
+    final raw = await client.rpc(
+      'set_restaurant_cart_fulfillment',
+      params: {
+        'p_cart_id': cartId,
+        'p_fulfillment_method': method,
+        'p_customer_instructions': customerInstructions,
+      },
+    );
+    if (raw is! Map) {
+      throw StateError('La préférence de réception du restaurant est invalide.');
+    }
+    return Map<String, dynamic>.from(raw);
+  }
+
   Future<List<Map<String, dynamic>>> addresses() async {
     final user = client.auth.currentUser;
     if (user == null) return const [];
@@ -115,16 +146,27 @@ class CheckoutRepository {
 
   Future<String> checkout({
     required String cartId,
-    required String addressId,
+    required String? addressId,
     required num deliveryFee,
+    String fulfillmentMethod = 'DELIVERY',
     String? couponCode,
     required String idempotencyKey,
   }) async {
+    final method = fulfillmentMethod.trim().toUpperCase();
+    if (method == 'DELIVERY' && (addressId == null || addressId.isEmpty)) {
+      throw StateError('Une adresse de livraison est nécessaire.');
+    }
+    if (method != 'DELIVERY' && method != 'PICKUP') {
+      throw StateError('Mode de réception non pris en charge.');
+    }
+
     final raw = await client.rpc(
       'checkout_cart',
       params: {
         'p_cart_id': cartId,
-        'p_delivery_address': {'id': addressId},
+        'p_delivery_address': method == 'PICKUP'
+            ? {'fulfillment_method': 'PICKUP'}
+            : {'id': addressId},
         'p_delivery_fee': deliveryFee,
         'p_coupon_code': couponCode,
         'p_idempotency_key': idempotencyKey,
