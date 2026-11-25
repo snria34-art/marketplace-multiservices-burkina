@@ -13,6 +13,69 @@ class SellerOrdersPage extends ConsumerStatefulWidget {
 
 class _SellerOrdersPageState extends ConsumerState<SellerOrdersPage> {
   late Future<List<Map<String, dynamic>>> _future;
+  String? _updatingGroupId;
+
+  String? _nextRestaurantStatus(String current) {
+    switch (current) {
+      case 'PAID':
+        return 'CONFIRMED';
+      case 'CONFIRMED':
+        return 'PREPARING';
+      case 'PREPARING':
+        return 'READY_FOR_PICKUP';
+      default:
+        return null;
+    }
+  }
+
+  String _restaurantActionLabel(String status) {
+    switch (status) {
+      case 'PAID':
+        return 'Confirmer la commande';
+      case 'CONFIRMED':
+        return 'Commencer la préparation';
+      case 'PREPARING':
+        return 'Marquer la commande prête';
+      default:
+        return 'Statut mis à jour';
+    }
+  }
+
+  Future<void> _advanceRestaurantOrder(Map<String, dynamic> group) async {
+    final client = ref.read(marketplaceSellerClientProvider);
+    final groupId = group['id']?.toString();
+    final status = group['status']?.toString() ?? '';
+    final nextStatus = _nextRestaurantStatus(status);
+    if (client == null || groupId == null || nextStatus == null || _updatingGroupId != null) {
+      return;
+    }
+
+    setState(() => _updatingGroupId = groupId);
+    try {
+      await client.rpc(
+        'transition_restaurant_order_group_status',
+        params: {
+          'p_order_group_id': groupId,
+          'p_next_status': nextStatus,
+          'p_note': null,
+        },
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(_restaurantActionLabel(status))),
+      );
+      setState(() => _future = _load());
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Mise à jour de la commande impossible. Actualisez puis réessayez.'),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _updatingGroupId = null);
+    }
+  }
 
   @override
   void initState() {
@@ -51,7 +114,7 @@ class _SellerOrdersPageState extends ConsumerState<SellerOrdersPage> {
     final groups = await client
         .from('order_groups')
         .select(
-          'id,order_id,shop_id,status,subtotal,created_at,shops(name),order_items(product_name,quantity,unit_price,total_price,restaurant_customizations)',
+          'id,order_id,shop_id,status,subtotal,created_at,fulfillment_method,fulfillment_instructions,pickup_location,shops(name,restaurant_profiles(id)),order_items(product_name,quantity,unit_price,total_price,restaurant_customizations)',
         )
         .inFilter('shop_id', shopIds)
         .order('created_at', ascending: false)
@@ -139,6 +202,18 @@ class _SellerOrdersPageState extends ConsumerState<SellerOrdersPage> {
                 final shop = group['shops'] is Map
                     ? Map<String, dynamic>.from(group['shops'] as Map)
                     : const <String, dynamic>{};
+                final restaurantProfile = shop['restaurant_profiles'];
+                final isRestaurant = restaurantProfile is Map ||
+                    (restaurantProfile is List && restaurantProfile.isNotEmpty);
+                final status = group['status']?.toString() ?? '';
+                final nextStatus = isRestaurant ? _nextRestaurantStatus(status) : null;
+                final rawPickup = group['pickup_location'];
+                final pickup = rawPickup is Map
+                    ? Map<String, dynamic>.from(rawPickup)
+                    : const <String, dynamic>{};
+                final fulfillment = group['fulfillment_method']?.toString() ?? 'DELIVERY';
+                final instructions = group['fulfillment_instructions']?.toString().trim() ?? '';
+                final updating = _updatingGroupId == group['id']?.toString();
                 final rawItems = group['order_items'];
                 final items = rawItems is List ? rawItems : const [];
 
@@ -151,6 +226,53 @@ class _SellerOrdersPageState extends ConsumerState<SellerOrdersPage> {
                       'Commande : ${group['order_id']?.toString() ?? '-'}\nÉtat : ${group['status']?.toString() ?? '-'} • Sous-total : ${formatXof(num.tryParse(group['subtotal']?.toString() ?? '0') ?? 0)}',
                     ),
                     children: [
+                      if (isRestaurant)
+                        ListTile(
+                          leading: Icon(
+                            fulfillment == 'PICKUP'
+                                ? Icons.storefront_outlined
+                                : Icons.delivery_dining_outlined,
+                          ),
+                          title: Text(
+                            fulfillment == 'PICKUP'
+                                ? 'Retrait au restaurant'
+                                : 'Livraison au client',
+                          ),
+                          subtitle: fulfillment == 'PICKUP'
+                              ? Text([
+                                  if ((pickup['address']?.toString() ?? '').isNotEmpty)
+                                    pickup['address'].toString(),
+                                  if ((pickup['phone']?.toString() ?? '').isNotEmpty)
+                                    'Téléphone : ${pickup['phone']}',
+                                ].join('\\n'))
+                              : null,
+                        ),
+                      if (isRestaurant && instructions.isNotEmpty)
+                        ListTile(
+                          leading: const Icon(Icons.notes_outlined),
+                          title: const Text('Instructions du client'),
+                          subtitle: Text(instructions),
+                        ),
+                      if (nextStatus != null)
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                          child: SizedBox(
+                            width: double.infinity,
+                            child: FilledButton.icon(
+                              onPressed: updating || _updatingGroupId != null
+                                  ? null
+                                  : () => _advanceRestaurantOrder(group),
+                              icon: updating
+                                  ? const SizedBox(
+                                      width: 16,
+                                      height: 16,
+                                      child: CircularProgressIndicator(strokeWidth: 2),
+                                    )
+                                  : const Icon(Icons.check_circle_outline),
+                              label: Text(_restaurantActionLabel(status)),
+                            ),
+                          ),
+                        ),
                       for (final rawItem in items)
                         Builder(
                           builder: (context) {
