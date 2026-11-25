@@ -103,6 +103,12 @@ class SellerToolsPage extends StatelessWidget {
           ),
           const Divider(),
           ListTile(
+            leading: const Icon(Icons.tune_outlined),
+            title: const Text('Paramètres de l’application'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push('/settings'),
+          ),
+          ListTile(
             leading: const Icon(Icons.settings_outlined),
             title: const Text('Paramètres vendeur'),
             trailing: const Icon(Icons.chevron_right),

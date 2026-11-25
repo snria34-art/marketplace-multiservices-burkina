@@ -69,10 +69,7 @@ class _HomePageState extends ConsumerState<HomePage> {
 
     await _loadProducts(reset: true);
 
-    return _CatalogMetadata(
-      types: types,
-      categories: categories,
-    );
+    return _CatalogMetadata(types: types, categories: categories);
   }
 
   Future<void> _loadProducts({required bool reset}) async {
@@ -112,7 +109,12 @@ class _HomePageState extends ConsumerState<HomePage> {
       });
     } catch (error) {
       if (!mounted || requestId != _productRequestId) return;
-      setState(() => _productsError = safeBackendErrorMessage(error, fallback: 'Catalogue indisponible. Vérifiez Internet et réessayez.'));
+      setState(
+        () => _productsError = safeBackendErrorMessage(
+          error,
+          fallback: 'Catalogue indisponible. Vérifiez Internet et réessayez.',
+        ),
+      );
     } finally {
       if (mounted && requestId == _productRequestId) {
         setState(() => _loadingProducts = false);
@@ -133,9 +135,7 @@ class _HomePageState extends ConsumerState<HomePage> {
     _loadProducts(reset: true);
   }
 
-  List<Map<String, dynamic>> _visibleCategories(
-    _CatalogMetadata metadata,
-  ) {
+  List<Map<String, dynamic>> _visibleCategories(_CatalogMetadata metadata) {
     if (_selectedTypeId == null) return metadata.categories;
 
     return metadata.categories
@@ -168,7 +168,10 @@ class _HomePageState extends ConsumerState<HomePage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            safeBackendErrorMessage(error, fallback: 'Impossible d’ajouter ce produit au panier. Réessayez.'),
+            safeBackendErrorMessage(
+              error,
+              fallback: 'Impossible d’ajouter ce produit au panier. Réessayez.',
+            ),
           ),
         ),
       );
@@ -185,6 +188,11 @@ class _HomePageState extends ConsumerState<HomePage> {
             tooltip: 'Panier',
             onPressed: () => context.push('/cart'),
             icon: const Icon(Icons.shopping_cart_outlined),
+          ),
+          IconButton(
+            tooltip: 'Paramètres de l’application',
+            onPressed: () => context.push('/settings'),
+            icon: const Icon(Icons.settings_outlined),
           ),
           const AccountSessionActionButton(),
         ],
@@ -206,7 +214,8 @@ class _HomePageState extends ConsumerState<HomePage> {
             );
           }
 
-          final metadata = snapshot.data ??
+          final metadata =
+              snapshot.data ??
               const _CatalogMetadata(types: [], categories: []);
 
           final categories = _visibleCategories(metadata);
@@ -285,13 +294,14 @@ class _HomePageState extends ConsumerState<HomePage> {
 
                         final product = _products[index];
                         final rawImages = product['product_images'];
-                        final firstImage = rawImages is List &&
+                        final firstImage =
+                            rawImages is List &&
                                 rawImages.isNotEmpty &&
                                 rawImages.first is Map
                             ? Map<String, dynamic>.from(rawImages.first as Map)
                             : const <String, dynamic>{};
-                        final storagePath =
-                            firstImage['storage_path']?.toString();
+                        final storagePath = firstImage['storage_path']
+                            ?.toString();
                         final catalog = ref.read(catalogRepositoryProvider);
 
                         return _ProductCard(
@@ -302,16 +312,15 @@ class _HomePageState extends ConsumerState<HomePage> {
                           onAdd: () => _addToCart(product),
                         );
                       },
-                      childCount:
-                          _products.length + (_loadingProducts ? 1 : 0),
+                      childCount: _products.length + (_loadingProducts ? 1 : 0),
                     ),
                     gridDelegate:
                         const SliverGridDelegateWithMaxCrossAxisExtent(
-                      maxCrossAxisExtent: 220,
-                      crossAxisSpacing: 12,
-                      mainAxisSpacing: 12,
-                      mainAxisExtent: 320,
-                    ),
+                          maxCrossAxisExtent: 220,
+                          crossAxisSpacing: 12,
+                          mainAxisSpacing: 12,
+                          mainAxisExtent: 320,
+                        ),
                   ),
                 ),
             ],
@@ -328,10 +337,7 @@ class _HomePageState extends ConsumerState<HomePage> {
 }
 
 class _CatalogMetadata {
-  const _CatalogMetadata({
-    required this.types,
-    required this.categories,
-  });
+  const _CatalogMetadata({required this.types, required this.categories});
 
   final List<Map<String, dynamic>> types;
   final List<Map<String, dynamic>> categories;
@@ -404,9 +410,7 @@ class _CatalogHeaderDelegate extends SliverPersistentHeaderDelegate {
 
                   return InkWell(
                     borderRadius: BorderRadius.circular(42),
-                    onTap: () => onCategorySelected(
-                      selected ? null : id,
-                    ),
+                    onTap: () => onCategorySelected(selected ? null : id),
                     child: SizedBox(
                       width: 72,
                       child: Column(
@@ -415,9 +419,7 @@ class _CatalogHeaderDelegate extends SliverPersistentHeaderDelegate {
                           CircleAvatar(
                             radius: 28,
                             child: Icon(
-                              selected
-                                  ? Icons.check
-                                  : Icons.category_outlined,
+                              selected ? Icons.check : Icons.category_outlined,
                             ),
                           ),
                           const SizedBox(height: 4),
@@ -484,8 +486,7 @@ class _ProductCard extends StatelessWidget {
                 return Image.network(
                   url,
                   fit: BoxFit.cover,
-                  errorBuilder: (_, _, _) =>
-                      const _ProductImagePlaceholder(),
+                  errorBuilder: (_, _, _) => const _ProductImagePlaceholder(),
                 );
               },
             ),
@@ -537,8 +538,6 @@ class _ProductImagePlaceholder extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
-      child: Icon(Icons.image_outlined, size: 54),
-    );
+    return const Center(child: Icon(Icons.image_outlined, size: 54));
   }
 }
