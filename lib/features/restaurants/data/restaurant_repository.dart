@@ -160,8 +160,14 @@ class RestaurantRepository {
   Future<void> addMenuItem({
     required String menuId,
     required Map<String, dynamic> product,
-    required num price,
   }) async {
+    // Cart checkout uses the catalog product price as its source of truth.
+    // Keep the restaurant menu price aligned with that same server-owned price.
+    final price = num.tryParse(product['price']?.toString() ?? '');
+    if (price == null || price < 0) {
+      throw const FormatException('Prix catalogue invalide.');
+    }
+
     await client.from('restaurant_menu_items').insert({
       'menu_id': menuId,
       'product_id': product['id'],
