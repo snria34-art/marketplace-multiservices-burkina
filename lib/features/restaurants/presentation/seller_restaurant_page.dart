@@ -83,7 +83,6 @@ class _SellerRestaurantPageState extends ConsumerState<SellerRestaurantPage> {
     );
 
     var delivery = profile['delivery_available'] == true;
-    var pickup = profile['pickup_available'] == true;
     var accepting = profile['accepting_orders'] != false;
 
     final values = await showDialog<Map<String, dynamic>>(
@@ -149,13 +148,6 @@ class _SellerRestaurantPageState extends ConsumerState<SellerRestaurantPage> {
                     onChanged: (value) =>
                         setDialogState(() => delivery = value),
                   ),
-                  SwitchListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: const Text('Retrait au restaurant'),
-                    value: pickup,
-                    onChanged: (value) =>
-                        setDialogState(() => pickup = value),
-                  ),
                 ],
               ),
             ),
@@ -172,7 +164,6 @@ class _SellerRestaurantPageState extends ConsumerState<SellerRestaurantPage> {
                 'minimum': minimum.text,
                 'hours': hours.text,
                 'delivery': delivery,
-                'pickup': pickup,
                 'accepting': accepting,
               }),
               child: const Text('Enregistrer'),
@@ -217,7 +208,7 @@ class _SellerRestaurantPageState extends ConsumerState<SellerRestaurantPage> {
         preparationTimeMin: preparationTime,
         deliveryAvailable: values['delivery'] == true,
         acceptingOrders: values['accepting'] == true,
-        pickupAvailable: values['pickup'] == true,
+        pickupAvailable: profile['pickup_available'] == true,
         minimumOrderAmount: minimumAmount,
         openingHours: values['hours'].toString().trim(),
       );
@@ -381,6 +372,27 @@ class _SellerRestaurantPageState extends ConsumerState<SellerRestaurantPage> {
           ),
         ) ??
         false;
+  }
+
+  Future<void> _setMenuActive(
+    Map<String, dynamic> menu,
+    bool active,
+  ) async {
+    final repository = _repository;
+    if (repository == null) return;
+    try {
+      await repository.updateMenu(
+        menuId: menu['id'].toString(),
+        name: menu['name']?.toString() ?? 'Menu',
+        description: menu['description']?.toString() ?? '',
+        active: active,
+      );
+      if (!mounted) return;
+      _refresh();
+      _message(active ? 'Menu publié.' : 'Menu masqué aux clients.');
+    } catch (_) {
+      _message('État du menu non modifié.');
+    }
   }
 
   Future<void> _setMenuItemActive(
@@ -553,7 +565,7 @@ class _SellerRestaurantPageState extends ConsumerState<SellerRestaurantPage> {
                               'Cuisine : ${(profile['cuisine_types'] is List ? (profile['cuisine_types'] as List).join(', ') : '').toString().isEmpty ? 'À renseigner' : (profile['cuisine_types'] as List).join(', ')}',
                             ),
                             Text(
-                              'Préparation : ${profile['preparation_time_min'] ?? 25} min • Livraison : ${profile['delivery_available'] == true ? 'Oui' : 'Non'} • Retrait : ${profile['pickup_available'] == true ? 'Oui' : 'Non'}',
+                              'Préparation : ${profile['preparation_time_min'] ?? 25} min • Livraison : ${profile['delivery_available'] == true ? 'Oui' : 'Non'}',
                             ),
                             Text(
                               profile['accepting_orders'] == false
@@ -593,6 +605,8 @@ class _SellerRestaurantPageState extends ConsumerState<SellerRestaurantPage> {
                             for (final menu in menus)
                               _RestaurantMenuCard(
                                 menu: menu,
+                                onMenuActiveChanged: (active) =>
+                                    _setMenuActive(menu, active),
                                 onAddItem: () => _addMenuItem(
                                   shopId: shop['id'].toString(),
                                   menuId: menu['id'].toString(),
@@ -609,6 +623,14 @@ class _SellerRestaurantPageState extends ConsumerState<SellerRestaurantPage> {
                                     context.push('/seller/products'),
                                 icon: const Icon(Icons.photo_library_outlined),
                                 label: const Text('Produits et photos'),
+                              ),
+                            ),
+                            Align(
+                              alignment: Alignment.centerLeft,
+                              child: OutlinedButton.icon(
+                                onPressed: () => context.push('/seller/shop'),
+                                icon: const Icon(Icons.storefront_outlined),
+                                label: const Text('Informations et photos de la boutique'),
                               ),
                             ),
                             if (shopStatus != 'ACTIVE' || status != 'VERIFIED')
@@ -697,6 +719,7 @@ class _SellerRestaurantPageState extends ConsumerState<SellerRestaurantPage> {
 class _RestaurantMenuCard extends StatelessWidget {
   const _RestaurantMenuCard({
     required this.menu,
+    required this.onMenuActiveChanged,
     required this.onAddItem,
     required this.onDelete,
     required this.onDeleteItem,
@@ -704,6 +727,7 @@ class _RestaurantMenuCard extends StatelessWidget {
   });
 
   final Map<String, dynamic> menu;
+  final ValueChanged<bool> onMenuActiveChanged;
   final VoidCallback onAddItem;
   final VoidCallback onDelete;
   final Future<void> Function(String) onDeleteItem;
@@ -723,7 +747,12 @@ class _RestaurantMenuCard extends StatelessWidget {
             subtitle: Text(menu['description']?.toString() ?? ''),
             trailing: Wrap(
               spacing: 0,
+              crossAxisAlignment: WrapCrossAlignment.center,
               children: [
+                Switch(
+                  value: menu['active'] == true,
+                  onChanged: onMenuActiveChanged,
+                ),
                 IconButton(
                   tooltip: 'Ajouter un plat',
                   onPressed: onAddItem,
