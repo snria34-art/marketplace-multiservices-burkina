@@ -25,6 +25,7 @@ void main() {
       expect(routeRequiresAuthentication('/admin/refunds'), isTrue);
       expect(routeRequiresAuthentication('/seller'), isTrue);
       expect(routeRequiresAuthentication('/seller/products'), isTrue);
+      expect(routeRequiresAuthentication('/seller/restaurant'), isTrue);
       expect(routeRequiresAuthentication('/courier'), isTrue);
     });
 
