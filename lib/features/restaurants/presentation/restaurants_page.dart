@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/providers/repository_providers.dart';
 import '../application/restaurant_providers.dart';
-import '../data/restaurant_repository.dart';
 
 class RestaurantsPage extends ConsumerStatefulWidget {
   const RestaurantsPage({super.key});
@@ -167,6 +166,13 @@ class _RestaurantsPageState extends ConsumerState<RestaurantsPage> {
                 final cuisines = restaurant['cuisine_types'];
                 final acceptingOrders =
                     restaurant['accepting_orders'] != false;
+                final deliveryAvailable =
+                    restaurant['delivery_available'] == true;
+                final canPlaceOrder = acceptingOrders && deliveryAvailable;
+                final minimumOrder = num.tryParse(
+                      restaurant['minimum_order_amount']?.toString() ?? '',
+                    ) ??
+                    0;
                 final rawReviews = shop['reviews'];
                 final reviews = rawReviews is List
                     ? rawReviews.whereType<Map>().toList()
@@ -192,9 +198,11 @@ class _RestaurantsPageState extends ConsumerState<RestaurantsPage> {
                     cuisines.join(', '),
                   if (restaurant['preparation_time_min'] != null)
                     'Préparation : ${restaurant['preparation_time_min']} min',
-                  restaurant['delivery_available'] == true
+                  deliveryAvailable
                       ? 'Livraison disponible'
                       : 'Livraison non proposée',
+                  if (minimumOrder > 0)
+                    'Minimum : ${minimumOrder.toStringAsFixed(0)} XOF',
                   if (averageRating != null)
                     'Note : ${averageRating.toStringAsFixed(1)}/5 (${ratings.length} avis)',
                   if ((restaurant['opening_hours']?.toString() ?? '').trim().isNotEmpty)
@@ -220,18 +228,22 @@ class _RestaurantsPageState extends ConsumerState<RestaurantsPage> {
                               : details.join(' • '),
                         ),
                         trailing: Icon(
-                          acceptingOrders
+                          canPlaceOrder
                               ? Icons.check_circle_outline
                               : Icons.pause_circle_outline,
-                          color: acceptingOrders
+                          color: canPlaceOrder
                               ? Colors.green
                               : Theme.of(context).colorScheme.error,
                         ),
                       ),
-                      if (!acceptingOrders)
-                        const Padding(
-                          padding: EdgeInsets.fromLTRB(16, 0, 16, 8),
-                          child: Text('Ce restaurant ne prend pas de commandes actuellement.'),
+                      if (!acceptingOrders || !deliveryAvailable)
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                          child: Text(
+                            !acceptingOrders
+                                ? 'Ce restaurant ne prend pas de commandes actuellement.'
+                                : 'La livraison est momentanément indisponible pour ce restaurant.',
+                          ),
                         ),
                       if (menus.isEmpty)
                         const Padding(
@@ -242,7 +254,7 @@ class _RestaurantsPageState extends ConsumerState<RestaurantsPage> {
                         for (final menu in menus)
                           _MenuSection(
                             menu: menu,
-                            acceptingOrders: acceptingOrders,
+                            acceptingOrders: canPlaceOrder,
                             onAddToCart: _addToCart,
                           ),
                     ],
@@ -333,27 +345,25 @@ class _RestaurantVariantDialogState extends State<_RestaurantVariantDialog> {
   Widget build(BuildContext context) {
     return AlertDialog(
       title: const Text('Choisir une option'),
-      content: SizedBox(
-        width: 420,
-        child: RadioGroup<String>(
-          groupValue: _selectedId,
-          onChanged: (value) {
-            if (value != null) setState(() => _selectedId = value);
-          },
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              for (final variant in widget.variants)
-                RadioListTile<String>(
-                  value: variant['id'].toString(),
-                  title: Text(variant['name']?.toString() ?? 'Option'),
-                  subtitle: variant['price'] == null
-                      ? null
-                      : Text('${variant['price']} XOF'),
-                ),
-            ],
-          ),
-        ),
+      content: DropdownButtonFormField<String>(
+        initialValue: _selectedId,
+        isExpanded: true,
+        decoration: const InputDecoration(labelText: 'Variante'),
+        items: [
+          for (final variant in widget.variants)
+            DropdownMenuItem(
+              value: variant['id'].toString(),
+              child: Text(
+                variant['price'] == null
+                    ? (variant['name']?.toString() ?? 'Option')
+                    : '${variant['name']?.toString() ?? 'Option'} • ${variant['price']} XOF',
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+        ],
+        onChanged: (value) {
+          if (value != null) setState(() => _selectedId = value);
+        },
       ),
       actions: [
         TextButton(
