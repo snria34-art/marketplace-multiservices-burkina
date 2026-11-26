@@ -443,6 +443,16 @@ class _SellerRestaurantPageState extends ConsumerState<SellerRestaurantPage> {
             icon: const Icon(Icons.inventory_2_outlined),
           ),
           IconButton(
+            tooltip: 'Avis des clients',
+            onPressed: () => context.push('/seller/reviews'),
+            icon: const Icon(Icons.star_outline),
+          ),
+          IconButton(
+            tooltip: 'Promotions',
+            onPressed: () => context.push('/seller/promotions'),
+            icon: const Icon(Icons.local_offer_outlined),
+          ),
+          IconButton(
             tooltip: 'Actualiser',
             onPressed: _refresh,
             icon: const Icon(Icons.refresh),
