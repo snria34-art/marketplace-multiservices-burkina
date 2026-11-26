@@ -319,16 +319,9 @@ class _SellerRestaurantPageState extends ConsumerState<SellerRestaurantPage> {
       final product = products.firstWhere(
         (item) => item['id'].toString() == values['product_id'].toString(),
       );
-      final price = num.tryParse(values['price']?.toString() ?? '');
-      if (price == null || price < 0) {
-        _message('Prix du plat invalide.');
-        return;
-      }
-
       await repository.addMenuItem(
         menuId: menuId,
         product: product,
-        price: price,
       );
       if (!mounted) return;
       _refresh();
@@ -600,7 +593,6 @@ class _SellerRestaurantPageState extends ConsumerState<SellerRestaurantPage> {
                             for (final menu in menus)
                               _RestaurantMenuCard(
                                 menu: menu,
-                                shopId: shop['id'].toString(),
                                 onAddItem: () => _addMenuItem(
                                   shopId: shop['id'].toString(),
                                   menuId: menu['id'].toString(),
@@ -705,7 +697,6 @@ class _SellerRestaurantPageState extends ConsumerState<SellerRestaurantPage> {
 class _RestaurantMenuCard extends StatelessWidget {
   const _RestaurantMenuCard({
     required this.menu,
-    required this.shopId,
     required this.onAddItem,
     required this.onDelete,
     required this.onDeleteItem,
@@ -713,7 +704,6 @@ class _RestaurantMenuCard extends StatelessWidget {
   });
 
   final Map<String, dynamic> menu;
-  final String shopId;
   final VoidCallback onAddItem;
   final VoidCallback onDelete;
   final Future<void> Function(String) onDeleteItem;
@@ -898,21 +888,11 @@ class _AddRestaurantMenuItemDialog extends StatefulWidget {
 class _AddRestaurantMenuItemDialogState
     extends State<_AddRestaurantMenuItemDialog> {
   late String _productId;
-  late final TextEditingController _price;
 
   @override
   void initState() {
     super.initState();
     _productId = widget.products.first['id'].toString();
-    _price = TextEditingController(
-      text: widget.products.first['price']?.toString() ?? '0',
-    );
-  }
-
-  @override
-  void dispose() {
-    _price.dispose();
-    super.dispose();
   }
 
   @override
@@ -941,22 +921,12 @@ class _AddRestaurantMenuItemDialogState
               final product = widget.products.firstWhere(
                 (item) => item['id'].toString() == value,
               );
-              setState(() {
-                _productId = value;
-                _price.text = product['price']?.toString() ?? '0';
-              });
+              setState(() => _productId = value);
             },
           ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _price,
-            keyboardType: const TextInputType.numberWithOptions(
-              decimal: true,
-            ),
-            decoration: const InputDecoration(
-              labelText: 'Prix affiché sur le menu',
-              suffixText: 'XOF',
-            ),
+          const SizedBox(height: 8),
+          const Text(
+            'Le prix du plat est repris du catalogue pour garantir le même montant dans le panier et à la commande.',
           ),
         ],
       ),
@@ -968,7 +938,6 @@ class _AddRestaurantMenuItemDialogState
         FilledButton(
           onPressed: () => Navigator.pop(context, {
             'product_id': _productId,
-            'price': _price.text.trim(),
           }),
           child: const Text('Ajouter'),
         ),
