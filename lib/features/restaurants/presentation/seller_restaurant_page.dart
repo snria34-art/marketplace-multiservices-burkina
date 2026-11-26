@@ -491,11 +491,22 @@ class _SellerRestaurantPageState extends ConsumerState<SellerRestaurantPage> {
                 final entries =
                     snapshot.data ?? const <Map<String, dynamic>>[];
                 if (entries.isEmpty) {
-                  return const Card(
+                  return Card(
                     child: Padding(
-                      padding: EdgeInsets.all(16),
-                      child: Text(
-                        'Aucune boutique n’est associée à ce compte. Un profil vendeur et une boutique sont nécessaires pour ouvrir un restaurant.',
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Aucune boutique n’est associée à ce compte. Créez d’abord votre boutique ; vous pourrez ensuite activer son espace restaurant.',
+                          ),
+                          const SizedBox(height: 10),
+                          OutlinedButton.icon(
+                            onPressed: () => context.push('/seller/shop'),
+                            icon: const Icon(Icons.add_business_outlined),
+                            label: const Text('Créer ma boutique'),
+                          ),
+                        ],
                       ),
                     ),
                   );
