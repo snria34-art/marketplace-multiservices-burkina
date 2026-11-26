@@ -29,6 +29,7 @@ import '../../features/messaging/presentation/messages_page.dart';
 import '../../features/notifications/presentation/notification_preferences_page.dart';
 import '../../features/notifications/presentation/notifications_page.dart';
 import '../../features/restaurants/presentation/restaurants_page.dart';
+import '../../features/restaurants/presentation/seller_restaurant_page.dart';
 import '../../features/seller/presentation/seller_dashboard_page.dart';
 import '../../features/seller/presentation/seller_orders_page.dart';
 import '../../features/seller/presentation/seller_products_page.dart';
@@ -148,15 +149,16 @@ Future<String?> _guardRoute(
           .from('user_roles')
           .select('role')
           .eq('user_id', user.id);
-      final hasSellerRole = rows is List &&
-          rows.any((row) => row is Map && row['role'] == 'SELLER');
+      final hasBusinessRole = rows is List &&
+          rows.any((row) => row is Map &&
+              (row['role'] == 'SELLER' || row['role'] == 'RESTAURANT'));
       final sellerProfile = await client
           .from('sellers')
           .select('id')
           .eq('user_id', user.id)
           .maybeSingle();
 
-      if (!hasSellerRole || sellerProfile == null) {
+      if (!hasBusinessRole || sellerProfile == null) {
         return '/access-status?reason=seller_required';
       }
     }
@@ -336,6 +338,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/seller/moderation',
         builder: (_, __) => const SellerModerationPage(),
+      ),
+      GoRoute(
+        path: '/seller/restaurant',
+        builder: (_, __) => const SellerRestaurantPage(),
       ),
       GoRoute(
         path: '/seller/dashboard',
