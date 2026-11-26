@@ -253,6 +253,7 @@ begin
   end if;
 
   if p_order_group_id is null
+     or p_next_status is null
      or p_next_status not in ('CONFIRMED', 'PREPARING', 'READY_FOR_PICKUP') then
     raise exception 'restaurant_order_transition_invalid';
   end if;
@@ -303,3 +304,70 @@ revoke all on function public.restaurant_transition_order_group_status(
 grant execute on function public.restaurant_transition_order_group_status(
   uuid, public.order_status, text
 ) to authenticated;
+
+
+-- Enforce restaurant ordering rules at transaction commit, not only in the UI.
+-- The checkout RPC creates order_groups before order_items, so a deferred
+-- constraint trigger can validate the final group subtotal after all items
+-- have been written in the same transaction.
+create or replace function public.enforce_restaurant_order_group_rules()
+returns trigger
+language plpgsql
+security definer
+set search_path = pg_catalog, public
+as $function$
+declare
+  v_accepting_orders boolean;
+  v_delivery_available boolean;
+  v_minimum_order_amount numeric(14,2);
+  v_subtotal numeric(14,2);
+begin
+  select
+    rp.accepting_orders,
+    rp.delivery_available,
+    rp.minimum_order_amount
+  into
+    v_accepting_orders,
+    v_delivery_available,
+    v_minimum_order_amount
+  from public.restaurant_profiles rp
+  where rp.shop_id = new.shop_id;
+
+  if not found then
+    return null;
+  end if;
+
+  if not v_accepting_orders then
+    raise exception 'restaurant_not_accepting_orders';
+  end if;
+
+  -- The current checkout journey is delivery-address based. Do not accept a
+  -- restaurant order when that restaurant has disabled delivery; pickup is
+  -- not advertised as an order mode until its dedicated checkout flow exists.
+  if not v_delivery_available then
+    raise exception 'restaurant_delivery_unavailable';
+  end if;
+
+  select coalesce(sum(oi.total_price), 0)
+    into v_subtotal
+  from public.order_items oi
+  where oi.order_group_id = new.id;
+
+  if v_subtotal < v_minimum_order_amount then
+    raise exception 'restaurant_minimum_order_not_reached';
+  end if;
+
+  return null;
+end;
+$function$;
+
+revoke all on function public.enforce_restaurant_order_group_rules()
+  from public, anon, authenticated;
+
+drop trigger if exists restaurant_order_group_rules
+  on public.order_groups;
+create constraint trigger restaurant_order_group_rules
+after insert on public.order_groups
+deferrable initially deferred
+for each row
+execute function public.enforce_restaurant_order_group_rules();
