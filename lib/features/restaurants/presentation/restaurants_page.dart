@@ -27,7 +27,7 @@ class _RestaurantsPageState extends ConsumerState<RestaurantsPage> {
         Future.value(const []);
   }
 
-  Future<void> _addToCart(String productId) async {
+  Future<void> _addToCart(Map<String, dynamic> item) async {
     final client = ref.read(supabaseProvider);
     final cart = ref.read(cartRepositoryProvider);
 
@@ -36,8 +36,34 @@ class _RestaurantsPageState extends ConsumerState<RestaurantsPage> {
       return;
     }
 
+    final productId = item['product_id']?.toString();
+    if (productId == null || productId.isEmpty) return;
+
+    final product = item['products'] is Map
+        ? Map<String, dynamic>.from(item['products'] as Map)
+        : const <String, dynamic>{};
+    final rawVariants = product['product_variants'];
+    final variants = rawVariants is List
+        ? rawVariants
+            .whereType<Map>()
+            .map((row) => Map<String, dynamic>.from(row))
+            .toList()
+        : const <Map<String, dynamic>>[];
+
+    String? variantId;
+    if (variants.isNotEmpty) {
+      variantId = await showDialog<String>(
+        context: context,
+        builder: (_) => _RestaurantVariantDialog(variants: variants),
+      );
+      if (!mounted || variantId == null) return;
+    }
+
     try {
-      await cart.addToCart(productId: productId);
+      await cart.addToCart(
+        productId: productId,
+        variantId: variantId,
+      );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Plat ajouté au panier.')),
@@ -47,7 +73,7 @@ class _RestaurantsPageState extends ConsumerState<RestaurantsPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
-            'Ajout impossible. Vérifiez que le plat est toujours disponible.',
+            'Ajout impossible. Vérifiez que le plat et sa variante sont toujours disponibles.',
           ),
         ),
       );
@@ -139,7 +165,20 @@ class _RestaurantsPageState extends ConsumerState<RestaurantsPage> {
                     ? Map<String, dynamic>.from(restaurant['shops'] as Map)
                     : const <String, dynamic>{};
                 final cuisines = restaurant['cuisine_types'];
-                final acceptingOrders = restaurant['accepting_orders'] != false;
+                final acceptingOrders =
+                    restaurant['accepting_orders'] != false;
+                final rawReviews = shop['reviews'];
+                final reviews = rawReviews is List
+                    ? rawReviews.whereType<Map>().toList()
+                    : const <Map>[];
+                final ratings = reviews
+                    .map((review) =>
+                        num.tryParse(review['rating']?.toString() ?? ''))
+                    .whereType<num>()
+                    .toList();
+                final averageRating = ratings.isEmpty
+                    ? null
+                    : ratings.reduce((a, b) => a + b) / ratings.length;
                 final menus = (restaurant['restaurant_menus'] is List
                         ? restaurant['restaurant_menus'] as List
                         : const [])
@@ -156,8 +195,8 @@ class _RestaurantsPageState extends ConsumerState<RestaurantsPage> {
                   restaurant['delivery_available'] == true
                       ? 'Livraison disponible'
                       : 'Livraison non proposée',
-                  if (restaurant['pickup_available'] == true)
-                    'Retrait sur place possible',
+                  if (averageRating != null)
+                    'Note : ${averageRating.toStringAsFixed(1)}/5 (${ratings.length} avis)',
                   if ((restaurant['opening_hours']?.toString() ?? '').trim().isNotEmpty)
                     'Horaires : ${restaurant['opening_hours']}',
                 ];
@@ -227,7 +266,7 @@ class _MenuSection extends StatelessWidget {
 
   final Map<String, dynamic> menu;
   final bool acceptingOrders;
-  final ValueChanged<String> onAddToCart;
+  final Future<void> Function(Map<String, dynamic>) onAddToCart;
 
   @override
   Widget build(BuildContext context) {
@@ -261,11 +300,70 @@ class _MenuSection extends StatelessWidget {
                 : IconButton.filledTonal(
                     tooltip: 'Ajouter au panier',
                     onPressed: acceptingOrders
-                        ? () => onAddToCart(item['product_id'].toString())
+                        ? () => onAddToCart(item)
                         : null,
                     icon: const Icon(Icons.add_shopping_cart_outlined),
                   ),
           ),
+      ],
+    );
+  }
+}
+
+class _RestaurantVariantDialog extends StatefulWidget {
+  const _RestaurantVariantDialog({required this.variants});
+
+  final List<Map<String, dynamic>> variants;
+
+  @override
+  State<_RestaurantVariantDialog> createState() =>
+      _RestaurantVariantDialogState();
+}
+
+class _RestaurantVariantDialogState extends State<_RestaurantVariantDialog> {
+  late String _selectedId;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedId = widget.variants.first['id'].toString();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Choisir une option'),
+      content: SizedBox(
+        width: 420,
+        child: RadioGroup<String>(
+          groupValue: _selectedId,
+          onChanged: (value) {
+            if (value != null) setState(() => _selectedId = value);
+          },
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (final variant in widget.variants)
+                RadioListTile<String>(
+                  value: variant['id'].toString(),
+                  title: Text(variant['name']?.toString() ?? 'Option'),
+                  subtitle: variant['price'] == null
+                      ? null
+                      : Text('${variant['price']} XOF'),
+                ),
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Annuler'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.pop(context, _selectedId),
+          child: const Text('Ajouter au panier'),
+        ),
       ],
     );
   }
