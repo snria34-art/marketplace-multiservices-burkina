@@ -11,7 +11,8 @@ class RestaurantRepository {
     restaurant_menus(
       id,name,description,active,sort_order,
       restaurant_menu_items(
-        id,product_id,name,description,price,active,sort_order
+        id,product_id,name,description,price,active,sort_order,
+        products(id,name,price,product_variants(id,name,price,attributes))
       )
     )
   ''';
@@ -22,11 +23,12 @@ class RestaurantRepository {
         .select('''
           id,shop_id,cuisine_types,preparation_time_min,delivery_available,
           accepting_orders,pickup_available,minimum_order_amount,opening_hours,
-          shops(name,address,status,verification_status),
+          shops(name,address,status,verification_status,reviews(rating,body,status)),
           restaurant_menus(
             id,name,description,active,sort_order,
             restaurant_menu_items(
-              id,product_id,name,description,price,active,sort_order
+              id,product_id,name,description,price,active,sort_order,
+              products(id,name,price,product_variants(id,name,price,attributes))
             )
           )
         ''')
@@ -146,7 +148,7 @@ class RestaurantRepository {
   Future<List<Map<String, dynamic>>> availableProducts(String shopId) async {
     final rows = await client
         .from('products')
-        .select('id,name,description,price,status')
+        .select('id,name,description,price,status,product_variants(id,name,price,attributes)')
         .eq('shop_id', shopId)
         .eq('status', 'ACTIVE')
         .order('name')
