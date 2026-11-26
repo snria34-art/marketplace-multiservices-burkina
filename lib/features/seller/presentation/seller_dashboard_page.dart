@@ -130,6 +130,11 @@ class _SellerDashboardPageState
             onPressed: () => context.push('/seller/shop'),
             icon: const Icon(Icons.storefront_outlined),
           ),
+          IconButton(
+            tooltip: 'Espace restaurateur',
+            onPressed: () => context.push('/seller/restaurant'),
+            icon: const Icon(Icons.restaurant_menu_outlined),
+          ),
           const AccountSessionActionButton(),
         ],
       ),
