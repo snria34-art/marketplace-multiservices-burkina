@@ -230,7 +230,7 @@ class _DeliveryTrackingPageState
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
-                                'Un livreur est affecté à votre colis.',
+                                'Informations sur l’affectation du livreur.',
                                 style: Theme.of(context).textTheme.bodyMedium,
                               ),
                             ),
