@@ -95,6 +95,9 @@ void main() {
       expect(sanitizeInternalLocation('/auth'), isNull);
       expect(sanitizeInternalLocation('/access-status'), isNull);
       expect(sanitizeInternalLocation('/orders/../admin'), isNull);
+      expect(sanitizeInternalLocation('/orders/%2e%2e/admin'), isNull);
+      expect(sanitizeInternalLocation('/orders/%252e%252e/admin'), isNull);
+      expect(sanitizeInternalLocation('/orders/%2f..%2fadmin'), isNull);
     });
   });
 }
