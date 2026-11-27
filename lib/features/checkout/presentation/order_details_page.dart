@@ -481,6 +481,37 @@ class _OrderDetailsPageState extends ConsumerState<OrderDetailsPage> {
     }
   }
 
+  Future<void> _confirmReceipt() async {
+    final client = ref.read(supabaseProvider);
+    if (client == null) {
+      _showReviewMessage('Service indisponible. Réessayez plus tard.');
+      return;
+    }
+
+    try {
+      await client.rpc(
+        'confirm_customer_order_received',
+        params: {'p_order_id': widget.orderId},
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Réception confirmée. Vous pouvez maintenant évaluer vos articles.',
+          ),
+        ),
+      );
+      setState(() => _future = _load());
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Impossible de confirmer la réception : $error'),
+        ),
+      );
+    }
+  }
+
   Future<void> _review(String productId, String shopId) async {
     final form = await showDialog<_ReviewForm>(
       context: context,
@@ -679,9 +710,24 @@ class _OrderDetailsPageState extends ConsumerState<OrderDetailsPage> {
           final order = data.order;
           final status = order['status']?.toString() ?? '-';
           final delivered = status == 'DELIVERED';
-          final reviewDeadline = DateTime.tryParse(order['review_deadline_at']?.toString() ?? '');
-          final reviewOpen = delivered && reviewDeadline != null && DateTime.now().isBefore(reviewDeadline);
-          final displayStatus = order['completed_at'] != null ? 'Commande terminée' : _statusLabel(status);
+          final completedAt = order['completed_at'];
+          final reviewDeadline = DateTime.tryParse(
+            order['review_deadline_at']?.toString() ?? '',
+          );
+          final reviewWindowOpen = reviewDeadline != null &&
+              DateTime.now().isBefore(reviewDeadline);
+          final receiptConfirmed = completedAt != null;
+          final canConfirmReceipt =
+              delivered && !receiptConfirmed && reviewWindowOpen;
+          final reviewOpen =
+              delivered && receiptConfirmed && reviewWindowOpen;
+          final displayStatus = status == 'CANCELLED' || status == 'REFUNDED'
+              ? _statusLabel(status)
+              : delivered && receiptConfirmed && reviewWindowOpen
+                  ? 'Réception confirmée'
+                  : delivered && !reviewWindowOpen
+                      ? 'Commande terminée'
+                      : _statusLabel(status);
 
           return ListView(
             padding: const EdgeInsets.all(12),
@@ -702,6 +748,46 @@ class _OrderDetailsPageState extends ConsumerState<OrderDetailsPage> {
                   ),
                 ),
               ),
+              if (canConfirmReceipt) ...[
+                const SizedBox(height: 10),
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(14),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Votre colis est indiqué comme livré.',
+                          style: Theme.of(context).textTheme.titleSmall,
+                        ),
+                        const SizedBox(height: 4),
+                        const Text(
+                          'Confirmez sa réception pour accéder à l’évaluation de vos articles.',
+                        ),
+                        const SizedBox(height: 10),
+                        SizedBox(
+                          width: double.infinity,
+                          child: FilledButton.icon(
+                            onPressed: _confirmReceipt,
+                            icon: const Icon(Icons.check_circle_outline),
+                            label: const Text('Confirmer la réception'),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+              if (reviewOpen)
+                Card(
+                  child: ListTile(
+                    leading: const Icon(Icons.check_circle_outline),
+                    title: const Text('Réception confirmée'),
+                    subtitle: const Text(
+                      'Vous pouvez maintenant évaluer les articles de cette commande.',
+                    ),
+                  ),
+                ),
               if (data.payment != null)
                 Card(
                   child: ListTile(

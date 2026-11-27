@@ -175,6 +175,45 @@ class CheckoutRepository {
     return _maps(raw);
   }
 
+  /// Confirms receipt of a delivered order through the ownership-checked RPC.
+  Future<void> confirmReceipt(String orderId) async {
+    if (orderId.trim().isEmpty) {
+      throw ArgumentError('Commande invalide.');
+    }
+
+    await client.rpc(
+      'confirm_customer_order_received',
+      params: {'p_order_id': orderId},
+    );
+  }
+
+  /// Loads the shops and item summaries for an already-authorized order list.
+  ///
+  /// The order_groups and order_items SELECT policies restrict these rows to
+  /// the customer who owns each order (or the relevant seller).
+  Future<List<Map<String, dynamic>>> orderGroupsForOrders(
+    List<String> orderIds,
+  ) async {
+    final ids = orderIds
+        .map((id) => id.trim())
+        .where((id) => id.isNotEmpty)
+        .toSet()
+        .toList();
+
+    if (ids.isEmpty) return const [];
+
+    final rows = await client
+        .from('order_groups')
+        .select(
+          'id,order_id,shop_id,status,subtotal,shops(name),'
+          'order_items(id,product_id,product_name,quantity,total_price)',
+        )
+        .inFilter('order_id', ids)
+        .order('created_at');
+
+    return _maps(rows);
+  }
+
   List<Map<String, dynamic>> _maps(dynamic rows) {
     if (rows is! List) return const [];
 

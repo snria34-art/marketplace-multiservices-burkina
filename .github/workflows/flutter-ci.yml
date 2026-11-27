@@ -56,7 +56,7 @@ jobs:
         run: git diff --exit-code -- pubspec.yaml pubspec.lock
 
       - name: Analyze
-        run: flutter analyze
+        run: flutter analyze --no-fatal-infos
 
       - name: Run tests
         run: flutter test

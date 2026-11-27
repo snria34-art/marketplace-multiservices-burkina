@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import '../lib/core/navigation/app_navigation.dart';
+import 'package:marketplace_multiservices_burkina/core/navigation/app_navigation.dart';
 
 void main() {
   test('maps order push to order details', () {
