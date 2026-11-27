@@ -19,7 +19,7 @@ class DeliveryRepository {
     final groups = await client
         .from('order_groups')
         .select(
-          'id,shop_id,shops(name),order_packages(id,status,picked_up_at,delivered_at,updated_at,delivery_assignments(id,courier_id,status,accepted_at,completed_at))',
+          'id,shop_id,shops(name),order_packages(id,status,picked_up_at,delivered_at,updated_at,delivery_assignments(id,courier_id,status,assigned_at,accepted_at,completed_at))',
         )
         .eq('order_id', orderId)
         .order('created_at');
@@ -84,6 +84,37 @@ class DeliveryRepository {
       final latest = courierId == null ? null : latestLocations[courierId];
       if (latest != null) {
         package['latest_location'] = latest;
+      }
+    }
+
+    // Delivery history is readable by the customer who owns the order under
+    // the existing delivery_events RLS policy. Only non-sensitive event
+    // fields are selected; metadata and actor identifiers stay server-side.
+    final packageIds = result
+        .map((package) => package['id']?.toString() ?? '')
+        .where((id) => id.isNotEmpty)
+        .toSet()
+        .toList();
+
+    if (packageIds.isNotEmpty) {
+      final eventRows = await client
+          .from('delivery_events')
+          .select('id,package_id,status,created_at')
+          .inFilter('package_id', packageIds)
+          .order('created_at');
+
+      final eventsByPackage = <String, List<Map<String, dynamic>>>{};
+      for (final rawEvent in eventRows as List) {
+        final event = Map<String, dynamic>.from(rawEvent as Map);
+        final packageId = event['package_id']?.toString() ?? '';
+        if (packageId.isEmpty) continue;
+        eventsByPackage.putIfAbsent(packageId, () => []).add(event);
+      }
+
+      for (final package in result) {
+        final packageId = package['id']?.toString() ?? '';
+        package['events'] = eventsByPackage[packageId] ??
+            const <Map<String, dynamic>>[];
       }
     }
 
