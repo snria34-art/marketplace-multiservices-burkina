@@ -1,5 +1,5 @@
 begin;
-select plan(15);
+select plan(18);
 
 select ok(
   has_function_privilege('authenticated', 'public.cancel_unpaid_order(uuid)', 'EXECUTE')
@@ -132,6 +132,41 @@ select ok(
   and position('op.status::text IN' in pg_get_functiondef('private.get_customer_order_delivery_assignments(uuid)'::regprocedure)) > 0
   and position('ORDER BY cl.recorded_at DESC, cl.id DESC' in pg_get_functiondef('private.get_customer_order_delivery_assignments(uuid)'::regprocedure)) > 0,
   'customer tracking checks order ownership and reveals only the latest location for an active assignment and package'
+);
+
+
+
+select ok(
+  to_regprocedure('private.confirm_customer_order_received(uuid)') is not null
+  and (
+    select prosecdef
+    from pg_proc
+    where oid='private.confirm_customer_order_received(uuid)'::regprocedure
+  )
+  and not (
+    select prosecdef
+    from pg_proc
+    where oid='public.confirm_customer_order_received(uuid)'::regprocedure
+  )
+  and has_function_privilege('authenticated','public.confirm_customer_order_received(uuid)','EXECUTE')
+  and not has_function_privilege('anon','public.confirm_customer_order_received(uuid)','EXECUTE'),
+  'customer receipt confirmation uses a private SECURITY DEFINER helper and authenticated-only invoker RPC'
+);
+
+select ok(
+  position('private.require_active_account()' in pg_get_functiondef('private.confirm_customer_order_received(uuid)'::regprocedure)) > 0
+  and position('customer_id = v_user_id' in pg_get_functiondef('private.confirm_customer_order_received(uuid)'::regprocedure)) > 0
+  and position('FOR UPDATE' in pg_get_functiondef('private.confirm_customer_order_received(uuid)'::regprocedure)) > 0
+  and position('review_deadline_at' in pg_get_functiondef('private.confirm_customer_order_received(uuid)'::regprocedure)) > 0
+  and position('CUSTOMER_CONFIRMED_RECEIPT' in pg_get_functiondef('private.confirm_customer_order_received(uuid)'::regprocedure)) > 0
+  and position('UPDATE public.orders' in pg_get_functiondef('private.confirm_customer_order_received(uuid)'::regprocedure)) > 0,
+  'receipt confirmation checks ownership, active account, delivered status and the existing review deadline under a row lock'
+);
+
+select ok(
+  position('o.completed_at IS NOT NULL' in pg_get_functiondef('private.create_review(uuid,uuid,integer,text,text[])'::regprocedure)) > 0
+  and position('now() <= o.review_deadline_at' in pg_get_functiondef('private.create_review(uuid,uuid,integer,text,text[])'::regprocedure)) > 0,
+  'product reviews require a confirmed receipt and remain limited by the original seven-day deadline'
 );
 
 select * from finish();
