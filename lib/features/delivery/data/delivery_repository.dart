@@ -6,13 +6,6 @@ class DeliveryRepository {
 
   final SupabaseClient client;
 
-  static const _activeAssignmentStatuses = {
-    'ASSIGNED',
-    'ACCEPTED',
-    'PICKED_UP',
-    'IN_TRANSIT',
-  };
-
   Future<List<Map<String, dynamic>>> packagesForOrder(
     String orderId,
   ) async {
