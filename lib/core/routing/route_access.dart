@@ -31,8 +31,36 @@ bool routeRequiresAuthentication(String path) {
 ///
 /// This value comes from a URL query parameter and must never become an
 /// external redirect or a redirect loop back to the login/status pages.
+bool _hasUnsafePathSegment(String value) {
+  final rawPath = value.split(RegExp(r'[?#]')).first;
+  for (final rawSegment in rawPath.split('/')) {
+    var decoded = rawSegment;
+    try {
+      // Decode repeatedly so double-encoded dot segments and separators are
+      // rejected before Uri normalizes away the original traversal.
+      for (var attempt = 0; attempt < 3; attempt++) {
+        final next = Uri.decodeComponent(decoded);
+        if (next == decoded) break;
+        decoded = next;
+      }
+    } on FormatException {
+      return true;
+    }
+
+    if (decoded == '.' ||
+        decoded == '..' ||
+        decoded.contains('/') ||
+        decoded.contains('\\')) {
+      return true;
+    }
+  }
+  return false;
+}
+
 String? sanitizeInternalLocation(String? value) {
-  if (value == null || value.isEmpty) return null;
+  if (value == null || value.isEmpty || _hasUnsafePathSegment(value)) {
+    return null;
+  }
 
   final uri = Uri.tryParse(value);
   if (uri == null ||
