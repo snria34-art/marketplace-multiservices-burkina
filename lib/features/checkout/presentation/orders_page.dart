@@ -72,6 +72,29 @@ class _OrdersPageState extends ConsumerState<OrdersPage> {
     await next;
   }
 
+  Future<void> _confirmReceipt(String orderId) async {
+    final repo = ref.read(checkoutRepositoryProvider);
+    if (repo == null) return;
+
+    try {
+      await repo.confirmReceipt(orderId);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Réception confirmée. Vous pouvez maintenant évaluer vos articles.'),
+        ),
+      );
+      await _refresh();
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Impossible de confirmer la réception : $error'),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final client = ref.watch(supabaseProvider);
@@ -167,6 +190,7 @@ class _OrdersPageState extends ConsumerState<OrdersPage> {
                         groupsByOrder: payload.groupsByOrder,
                         filter: filter,
                         onRefresh: _refresh,
+                        onConfirmReceived: _confirmReceipt,
                       );
                     }).toList(),
                   ),
@@ -207,11 +231,16 @@ class _OrdersPageState extends ConsumerState<OrdersPage> {
         return status == 'IN_TRANSIT';
       case _OrderFilter.receive:
         return const {
-          'READY_FOR_PICKUP',
-          'PARTIALLY_FULFILLED',
-        }.contains(status);
+              'READY_FOR_PICKUP',
+              'PARTIALLY_FULFILLED',
+            }.contains(status) ||
+            (status == 'DELIVERED' &&
+                completedAt == null &&
+                deadline != null &&
+                deadline.isAfter(now));
       case _OrderFilter.review:
         return status == 'DELIVERED' &&
+            completedAt != null &&
             deadline != null &&
             deadline.isAfter(now);
       case _OrderFilter.disputes:
@@ -220,9 +249,7 @@ class _OrdersPageState extends ConsumerState<OrdersPage> {
         return status == 'CANCELLED' ||
             status == 'REFUNDED' ||
             (status == 'DELIVERED' &&
-                (completedAt != null ||
-                    deadline == null ||
-                    !deadline.isAfter(now)));
+                (deadline == null || !deadline.isAfter(now)));
     }
   }
 }
@@ -233,12 +260,14 @@ class _OrdersList extends StatelessWidget {
     required this.groupsByOrder,
     required this.filter,
     required this.onRefresh,
+    required this.onConfirmReceived,
   });
 
   final List<Map<String, dynamic>> orders;
   final Map<String, List<Map<String, dynamic>>> groupsByOrder;
   final _OrderFilter filter;
   final Future<void> Function() onRefresh;
+  final Future<void> Function(String orderId) onConfirmReceived;
 
   @override
   Widget build(BuildContext context) {
@@ -288,6 +317,7 @@ class _OrdersList extends StatelessWidget {
               order: order,
               groups: groups,
               filter: filter,
+              onConfirmReceived: onConfirmReceived,
             );
           }
 
@@ -514,17 +544,37 @@ class _OrderCard extends StatelessWidget {
     required this.order,
     required this.groups,
     required this.filter,
+    required this.onConfirmReceived,
   });
 
   final Map<String, dynamic> order;
   final List<Map<String, dynamic>> groups;
   final _OrderFilter filter;
+  final Future<void> Function(String orderId) onConfirmReceived;
 
   @override
   Widget build(BuildContext context) {
     final orderId = order['order_id']?.toString() ?? '';
     final status = order['status']?.toString().toUpperCase() ?? '';
-    final completed = order['completed_at'] != null;
+    final receiptConfirmed = order['completed_at'] != null;
+    final reviewDeadline = DateTime.tryParse(
+      order['review_deadline_at']?.toString() ?? '',
+    );
+    final reviewWindowOpen =
+        reviewDeadline != null && reviewDeadline.isAfter(DateTime.now());
+    final completed = status == 'CANCELLED' ||
+        status == 'REFUNDED' ||
+        (status == 'DELIVERED' && !reviewWindowOpen);
+    final canConfirmReceipt = status == 'DELIVERED' &&
+        !receiptConfirmed &&
+        reviewWindowOpen;
+    final cardStatus = status == 'DELIVERED' &&
+            receiptConfirmed &&
+            reviewWindowOpen
+        ? 'Réception confirmée'
+        : completed
+            ? 'Terminée'
+            : _statusLabel(status);
     final canTrack = !const {'PENDING_PAYMENT', 'CANCELLED', 'REFUNDED'}
         .contains(status);
     final amount = order['total']?.toString() ?? '0';
@@ -563,9 +613,7 @@ class _OrderCard extends StatelessWidget {
                   child: Chip(
                     visualDensity: VisualDensity.compact,
                     label: Text(
-                      completed
-                          ? 'Terminée'
-                          : _statusLabel(status),
+                      cardStatus,
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
@@ -612,6 +660,14 @@ class _OrderCard extends StatelessWidget {
                     filter == _OrderFilter.review ? 'Évaluer' : 'Détails',
                   ),
                 ),
+                if (canConfirmReceipt)
+                  FilledButton.icon(
+                    onPressed: orderId.isEmpty
+                        ? null
+                        : () => onConfirmReceived(orderId),
+                    icon: const Icon(Icons.check_circle_outline),
+                    label: const Text('Confirmer la réception'),
+                  ),
                 if (canTrack)
                   FilledButton.tonalIcon(
                     onPressed: orderId.isEmpty
