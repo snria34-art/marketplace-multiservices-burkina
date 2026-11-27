@@ -9,7 +9,13 @@ import 'package:marketplace_multiservices_burkina/features/courier/presentation/
 
 class _NoMissionCourierRepository extends CourierRepository {
   _NoMissionCourierRepository()
-      : super(SupabaseClient('http://localhost:54321', 'test-anon-key'));
+      : super(
+          SupabaseClient(
+            'http://localhost:54321',
+            'test-anon-key',
+            authOptions: const AuthClientOptions(autoRefreshToken: false),
+          ),
+        );
 
   @override
   Future<List<Map<String, dynamic>>> assignments() async => const [];
