@@ -200,13 +200,19 @@ class _DeliveryTrackingPageState
                               ],
                             ),
                           ),
-                          Chip(
-                            visualDensity: VisualDensity.compact,
-                            avatar: Icon(
-                              _statusIcon(packageStatus),
-                              size: 16,
+                          Flexible(
+                            child: Chip(
+                              visualDensity: VisualDensity.compact,
+                              avatar: Icon(
+                                _statusIcon(packageStatus),
+                                size: 16,
+                              ),
+                              label: Text(
+                                _statusLabel(packageStatus),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             ),
-                            label: Text(_statusLabel(packageStatus)),
                           ),
                         ],
                       ),
