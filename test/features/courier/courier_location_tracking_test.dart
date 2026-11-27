@@ -48,6 +48,10 @@ void main() {
       );
       expect(find.text('Autoriser le suivi'), findsNothing);
       expect(find.text('Partager votre position'), findsNothing);
+
+      // Let the SnackBar's finite display timer complete before the test ends.
+      await tester.pump(const Duration(seconds: 5));
+      await tester.pumpAndSettle();
     },
   );
 }
