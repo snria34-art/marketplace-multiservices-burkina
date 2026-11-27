@@ -175,6 +175,33 @@ class CheckoutRepository {
     return _maps(raw);
   }
 
+  /// Loads the shops and item summaries for an already-authorized order list.
+  ///
+  /// The order_groups and order_items SELECT policies restrict these rows to
+  /// the customer who owns each order (or the relevant seller).
+  Future<List<Map<String, dynamic>>> orderGroupsForOrders(
+    List<String> orderIds,
+  ) async {
+    final ids = orderIds
+        .map((id) => id.trim())
+        .where((id) => id.isNotEmpty)
+        .toSet()
+        .toList();
+
+    if (ids.isEmpty) return const [];
+
+    final rows = await client
+        .from('order_groups')
+        .select(
+          'id,order_id,shop_id,status,subtotal,shops(name),'
+          'order_items(id,product_id,product_name,quantity,total_price)',
+        )
+        .inFilter('order_id', ids)
+        .order('created_at');
+
+    return _maps(rows);
+  }
+
   List<Map<String, dynamic>> _maps(dynamic rows) {
     if (rows is! List) return const [];
 
