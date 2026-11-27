@@ -226,7 +226,7 @@ class _DeliveryTrackingPageState
                         const SizedBox(height: 12),
                         Row(
                           children: [
-                            const Icon(Icons.delivery_dining_outlined),
+                            const Icon(Icons.local_shipping_outlined),
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
@@ -272,7 +272,7 @@ class _DeliveryTrackingPageState
                         const Divider(height: 28),
                         Row(
                           children: [
-                            const Icon(Icons.my_location_outlined),
+                            const Icon(Icons.my_location),
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
@@ -346,7 +346,7 @@ class _DeliveryTrackingPageState
                         const Divider(height: 28),
                         const Row(
                           children: [
-                            Icon(Icons.location_searching_outlined),
+                            Icon(Icons.location_searching),
                             SizedBox(width: 8),
                             Expanded(
                               child: Text(
