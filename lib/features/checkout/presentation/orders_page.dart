@@ -202,16 +202,16 @@ class _OrdersPageState extends ConsumerState<OrdersPage> {
           'PAID',
           'CONFIRMED',
           'PREPARING',
-          'READY_FOR_PICKUP',
-          'PARTIALLY_FULFILLED',
         }.contains(status);
       case _OrderFilter.shipping:
         return status == 'IN_TRANSIT';
       case _OrderFilter.receive:
-        return status == 'DELIVERED' && completedAt == null;
+        return const {
+          'READY_FOR_PICKUP',
+          'PARTIALLY_FULFILLED',
+        }.contains(status);
       case _OrderFilter.review:
         return status == 'DELIVERED' &&
-            completedAt != null &&
             deadline != null &&
             deadline.isAfter(now);
       case _OrderFilter.disputes:
@@ -220,8 +220,9 @@ class _OrdersPageState extends ConsumerState<OrdersPage> {
         return status == 'CANCELLED' ||
             status == 'REFUNDED' ||
             (status == 'DELIVERED' &&
-                completedAt != null &&
-                (deadline == null || !deadline.isAfter(now)));
+                (completedAt != null ||
+                    deadline == null ||
+                    !deadline.isAfter(now)));
     }
   }
 }
