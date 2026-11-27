@@ -11,6 +11,7 @@ enum _OrderFilter {
   shipping,
   receive,
   review,
+  disputes,
   completed,
 }
 
@@ -21,6 +22,7 @@ const _orderFilters = <_OrderFilter>[
   _OrderFilter.shipping,
   _OrderFilter.receive,
   _OrderFilter.review,
+  _OrderFilter.disputes,
   _OrderFilter.completed,
 ];
 
@@ -212,12 +214,14 @@ class _OrdersPageState extends ConsumerState<OrdersPage> {
             completedAt != null &&
             deadline != null &&
             deadline.isAfter(now);
+      case _OrderFilter.disputes:
+        return status == 'DISPUTED';
       case _OrderFilter.completed:
         return status == 'CANCELLED' ||
             status == 'REFUNDED' ||
             (status == 'DELIVERED' &&
-                (completedAt != null ||
-                    (deadline != null && !deadline.isAfter(now))));
+                completedAt != null &&
+                (deadline == null || !deadline.isAfter(now)));
     }
   }
 }
@@ -494,6 +498,8 @@ String _filterLabel(_OrderFilter filter) {
       return 'À recevoir';
     case _OrderFilter.review:
       return 'À évaluer';
+    case _OrderFilter.disputes:
+      return 'Litiges';
     case _OrderFilter.completed:
       return 'Terminées';
   }
@@ -513,6 +519,8 @@ String _emptyMessage(_OrderFilter filter) {
       return 'Aucune commande en attente de réception.';
     case _OrderFilter.review:
       return 'Aucune commande à évaluer pour le moment.';
+    case _OrderFilter.disputes:
+      return 'Aucune commande en litige.';
     case _OrderFilter.completed:
       return 'Aucune commande terminée.';
   }
