@@ -175,6 +175,18 @@ class CheckoutRepository {
     return _maps(raw);
   }
 
+  /// Confirms receipt of a delivered order through the ownership-checked RPC.
+  Future<void> confirmReceipt(String orderId) async {
+    if (orderId.trim().isEmpty) {
+      throw ArgumentError('Commande invalide.');
+    }
+
+    await client.rpc(
+      'confirm_customer_order_received',
+      params: {'p_order_id': orderId},
+    );
+  }
+
   /// Loads the shops and item summaries for an already-authorized order list.
   ///
   /// The order_groups and order_items SELECT policies restrict these rows to
