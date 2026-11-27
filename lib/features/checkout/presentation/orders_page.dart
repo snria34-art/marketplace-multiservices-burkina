@@ -562,19 +562,16 @@ class _OrderCard extends StatelessWidget {
     );
     final reviewWindowOpen =
         reviewDeadline != null && reviewDeadline.isAfter(DateTime.now());
-    final completed = status == 'CANCELLED' ||
-        status == 'REFUNDED' ||
-        (status == 'DELIVERED' && !reviewWindowOpen);
     final canConfirmReceipt = status == 'DELIVERED' &&
         !receiptConfirmed &&
         reviewWindowOpen;
-    final cardStatus = status == 'DELIVERED' &&
-            receiptConfirmed &&
-            reviewWindowOpen
-        ? 'Réception confirmée'
-        : completed
-            ? 'Terminée'
-            : _statusLabel(status);
+    final cardStatus = status == 'CANCELLED' || status == 'REFUNDED'
+        ? _statusLabel(status)
+        : status == 'DELIVERED' && receiptConfirmed && reviewWindowOpen
+            ? 'Réception confirmée'
+            : status == 'DELIVERED' && !reviewWindowOpen
+                ? 'Terminée'
+                : _statusLabel(status);
     final canTrack = !const {'PENDING_PAYMENT', 'CANCELLED', 'REFUNDED'}
         .contains(status);
     final amount = order['total']?.toString() ?? '0';
