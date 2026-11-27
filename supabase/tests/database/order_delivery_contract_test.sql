@@ -1,5 +1,5 @@
 begin;
-select plan(13);
+select plan(15);
 
 select ok(
   has_function_privilege('authenticated', 'public.cancel_unpaid_order(uuid)', 'EXECUTE')
@@ -103,6 +103,35 @@ select ok(
   and position('if v_refund.status=''COMPLETED'' then' in pg_get_functiondef('public.complete_refund(uuid,text)'::regprocedure)) > 0
   and position('for update' in pg_get_functiondef('public.complete_refund(uuid,text)'::regprocedure)) > 0,
   'refund completion remains service-role-only, idempotent and row-locked'
+);
+
+
+select ok(
+  to_regprocedure('private.get_customer_order_delivery_assignments(uuid)') is not null
+  and (
+    select prosecdef
+    from pg_proc
+    where oid='private.get_customer_order_delivery_assignments(uuid)'::regprocedure
+  )
+  and has_function_privilege('authenticated','private.get_customer_order_delivery_assignments(uuid)','EXECUTE')
+  and not has_function_privilege('anon','private.get_customer_order_delivery_assignments(uuid)','EXECUTE')
+  and not (
+    select prosecdef
+    from pg_proc
+    where oid='public.get_customer_order_delivery_assignments(uuid)'::regprocedure
+  )
+  and has_function_privilege('authenticated','public.get_customer_order_delivery_assignments(uuid)','EXECUTE')
+  and not has_function_privilege('anon','public.get_customer_order_delivery_assignments(uuid)','EXECUTE'),
+  'customer delivery tracking uses a private SECURITY DEFINER helper and an authenticated-only invoker RPC'
+);
+
+select ok(
+  position('private.require_active_account()' in pg_get_functiondef('private.get_customer_order_delivery_assignments(uuid)'::regprocedure)) > 0
+  and position('o.customer_id = v_user_id' in pg_get_functiondef('private.get_customer_order_delivery_assignments(uuid)'::regprocedure)) > 0
+  and position('da.status::text IN' in pg_get_functiondef('private.get_customer_order_delivery_assignments(uuid)'::regprocedure)) > 0
+  and position('op.status::text IN' in pg_get_functiondef('private.get_customer_order_delivery_assignments(uuid)'::regprocedure)) > 0
+  and position('ORDER BY cl.recorded_at DESC, cl.id DESC' in pg_get_functiondef('private.get_customer_order_delivery_assignments(uuid)'::regprocedure)) > 0,
+  'customer tracking checks order ownership and reveals only the latest location for an active assignment and package'
 );
 
 select * from finish();
