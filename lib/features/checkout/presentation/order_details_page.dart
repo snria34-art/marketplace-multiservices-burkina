@@ -721,11 +721,13 @@ class _OrderDetailsPageState extends ConsumerState<OrderDetailsPage> {
               delivered && !receiptConfirmed && reviewWindowOpen;
           final reviewOpen =
               delivered && receiptConfirmed && reviewWindowOpen;
-          final displayStatus = delivered && receiptConfirmed && reviewWindowOpen
-              ? 'Réception confirmée'
-              : (completedAt != null || (delivered && !reviewWindowOpen))
-                  ? 'Commande terminée'
-                  : _statusLabel(status);
+          final displayStatus = status == 'CANCELLED' || status == 'REFUNDED'
+              ? _statusLabel(status)
+              : delivered && receiptConfirmed && reviewWindowOpen
+                  ? 'Réception confirmée'
+                  : delivered && !reviewWindowOpen
+                      ? 'Commande terminée'
+                      : _statusLabel(status);
 
           return ListView(
             padding: const EdgeInsets.all(12),
