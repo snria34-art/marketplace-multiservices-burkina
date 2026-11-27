@@ -242,48 +242,268 @@ class _OrdersList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (orders.isEmpty) {
-      return RefreshIndicator(
-        onRefresh: onRefresh,
-        child: ListView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          children: [
-            const SizedBox(height: 100),
-            Icon(
-              Icons.receipt_long_outlined,
-              size: 48,
-              color: Theme.of(context).colorScheme.outline,
-            ),
-            const SizedBox(height: 12),
-            Text(
-              _emptyMessage(filter),
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyLarge,
-            ),
-          ],
-        ),
-      );
-    }
+    final showRecommendations = filter == _OrderFilter.all;
+    final showEmptyMessage = orders.isEmpty;
+    final itemCount = orders.length +
+        (showEmptyMessage ? 1 : 0) +
+        (showRecommendations ? 1 : 0);
 
     return RefreshIndicator(
       onRefresh: onRefresh,
       child: ListView.separated(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.all(12),
-        itemCount: orders.length,
+        itemCount: itemCount,
         separatorBuilder: (_, __) => const SizedBox(height: 10),
         itemBuilder: (context, index) {
-          final order = orders[index];
-          final orderId = order['order_id']?.toString() ?? '';
-          final groups = groupsByOrder[orderId] ??
-              const <Map<String, dynamic>>[];
+          if (showEmptyMessage && index == 0) {
+            return Padding(
+              padding: const EdgeInsets.symmetric(vertical: 28),
+              child: Column(
+                children: [
+                  Icon(
+                    Icons.receipt_long_outlined,
+                    size: 48,
+                    color: Theme.of(context).colorScheme.outline,
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    _emptyMessage(filter),
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.bodyLarge,
+                  ),
+                ],
+              ),
+            );
+          }
 
-          return _OrderCard(
-            order: order,
-            groups: groups,
-            filter: filter,
-          );
+          final orderIndex = index - (showEmptyMessage ? 1 : 0);
+          if (orderIndex >= 0 && orderIndex < orders.length) {
+            final order = orders[orderIndex];
+            final orderId = order['order_id']?.toString() ?? '';
+            final groups = groupsByOrder[orderId] ??
+                const <Map<String, dynamic>>[];
+
+            return _OrderCard(
+              order: order,
+              groups: groups,
+              filter: filter,
+            );
+          }
+
+          return const _RecommendedProductsSection();
         },
+      ),
+    );
+  }
+}
+
+class _RecommendedProductsSection extends ConsumerStatefulWidget {
+  const _RecommendedProductsSection();
+
+  @override
+  ConsumerState<_RecommendedProductsSection> createState() =>
+      _RecommendedProductsSectionState();
+}
+
+class _RecommendedProductsSectionState
+    extends ConsumerState<_RecommendedProductsSection> {
+  late Future<List<Map<String, dynamic>>> _future;
+
+  @override
+  void initState() {
+    super.initState();
+    _future = _load();
+  }
+
+  Future<List<Map<String, dynamic>>> _load() async {
+    final catalog = ref.read(catalogRepositoryProvider);
+    if (catalog == null) return const [];
+    return catalog.products(limit: 8);
+  }
+
+  Future<void> _addToCart(Map<String, dynamic> product) async {
+    final productId = product['id']?.toString() ?? '';
+    if (productId.isEmpty) return;
+
+    final client = ref.read(supabaseProvider);
+    if (client?.auth.currentUser == null) {
+      if (mounted) context.push('/auth');
+      return;
+    }
+
+    final cart = ref.read(cartRepositoryProvider);
+    if (cart == null) return;
+
+    try {
+      await cart.addToCart(productId: productId);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Produit ajouté au panier.')),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Impossible d’ajouter ce produit : $error'),
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<List<Map<String, dynamic>>>(
+      future: _future,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Padding(
+            padding: EdgeInsets.symmetric(vertical: 20),
+            child: Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        final products = snapshot.data ?? const <Map<String, dynamic>>[];
+        if (snapshot.hasError || products.isEmpty) {
+          return const SizedBox.shrink();
+        }
+
+        final catalog = ref.read(catalogRepositoryProvider);
+        if (catalog == null) return const SizedBox.shrink();
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Divider(height: 28),
+            Text(
+              'À découvrir',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'D’autres articles disponibles sur Marketplace Burkina',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            const SizedBox(height: 12),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final cardWidth = (constraints.maxWidth - 12) / 2;
+                return Wrap(
+                  spacing: 12,
+                  runSpacing: 12,
+                  children: products.map((product) {
+                    final rawImages = product['product_images'];
+                    final firstImage = rawImages is List &&
+                            rawImages.isNotEmpty &&
+                            rawImages.first is Map
+                        ? Map<String, dynamic>.from(rawImages.first as Map)
+                        : const <String, dynamic>{};
+                    final storagePath =
+                        firstImage['storage_path']?.toString();
+
+                    return SizedBox(
+                      width: cardWidth,
+                      child: _RecommendedProductCard(
+                        product: product,
+                        imageUrl: storagePath == null
+                            ? Future.value(null)
+                            : catalog.productImageUrl(storagePath),
+                        onAdd: () => _addToCart(product),
+                      ),
+                    );
+                  }).toList(),
+                );
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _RecommendedProductCard extends StatelessWidget {
+  const _RecommendedProductCard({
+    required this.product,
+    required this.imageUrl,
+    required this.onAdd,
+  });
+
+  final Map<String, dynamic> product;
+  final Future<String?> imageUrl;
+  final VoidCallback onAdd;
+
+  @override
+  Widget build(BuildContext context) {
+    final rawShop = product['shops'];
+    final shop = rawShop is Map
+        ? Map<String, dynamic>.from(rawShop)
+        : const <String, dynamic>{};
+
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SizedBox(
+            height: 116,
+            child: FutureBuilder<String?>(
+              future: imageUrl,
+              builder: (context, snapshot) {
+                final url = snapshot.data;
+                if (url == null || url.isEmpty) {
+                  return const Center(
+                    child: Icon(Icons.image_outlined, size: 42),
+                  );
+                }
+                return Image.network(
+                  url,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => const Center(
+                    child: Icon(Icons.image_not_supported_outlined, size: 42),
+                  ),
+                );
+              },
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(9, 8, 9, 3),
+            child: Text(
+              product['name']?.toString() ?? 'Article',
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 9),
+            child: Text(
+              '${product['price']?.toString() ?? '0'} XOF',
+              style: Theme.of(context).textTheme.titleSmall,
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(7, 2, 5, 4),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    shop['name']?.toString() ?? 'Boutique',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ),
+                IconButton(
+                  tooltip: 'Ajouter au panier',
+                  visualDensity: VisualDensity.compact,
+                  onPressed: onAdd,
+                  icon: const Icon(Icons.add_shopping_cart_outlined),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
