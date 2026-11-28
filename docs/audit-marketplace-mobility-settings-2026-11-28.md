@@ -102,7 +102,18 @@ Une première étape d'onboarding est maintenant présente sur la branche de tra
 
 **Limite fonctionnelle majeure :** l'interface de revue/approbation administrative, le dépôt sécurisé des pièces (identité, permis, carte grise, assurance, visite technique), la gestion de flotte et les commandes de missions restent à développer. Tant que cette revue n'est pas livrée et testée, le parcours d'inscription ne constitue pas un onboarding complet de production.
 
-## 7. Limites et éléments non vérifiés
+## 7. Revue administrative des demandes prestataires
+
+Une deuxième tranche de contrôle est ajoutée :
+- RPC d'administration listant uniquement les dossiers en attente, derrière `private.is_admin()` ;
+- décision d'approbation ou de refus, verrouillage de la ligne pendant la décision, contrôle de l'état `PENDING` ;
+- approbation : passage à `VERIFIED` et activation ; refus : passage à `REJECTED` et désactivation ;
+- motif obligatoire pour un refus et journalisation de chaque décision dans `audit_logs` ;
+- écran dans le tableau de bord administrateur.
+
+**Attention :** cette revue ne vérifie pas encore les justificatifs, puisqu'aucun dépôt de documents n'est implémenté dans cette tranche. La validation actuelle porte uniquement sur les informations déclaratives du formulaire. Il faudra ajouter les pièces et la checklist avant d'autoriser l'activation en production.
+
+## 8. Limites et éléments non vérifiés
 
 - Audit statique du contenu disponible via GitHub ; les changements non commités de Cloud Shell n'ont pas été lus.
 - Aucun accès à une base Supabase distante, aucune donnée n'a été modifiée et aucune migration n'a été appliquée à un environnement.
