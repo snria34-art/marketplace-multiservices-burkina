@@ -76,6 +76,14 @@ begin
     raise exception 'provider_application_already_reviewed' using errcode = '23505';
   end if;
 
+  -- Fail closed until private KYC document upload and administrative
+  -- document verification are implemented. Self-declared application fields
+  -- alone must never activate a mobility or logistics provider.
+  if v_decision = 'APPROVE' then
+    raise exception 'provider_kyc_documents_required'
+      using errcode = '42501';
+  end if;
+
   update public.service_providers
   set verification_status = case
         when v_decision = 'APPROVE'
