@@ -1,5 +1,5 @@
 begin;
-select plan(8);
+select plan(9);
 
 select has_function('public','admin_list_pending_provider_applications',array[]::text[]);
 select has_function('public','admin_review_provider_application',array['uuid','text','text']);
@@ -29,6 +29,11 @@ select ok(
   position('verification_status' in pg_get_functiondef('public.admin_review_provider_application(uuid,text,text)'::regprocedure)) > 0
   and position('active = (v_decision = ''APPROVE'')' in pg_get_functiondef('public.admin_review_provider_application(uuid,text,text)'::regprocedure)) > 0,
   'approval verifies and activates while rejection deactivates'
+);
+
+select ok(
+  position('provider_kyc_documents_required' in pg_get_functiondef('public.admin_review_provider_application(uuid,text,text)'::regprocedure)) > 0,
+  'approval is fail-closed until private KYC documents are verified'
 );
 
 select ok(
