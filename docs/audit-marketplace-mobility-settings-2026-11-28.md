@@ -120,3 +120,15 @@ Une deuxième tranche de contrôle est ajoutée :
 - Aucun build Flutter, analyse Dart, test pgTAP ou test E2E n'a été exécuté dans cette exécution.
 - Les validations CI de la branche de travail doivent être consultées avant toute fusion.
 - L'audit global du 7 novembre reste pertinent pour les sujets paiements/remboursements, notifications Firebase, configuration des secrets, tests de charge, restauration et livraison native ; son état live ne doit pas être considéré comme actuel sans nouvelle mesure.
+
+
+## 7. Sécurité renforcée après revue statique
+
+La revue du parcours d'administration a identifié que la décision d'approbation initiale pouvait activer un prestataire sur la seule base des informations déclarées. Ce comportement n'est pas acceptable pour les métiers de mobilité et de logistique.
+
+Correctif de protection ajouté sur la branche de travail :
+- la RPC `admin_review_provider_application` refuse désormais `APPROVE` avec `provider_kyc_documents_required` tant que le dépôt privé et la vérification administrative des justificatifs ne sont pas disponibles ;
+- le bouton d'approbation est désactivé dans l'écran admin, avec une explication ; le refus avec motif reste disponible ;
+- un test pgTAP vérifie le verrouillage fail-closed.
+
+Cette mesure est volontairement temporaire : l'approbation ne sera réactivée qu'après mise en place du dépôt privé, des politiques Storage, de la revue des documents (identité, permis selon le métier, carte grise, assurance et visite technique selon le véhicule) et des tests d'accès administrateur. Les tests Flutter et pgTAP restent à exécuter dans l'environnement du projet.
