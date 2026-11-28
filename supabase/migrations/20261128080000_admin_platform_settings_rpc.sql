@@ -124,7 +124,7 @@ begin
       );
 
     else
-      -- In particular, default_commission_rate and all payment-related keys
+      -- Financial settings and all payment-related keys
       -- cannot be changed through this operational settings endpoint.
       raise exception 'setting_not_editable' using errcode = '22023';
   end case;
