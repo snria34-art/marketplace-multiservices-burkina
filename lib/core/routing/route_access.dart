@@ -24,7 +24,8 @@ bool routeRequiresAuthentication(String path) {
       _matchesRoute(path, '/notifications') ||
       isAdminRoute(path) ||
       isSellerRoute(path) ||
-      isCourierRoute(path);
+      isCourierRoute(path) ||
+      _matchesRoute(path, '/provider');
 }
 
 /// Only accepts an internal application location.
