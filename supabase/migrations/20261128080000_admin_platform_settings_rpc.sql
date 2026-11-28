@@ -100,7 +100,7 @@ begin
       );
 
     when 'public_announcement' then
-      if pg_catalog.jsonb_typeof(p_value -> 'enabled') <> 'boolean' then
+      if pg_catalog.jsonb_typeof(p_value -> 'enabled') is distinct from 'boolean' then
         raise exception 'invalid_announcement_enabled' using errcode = '22023';
       end if;
 
