@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/providers/repository_providers.dart';
 import '../data/service_repository.dart';
@@ -135,6 +136,11 @@ class _ServicesPageState extends ConsumerState<ServicesPage> {
       appBar: AppBar(
         title: const Text('Services'),
         actions: [
+          IconButton(
+            tooltip: 'Devenir prestataire',
+            onPressed: () => context.push('/provider/apply'),
+            icon: const Icon(Icons.storefront_outlined),
+          ),
           IconButton(
             onPressed: _refresh,
             icon: const Icon(Icons.refresh),
