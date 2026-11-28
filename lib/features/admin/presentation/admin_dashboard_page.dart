@@ -381,6 +381,18 @@ class _AdminDashboardPageState
                 ),
               const SizedBox(height: 12),
               FilledButton.icon(
+                onPressed: () => context.push('/admin/settings'),
+                icon: const Icon(Icons.tune_outlined),
+                label: const Text('Paramètres globaux de la plateforme'),
+              ),
+              const SizedBox(height: 8),
+              FilledButton.icon(
+                onPressed: () => context.push('/admin/providers'),
+                icon: const Icon(Icons.directions_car_filled_outlined),
+                label: const Text('Demandes de prestataires'),
+              ),
+              const SizedBox(height: 8),
+              FilledButton.icon(
                 onPressed: _addAssociate,
                 icon: const Icon(Icons.person_add_alt_1_outlined),
                 label: const Text('Ajouter un associé après paiement'),
