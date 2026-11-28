@@ -1,5 +1,5 @@
 begin;
-select plan(10);
+select plan(11);
 
 select has_function(
   'public',
@@ -45,6 +45,16 @@ select ok(
     )
   ) = 0,
   'the operational settings RPC does not expose payment or commission keys'
+);
+
+select ok(
+  position(
+    'is distinct from' 
+    in pg_get_functiondef(
+      'public.admin_upsert_marketplace_setting(text,jsonb)'::regprocedure
+    )
+  ) > 0,
+  'an announcement cannot be saved without an explicit enabled flag'
 );
 
 select has_function(
