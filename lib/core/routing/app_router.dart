@@ -49,6 +49,7 @@ import '../../features/verticals/data/vertical_repository.dart';
 import '../../features/verticals/presentation/vertical_discovery_page.dart';
 import '../../features/admin/presentation/admin_dashboard_page.dart';
 import '../../features/admin/presentation/admin_platform_settings_page.dart';
+import '../../features/providers/presentation/provider_application_page.dart';
 import '../../features/admin/presentation/admin_assistant_page.dart';
 import '../../features/admin/presentation/admin_return_policies_page.dart';
 import '../../features/admin/presentation/admin_catalog_moderation_page.dart';
@@ -285,6 +286,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/services',
         builder: (_, __) => const ServicesPage(),
+      ),
+      GoRoute(
+        path: '/provider/apply',
+        builder: (_, __) => const ProviderApplicationPage(),
       ),
       GoRoute(
         path: '/messages',
