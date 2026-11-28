@@ -91,7 +91,18 @@ Cette première tranche n'ajoute pas de sélecteur Wave/CinetPay et ne modifie a
 - **P6 — Fret et coursiers :** devis transporteur, suivi, preuve, incidents et facturation.
 - **P7 — Qualité :** avis, modération, analytics, tests charge/restauration et audit de sécurité final.
 
-## 6. Limites et éléments non vérifiés
+## 6. Évolution ajoutée après le premier audit : inscription prestataire
+
+Une première étape d'onboarding est maintenant présente sur la branche de travail :
+- entrée « Devenir prestataire » depuis la page Services ;
+- formulaire authentifié pour Taxi, Moto-taxi, VTC/chauffeur privé, location de véhicules, compagnie de transport/bus, fret et coursier ;
+- RPC serveur qui exige un profil actif, applique une liste blanche des types, valide les longueurs et refuse les doublons ;
+- création du profil avec vérification `PENDING` et `active=false` ; attribution contrôlée du rôle `SERVICE_PROVIDER` ;
+- aucun document sensible n'est encore téléversé et aucun prestataire n'est publié automatiquement.
+
+**Limite fonctionnelle majeure :** l'interface de revue/approbation administrative, le dépôt sécurisé des pièces (identité, permis, carte grise, assurance, visite technique), la gestion de flotte et les commandes de missions restent à développer. Tant que cette revue n'est pas livrée et testée, le parcours d'inscription ne constitue pas un onboarding complet de production.
+
+## 7. Limites et éléments non vérifiés
 
 - Audit statique du contenu disponible via GitHub ; les changements non commités de Cloud Shell n'ont pas été lus.
 - Aucun accès à une base Supabase distante, aucune donnée n'a été modifiée et aucune migration n'a été appliquée à un environnement.
