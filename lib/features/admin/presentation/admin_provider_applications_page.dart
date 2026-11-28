@@ -202,12 +202,18 @@ class _AdminProviderApplicationsPageState
                           ),
                         ],
                         const SizedBox(height: 12),
+                        const Text(
+                          'Approbation désactivée : le dépôt privé et la vérification '
+                          'des justificatifs KYC ne sont pas encore disponibles. '
+                          'Une demande peut être refusée avec un motif.',
+                        ),
+                        const SizedBox(height: 12),
                         Wrap(
                           spacing: 8,
                           runSpacing: 8,
                           children: [
                             FilledButton.icon(
-                              onPressed: busy ? null : () => _review(item, 'APPROVE'),
+                              onPressed: null,
                               icon: busy
                                   ? const SizedBox(
                                       width: 16,
